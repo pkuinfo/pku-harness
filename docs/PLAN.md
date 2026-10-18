@@ -23,7 +23,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T2.1 Store: expo-sqlite DB with migrations + KV; SecureStore wrapper (2026-10-18)
 - [x] T2.2 Plugin runtime: definePlugin, registry, tool ids, effects, permissions model, ctx (2026-10-18)
 - [x] T2.3 Settings: AI provider (base URL, key, model) stored securely; connection test (2026-10-18)
-- [ ] T2.6 Provider plugins: `providers` contribution, registry, picker in AI settings; DeepSeek + OpenAI-compatible built in; account/subscription auth kinds
+- [x] T2.6 Provider plugins: `providers` contribution + registry, per-provider settings/keys (migrated from v0), AI settings picker with live `/models` listing and connection test; DeepSeek (default, DeepSeek Harness catalog) + OpenAI-compatible built in; `account` auth kind with `signIn()` hook (2026-10-18)
 - [x] T2.4 Agent loop: AI SDK + openai-compatible provider, streaming via expo/fetch, tool calling, session log (2026-10-18)
 - [x] T2.5 Chat screen: message list, composer, streaming text, tool-call chips, AgentOrb states (2026-10-18)
 
@@ -63,6 +63,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T8.3 Notifications (permission, exact alarms, background status, test), appearance (system/dark/light, persisted), data export (JSON, no secrets) and full reset (2026-10-18)
 
 ## M9 End-to-end
+- [x] T9.0 Agent E2E on emulator against a scripted OpenAI-compatible mock model: streaming, tool calls (scheduler / dashboard / ui.render form submit / remote MCP write with approval) (2026-10-18)
 - [ ] T9.1 E2E on emulator: login → ask balance → build dashboard widget → low-balance check job → notification fires
 - [ ] T9.2 E2E: timetable sync → class reminder; "remind me every 3 days, 16 times"
 - [ ] T9.3 Polish pass with `impeccable` + design review checklist; README for contributors

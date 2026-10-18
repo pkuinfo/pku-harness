@@ -26,7 +26,7 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
       title={plugin.name}
       subtitle={
         settings.enabled
-          ? [`${toolCount} 个能力`, ...notes].join(' · ')
+          ? [toolCount || !plugin.providers ? `${toolCount} 个能力` : `${Object.keys(plugin.providers).length} 个模型服务`, ...notes].join(' · ')
           : '已关闭，AI 无法使用'
       }
       onPress={() => router.push({ pathname: '/plugins/[id]', params: { id: plugin.id } })}
@@ -53,7 +53,8 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
 export function PluginsScreen() {
   const plugins = usePlugins();
   const core = plugins.filter((p) => p.core);
-  const services = plugins.filter((p) => !p.core && !p.remote);
+  const ai = plugins.filter((p) => !p.core && !p.remote && p.providers);
+  const services = plugins.filter((p) => !p.core && !p.remote && !p.providers);
   const remote = plugins.filter((p) => p.remote);
   return (
     <Screen title="插件" subtitle="Plugins" back>
@@ -66,6 +67,15 @@ export function PluginsScreen() {
         <FadeIn index={1}>
           <ListGroup title="校园服务">
             {services.map((p) => (
+              <PluginRow key={p.id} plugin={p} />
+            ))}
+          </ListGroup>
+        </FadeIn>
+      ) : null}
+      {ai.length ? (
+        <FadeIn index={2}>
+          <ListGroup title="AI 服务" footer="模型服务也是插件，可在 设置 → AI 服务 中切换。">
+            {ai.map((p) => (
               <PluginRow key={p.id} plugin={p} />
             ))}
           </ListGroup>

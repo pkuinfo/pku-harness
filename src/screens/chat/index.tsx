@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, type ComponentRef } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AgentOrb } from '@/components/agent-orb';
@@ -47,7 +47,7 @@ export function Chat() {
   const empty = chat.messages.length === 0;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior="padding">
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <AgentOrb size={36} state={busy ? 'thinking' : 'idle'} />
         <View style={{ flex: 1 }}>

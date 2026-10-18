@@ -1,9 +1,10 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 
 import { Screen } from '@/components/screen';
 import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
+import { sendMessage } from '@/core/agent/run';
 import { invokeTool } from '@/core/runtime/invoke';
 
 /**
@@ -11,8 +12,14 @@ import { invokeTool } from '@/core/runtime/invoke';
  * `pkuharness://dev?tool=scheduler.create&input=<url-encoded JSON>`. Disabled in release.
  */
 export function DevTools() {
-  const { tool, input, n, actor } = useLocalSearchParams<{ tool?: string; input?: string; n?: string; actor?: 'user' | 'agent' }>();
+  const { tool, input, n, actor, chat } = useLocalSearchParams<{ tool?: string; input?: string; n?: string; actor?: 'user' | 'agent'; chat?: string }>();
   const [out, setOut] = useState('');
+  useEffect(() => {
+    // `?chat=…` sends a message through the real agent pipeline and opens the chat tab.
+    if (!__DEV__ || !chat) return;
+    router.replace('/');
+    sendMessage(chat);
+  }, [chat, n]);
   useEffect(() => {
     if (!__DEV__ || !tool) return;
     Promise.resolve()

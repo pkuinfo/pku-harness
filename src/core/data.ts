@@ -6,6 +6,7 @@ import { aiConfig } from '@/core/agent/provider';
 import { seedStarterWidgets } from '@/core/dashboard/starter';
 import { widgetStore } from '@/core/dashboard/store';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
+import { registry } from '@/core/runtime/registry';
 import { remotePlugins } from '@/core/runtime/remote';
 import { BACKGROUND_TASK } from '@/core/scheduler/engine';
 import { jobStore } from '@/core/scheduler/store';
@@ -40,6 +41,7 @@ export async function resetData() {
     for (const table of ['kv', 'messages', 'sessions', 'widgets', 'jobs', 'todos', 'cache']) await db.execAsync(`DELETE FROM ${table}`);
   });
   for (const key of ['ai.apiKey', 'campus.username', 'campus.password', 'campus.otpSecret'] as const) await secrets.delete(key).catch(() => {});
+  for (const p of registry.providers()) await secrets.delete(`ai.${p.id}.apiKey`).catch(() => {});
   chatStore.clear();
   await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load()]);
   await seedStarterWidgets();

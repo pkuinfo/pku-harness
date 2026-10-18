@@ -36,6 +36,44 @@ export interface DataSourceDef {
   ttlMs: number;
 }
 
+/** How a provider authenticates. `account` = sign-in / subscription flow owned by the plugin. */
+export type ProviderAuth = 'apiKey' | 'account' | 'none';
+
+export interface ProviderModel {
+  id: string;
+  name?: string;
+  description?: string;
+}
+
+export interface ProviderConfig {
+  baseURL: string;
+  model: string;
+  /** API key or account token from SecureStore; undefined when auth is 'none'. */
+  credential?: string;
+}
+
+/**
+ * A model provider contributed by a plugin (docs/ARCHITECTURE.md §5). The returned model is an
+ * AI SDK `LanguageModel`; typed loosely here so core types don't depend on the AI SDK.
+ */
+export interface ProviderDef {
+  name: string;
+  description: string;
+  auth: ProviderAuth;
+  defaultBaseURL: string;
+  /** Whether the user may edit the base URL (generic OpenAI-compatible endpoints). */
+  editableBaseURL?: boolean;
+  models: ProviderModel[];
+  defaultModel: string;
+  /** Where to get a key / how to sign in, shown under the field. */
+  credentialHint?: string;
+  /** Optional live model listing. */
+  listModels?: (config: ProviderConfig) => Promise<ProviderModel[]>;
+  /** For auth 'account': run the sign-in flow and return a credential to store. */
+  signIn?: () => Promise<string>;
+  createModel: (config: ProviderConfig) => unknown;
+}
+
 export interface PluginDef {
   id: string;
   name: string;
@@ -53,6 +91,8 @@ export interface PluginDef {
   scopes: string[];
   tools: Record<string, ToolDef>;
   dataSources?: Record<string, DataSourceDef>;
+  /** Model providers this plugin contributes (AI access is a plugin too). */
+  providers?: Record<string, ProviderDef>;
   /** Extra guidance appended to the agent's system prompt. */
   instructions?: string;
 }

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import type { ReactNode } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MAX_CONTENT_WIDTH } from '@/hooks/use-layout';
@@ -25,6 +25,8 @@ export function SheetScreen({
   loading,
   danger,
   onDanger,
+  secondary,
+  onSecondary,
 }: {
   title: string;
   children: ReactNode;
@@ -34,11 +36,13 @@ export function SheetScreen({
   loading?: boolean;
   danger?: string;
   onDanger?: () => void;
+  secondary?: string;
+  onSecondary?: () => void;
 }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior="padding">
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Text variant="headline" style={{ flex: 1 }}>
           {title}
@@ -50,6 +54,7 @@ export function SheetScreen({
       </ScrollView>
       <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md), borderTopColor: c.border, backgroundColor: c.bg }]}>
         {danger && onDanger ? <Button title={danger} variant="danger" onPress={onDanger} style={{ flex: 1 }} /> : null}
+        {secondary && onSecondary ? <Button title={secondary} variant="secondary" onPress={onSecondary} style={{ flex: 1 }} /> : null}
         <Button title={primary} onPress={onPrimary} disabled={primaryDisabled} loading={loading} style={{ flex: 2 }} />
       </View>
     </KeyboardAvoidingView>

@@ -1,6 +1,7 @@
-import type { PluginDef, ToolDef } from './types';
+import type { PluginDef, ProviderDef, ToolDef } from './types';
 
 export type ToolEntry = { id: string; pluginId: string; name: string; def: ToolDef };
+export type ProviderEntry = { id: string; pluginId: string; def: ProviderDef };
 
 const plugins = new Map<string, PluginDef>();
 const listeners = new Set<() => void>();
@@ -39,6 +40,13 @@ export const registry = {
     return this.list().flatMap((p) =>
       Object.entries(p.tools).map(([name, def]) => ({ id: `${p.id}.${name}`, pluginId: p.id, name, def })),
     );
+  },
+  /** Provider ids are `<plugin>.<provider>`. */
+  providers(): ProviderEntry[] {
+    return this.list().flatMap((p) => Object.entries(p.providers ?? {}).map(([key, def]) => ({ id: `${p.id}.${key}`, pluginId: p.id, def })));
+  },
+  provider(id: string): ProviderEntry | undefined {
+    return this.providers().find((p) => p.id === id);
   },
   subscribe(listener: () => void) {
     listeners.add(listener);
