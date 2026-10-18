@@ -26,8 +26,8 @@ a hosted model option comes later.
 | Tab | Route | Purpose |
 |---|---|---|
 | Chat | `src/app/(tabs)/index.tsx` | Agent conversation. Streams text, shows tool activity, renders **generative UI** (forms, pickers, cards, checkouts) inline. Users create dashboards and reminders from here. |
-| Dashboard | `src/app/(tabs)/dashboard.tsx` | A grid of **widgets** built by the agent on request. Each widget binds a plugin data source to a UI spec. Changed through chat or by long-press. |
-| Schedule | `src/app/(tabs)/schedule.tsx` | Timetable (time, building, room, course), to-dos and reminders. Every recurring item is a **job** in the shared scheduler. |
+| Dashboard | slot, filled by the `dashboard` plugin | A grid of **widgets** built by the agent on request. Each widget binds a plugin data source to a UI spec. Changed through chat or by long-press. |
+| Schedule | slot, filled by the `schedule` plugin | Timetable (time, building, room, course), to-dos and reminders. Every recurring item is a **job** in the shared scheduler. |
 | Settings | `src/app/(tabs)/settings.tsx` | Campus account, AI provider, plugins and their permissions, notifications, appearance, data. Minimal by design. |
 
 ## 3. Layers
@@ -73,8 +73,12 @@ themselves goes through `ctx.services`, implemented by the harness in `src/core/
 (registry, remote, genui, scheduler, widgets, todos, timetable). Bundled plugins ship in the
 binary because stores forbid downloading code; community plugins are remote (MCP).
 
-**Plugin UI.** Plugins contribute screens (`contributes.screens`, mounted at
-`/p/<plugin>/<screen>`) and Settings rows (`contributes.settings`). A screen receives `HostUI`
+**Plugin UI.** The harness owns Chat and Settings; the Dashboard and Schedule tabs are
+*slots* (`TabSlotHost`) filled by whichever enabled plugin contributes them
+(`contributes.tabs`: dashboard plugin, schedule plugin), with an empty state otherwise.
+Plugins also contribute screens (`contributes.screens`, at `/p/<plugin>/<screen>`, or
+`/m/<plugin>/<screen>` for `presentation: 'modal'` forms) and Settings rows
+(`contributes.settings`). A screen receives `HostUI`
 (`src/core/host-ui.tsx`: the design-system components, haptics, navigation,
 `useStoreVersion()`), `services`, its plugin `kv` and `invoke(tool, input)` (same permissions as
 the agent). Metro blocks `plugins/node_modules` so plugin code shares the app's React.

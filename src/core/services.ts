@@ -64,6 +64,7 @@ const host: HostServices = {
     remove: (id) => widgetStore.remove(id),
     reorder: (ids) => widgetStore.reorder(ids),
     preview: (w) => resolveWidgetState(w, true),
+    resolve: (w, force) => resolveWidgetState(w, force ?? false),
   },
   todos: {
     list: () => todoStore.list(),

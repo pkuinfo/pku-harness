@@ -19,6 +19,7 @@ export const icons = {
   close: { ios: 'xmark', android: 'close' },
   check: { ios: 'checkmark', android: 'check' },
   chevronRight: { ios: 'chevron.right', android: 'chevron_right' },
+  chevronDown: { ios: 'chevron.down', android: 'expand_more' },
   card: { ios: 'creditcard', android: 'credit_card' },
   wifi: { ios: 'wifi', android: 'wifi' },
   book: { ios: 'book', android: 'menu_book' },

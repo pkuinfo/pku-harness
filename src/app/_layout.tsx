@@ -53,10 +53,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="welcome" options={{ animation: 'fade', gestureEnabled: false }} />
           <Stack.Screen name="ai-settings" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="todo/[id]" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="reminder/[id]" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="course/[id]" options={{ presentation: 'modal' }} />
-          <Stack.Screen name="semester" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="m/[plugin]/[screen]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="plugins/add" options={{ presentation: 'modal' }} />
         </Stack>
         <ApprovalPrompt />

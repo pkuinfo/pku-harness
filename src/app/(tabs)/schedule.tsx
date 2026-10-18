@@ -1,5 +1,6 @@
-import { Schedule } from '@/screens/schedule';
+import { TabSlotHost } from '@/screens/plugins/tab-slot';
 
+/** Schedule slot: content comes from the plugin that contributes it (schedule plugin). */
 export default function ScheduleRoute() {
-  return <Schedule />;
+  return <TabSlotHost slot="schedule" />;
 }
