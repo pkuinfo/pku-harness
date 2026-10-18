@@ -98,7 +98,7 @@ export function PluginsScreen() {
             <PluginRow key={p.id} plugin={p} />
           ))}
           <ListRow icon="plus" title="添加远程插件" subtitle="输入 MCP 地址" onPress={() => router.push('/plugins/add')} />
-          <ListRow icon="globe" title="插件市场" subtitle="即将开放" />
+          <ListRow icon="store" title="插件市场" subtitle="浏览社区插件，内置和远程平等" onPress={() => router.push('/plugins/market')} />
         </ListGroup>
       </FadeIn>
     </Screen>

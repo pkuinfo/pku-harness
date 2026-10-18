@@ -70,7 +70,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 ## M10 Plugin ecosystem
 - [x] T10.1 `pkuinfo/pku-harness-plugins`: SDK (contract + pure helpers + tests), all bundled plugins ported, registry + schema + validator, remote template, demo-canteen example, CI, CONTRIBUTING; app consumes it as submodule `./plugins` and implements `HostServices` (2026-10-18)
 - [x] T10.2 Device capabilities: `requires` on plugins, `HOST_CAPABILITIES`, unavailable plugins hidden from the agent and explained in Settings (2026-10-18) — completes T2.8
-- [ ] T10.3 Marketplace screen in the app reading `registry/registry.json` (install remote plugins, show bundled ones as installed)
+- [x] T10.3 Marketplace (设置 → 插件 → 插件市场): registry from jsDelivr/GitHub raw, validated with the shared schema, cached offline; search + filters; bundled shown as installed, remote one-tap install, self-hosted → add sheet prefilled (2026-10-18)
 - [ ] T10.4 Plugin UI contributions: plugins contribute tabs / screens / settings sections, so Dashboard and Schedule UIs move into their plugins (phase 2 of "harness, not content")
 
 ## M9 End-to-end

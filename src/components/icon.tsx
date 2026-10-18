@@ -50,6 +50,8 @@ export const icons = {
   drag: { ios: 'line.3.horizontal', android: 'drag_handle' },
   calendarClock: { ios: 'calendar.badge.clock', android: 'event_upcoming' },
   server: { ios: 'server.rack', android: 'dns' },
+  search: { ios: 'magnifyingglass', android: 'search' },
+  store: { ios: 'bag', android: 'storefront' },
 } as const;
 
 export type IconName = keyof typeof icons;

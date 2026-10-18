@@ -16,10 +16,10 @@ import { haptics } from '@/utils/haptics';
 import { EFFECTS } from './effects';
 
 /** Settings → 插件 → 添加远程插件: connect to an MCP endpoint, review its tools, install. */
-export function AddRemotePlugin() {
-  const [url, setUrl] = useState('');
+export function AddRemotePlugin({ initialUrl = '', initialName = '' }: { initialUrl?: string; initialName?: string }) {
+  const [url, setUrl] = useState(initialUrl);
   const [token, setToken] = useState('');
-  const [name, setName] = useState('');
+  const [name, setName] = useState(initialName);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [probe, setProbe] = useState<{ server: McpServerInfo | null; tools: McpTool[] } | null>(null);
