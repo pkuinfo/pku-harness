@@ -87,8 +87,14 @@ definePlugin({
 
 ## 5. Agent
 
-- **Model access**: Vercel AI SDK (`ai`) with `@ai-sdk/openai-compatible`. The provider
-  config (base URL, API key, model id) lives in SecureStore. Streaming uses `expo/fetch`.
+- **Model access is a plugin too.** A *provider plugin* contributes model access through a
+  `providers` contribution: id, display name, auth kind (`apiKey` | `account` | `none`),
+  config fields (base URL, model list), and a factory returning an AI SDK `LanguageModel`.
+  Built-in: DeepSeek (default) and generic OpenAI-compatible. Community plugins can add
+  others (Anthropic, Kimi, GLM, Ollama on LAN…) and subscription/account sign-in flows,
+  modeled on DeepSeek Harness's `llm-deepseek-account` / `llm-pi-ai` adapters. Secrets
+  live in SecureStore per provider; the agent asks the active provider for its model.
+  Streaming uses `expo/fetch`.
 - **Loop**: `streamText` with tools from every enabled plugin plus core tools, multi-step
   until the model stops. Every turn is appended to a session log in SQLite, the same
   "model-visible means logged" rule DeepSeek Harness follows.

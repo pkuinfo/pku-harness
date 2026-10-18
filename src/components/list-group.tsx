@@ -87,7 +87,7 @@ export function ListRow({
           {value}
         </Text>
       ) : null}
-      {accessory}
+      {accessory ? <View style={styles.accessory}>{accessory}</View> : null}
       {chevron ?? !!onPress ? <Icon name="chevronRight" size={16} color={c.textFaint} /> : null}
     </View>
   );
@@ -120,4 +120,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   texts: { flex: 1, gap: spacing.xxs },
+  accessory: { alignSelf: 'center' },
 });

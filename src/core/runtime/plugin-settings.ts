@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 import { kv } from '@/core/store/kv';
 
+import { registry } from './registry';
 import type { ToolEffect } from './types';
 
 /** Per effect: run directly, ask the user in the UI first, or never run. */
@@ -28,7 +29,7 @@ export const pluginSettings = {
     listeners.forEach((l) => l());
   },
   get(pluginId: string): PluginSettings {
-    return cache[pluginId] ?? DEFAULT_SETTINGS;
+    return resolve(pluginId, cache[pluginId]);
   },
   async update(pluginId: string, patch: Partial<PluginSettings>) {
     const current = this.get(pluginId);
@@ -43,7 +44,15 @@ export const pluginSettings = {
   snapshot: () => cache,
 };
 
+/** Stored settings over the plugin's manifest defaults; core plugins are always enabled. */
+function resolve(pluginId: string, stored: PluginSettings | undefined): PluginSettings {
+  const def = registry.get(pluginId);
+  const base: PluginSettings = { ...DEFAULT_SETTINGS, modes: { ...DEFAULT_SETTINGS.modes, ...def?.defaultModes } };
+  const merged = stored ? { ...base, ...stored, modes: { ...base.modes, ...stored.modes } } : base;
+  return def?.core ? { ...merged, enabled: true } : merged;
+}
+
 export function usePluginSettings(pluginId: string): PluginSettings {
   const all = useSyncExternalStore(pluginSettings.subscribe, pluginSettings.snapshot);
-  return all[pluginId] ?? DEFAULT_SETTINGS;
+  return resolve(pluginId, all[pluginId]);
 }

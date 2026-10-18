@@ -5,7 +5,7 @@ import { themes, type ThemeColors, type ThemeName } from './colors';
 
 export type ThemePreference = 'system' | ThemeName;
 
-let preference: ThemePreference = 'dark';
+let preference: ThemePreference = 'system';
 const listeners = new Set<() => void>();
 
 /** Set the user's theme preference. Persisted by the settings store (src/core/store). */
@@ -18,13 +18,13 @@ export function getThemePreference() {
   return preference;
 }
 
-function subscribe(listener: () => void) {
+export function subscribeThemePreference(listener: () => void) {
   listeners.add(listener);
   return () => listeners.delete(listener);
 }
 
 export function useThemePreference() {
-  return useSyncExternalStore(subscribe, getThemePreference);
+  return useSyncExternalStore(subscribeThemePreference, getThemePreference);
 }
 
 export function useThemeName(): ThemeName {

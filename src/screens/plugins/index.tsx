@@ -1,0 +1,91 @@
+import { router } from 'expo-router';
+import { View } from 'react-native';
+
+import { Chip } from '@/components/chip';
+import { FadeIn } from '@/components/fade-in';
+import { ListGroup, ListRow } from '@/components/list-group';
+import { NativeSwitch } from '@/components/native-switch';
+import { Screen } from '@/components/screen';
+import { Text } from '@/components/text';
+import { usePlugins } from '@/core/runtime/hooks';
+import { pluginSettings, usePluginSettings } from '@/core/runtime/plugin-settings';
+import type { PluginDef } from '@/core/runtime/types';
+import { spacing } from '@/theme';
+import { haptics } from '@/utils/haptics';
+
+import { EFFECTS, effectsOf, pluginIcon } from './effects';
+
+function PluginRow({ plugin }: { plugin: PluginDef }) {
+  const settings = usePluginSettings(plugin.id);
+  const toolCount = Object.keys(plugin.tools).length;
+  const effects = effectsOf(plugin);
+  const ask = effects.filter((e) => settings.modes[e] === 'ask').map((e) => EFFECTS[e].label);
+  const off = effects.filter((e) => settings.modes[e] === 'off').map((e) => EFFECTS[e].label);
+  const notes = [ask.length ? `${ask.join('、')}需确认` : '', off.length ? `${off.join('、')}已禁止` : ''].filter(Boolean);
+  return (
+    <ListRow
+      icon={pluginIcon(plugin)}
+      title={plugin.name}
+      subtitle={
+        settings.enabled
+          ? [`${toolCount} 个能力`, ...notes].join(' · ')
+          : '已关闭，AI 无法使用'
+      }
+      onPress={() => router.push({ pathname: '/plugins/[id]', params: { id: plugin.id } })}
+      chevron={plugin.core}
+      accessory={
+        plugin.core ? (
+          <Chip label="内置" />
+        ) : (
+          <NativeSwitch
+            label={`启用 ${plugin.name}`}
+            value={settings.enabled}
+            onValueChange={(v) => {
+              haptics.tap();
+              pluginSettings.update(plugin.id, { enabled: v });
+            }}
+          />
+        )
+      }
+    />
+  );
+}
+
+/** Settings → 插件: every registered plugin, on/off, and a way into its permissions. */
+export function PluginsScreen() {
+  const plugins = usePlugins();
+  const core = plugins.filter((p) => p.core);
+  const services = plugins.filter((p) => !p.core);
+  return (
+    <Screen title="插件" subtitle="Plugins" back>
+      <FadeIn index={0}>
+        <Text variant="callout" tone="muted">
+          每个校园服务都是一个插件。开启后，你和 AI 都能使用它的能力；在插件详情里可以为读取、修改、资金、公开操作分别设置是否需要确认。
+        </Text>
+      </FadeIn>
+      {services.length ? (
+        <FadeIn index={1}>
+          <ListGroup title="校园服务">
+            {services.map((p) => (
+              <PluginRow key={p.id} plugin={p} />
+            ))}
+          </ListGroup>
+        </FadeIn>
+      ) : null}
+      <FadeIn index={2}>
+        <ListGroup title="系统能力" footer="系统能力是应用本身的一部分，始终开启。">
+          {core.map((p) => (
+            <PluginRow key={p.id} plugin={p} />
+          ))}
+        </ListGroup>
+      </FadeIn>
+      <FadeIn index={3}>
+        <View style={{ gap: spacing.sm }}>
+          <ListGroup title="插件市场" footer="远程插件通过 MCP 连接，不在本机运行第三方代码，也拿不到你的校园密码。">
+            <ListRow icon="globe" title="浏览插件市场" subtitle="即将开放" />
+          </ListGroup>
+        </View>
+      </FadeIn>
+    </Screen>
+  );
+}

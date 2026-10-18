@@ -41,6 +41,14 @@ export const icons = {
   edit: { ios: 'pencil', android: 'edit' },
   lock: { ios: 'lock', android: 'lock' },
   globe: { ios: 'globe', android: 'language' },
+  back: { ios: 'chevron.left', android: 'arrow_back' },
+  shield: { ios: 'checkmark.shield', android: 'verified_user' },
+  alarm: { ios: 'alarm', android: 'alarm' },
+  bolt: { ios: 'bolt', android: 'bolt' },
+  send2: { ios: 'paperplane', android: 'send' },
+  drag: { ios: 'line.3.horizontal', android: 'drag_handle' },
+  calendarClock: { ios: 'calendar.badge.clock', android: 'event_upcoming' },
+  server: { ios: 'server.rack', android: 'dns' },
 } as const;
 
 export type IconName = keyof typeof icons;

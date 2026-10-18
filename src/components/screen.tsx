@@ -1,9 +1,12 @@
+import { router } from 'expo-router';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View, type ScrollViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { MAX_CONTENT_WIDTH } from '@/hooks/use-layout';
 import { spacing, useTheme } from '@/theme';
 
+import { IconButton } from './button';
 import { Text } from './text';
 
 /** Standard tab screen: large title header + scrollable content with token padding. */
@@ -13,6 +16,7 @@ export function Screen({
   trailing,
   children,
   scroll = true,
+  back,
   contentContainerStyle,
   ...scrollProps
 }: ScrollViewProps & {
@@ -21,11 +25,16 @@ export function Screen({
   trailing?: ReactNode;
   children: ReactNode;
   scroll?: boolean;
+  /** Pushed screens: show a back button that pops the stack. */
+  back?: boolean;
 }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const header = (
     <View style={styles.header}>
+      {back ? (
+        <IconButton icon="back" label="返回" variant="ghost" onPress={() => router.back()} style={styles.back} />
+      ) : null}
       <View style={{ flex: 1, gap: spacing.xxs }}>
         {subtitle ? (
           <Text variant="micro" tone="faint">
@@ -58,6 +67,9 @@ export function Screen({
 
 const styles = StyleSheet.create({
   header: {
+    width: '100%',
+    maxWidth: MAX_CONTENT_WIDTH,
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'flex-end',
     paddingHorizontal: spacing.lg,
@@ -65,5 +77,6 @@ const styles = StyleSheet.create({
     paddingBottom: spacing.md,
     gap: spacing.md,
   },
-  body: { paddingHorizontal: spacing.lg, gap: spacing.xl },
+  back: { marginLeft: -spacing.sm, marginBottom: spacing.xxs },
+  body: { width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center', paddingHorizontal: spacing.lg, gap: spacing.xl },
 });

@@ -30,8 +30,10 @@ export function checkSpec(spec: unknown): { ok: true; spec: Spec } | { ok: false
 export const uiPlugin = definePlugin({
   id: 'ui',
   name: '界面生成',
-  description: 'Render native UI (forms, pickers, cards) inside the conversation.',
+  description: '让 AI 在对话里生成原生界面：表单、选择器、数据卡片。',
   version: '0.1.0',
+  icon: 'sparkles',
+  core: true,
   scopes: [],
   tools: {
     render: defineTool({

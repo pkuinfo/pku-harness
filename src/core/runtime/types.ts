@@ -41,6 +41,12 @@ export interface PluginDef {
   name: string;
   description: string;
   version: string;
+  /** Icon name from src/components/icon.tsx (kept as a string so core doesn't import UI). */
+  icon?: string;
+  /** Part of the app itself: always on, can't be disabled in Settings. */
+  core?: boolean;
+  /** Default per-effect modes; the user can change them in Settings → 插件. */
+  defaultModes?: Partial<Record<ToolEffect, 'auto' | 'ask' | 'off'>>;
   /** Campus services or hosts this plugin talks to, shown in Settings. */
   scopes: string[];
   tools: Record<string, ToolDef>;
