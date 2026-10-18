@@ -164,7 +164,7 @@ const components: Components<typeof catalog> = {
   Stat: ({ props }) => (
     <Stat
       label={props.label}
-      value={props.value}
+      value={typeof props.value === 'number' ? props.value : props.value == null ? null : Number(props.value)}
       prefix={props.prefix ?? ''}
       suffix={props.suffix ?? ''}
       decimals={props.decimals ?? 2}

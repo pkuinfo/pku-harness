@@ -22,7 +22,8 @@ export function Stat({
 }: {
   label: string;
   icon?: IconName;
-  value: number;
+  /** null/NaN renders an em dash (data not available). */
+  value: number | null;
   prefix?: string;
   suffix?: string;
   decimals?: number;
@@ -39,7 +40,13 @@ export function Stat({
           {label}
         </Text>
       </View>
-      <AnimatedNumber value={value} variant={size} format={(n) => `${prefix}${n.toFixed(decimals)}${suffix}`} />
+      {typeof value === 'number' && Number.isFinite(value) ? (
+        <AnimatedNumber value={value} variant={size} format={(n) => `${prefix}${n.toFixed(decimals)}${suffix}`} />
+      ) : (
+        <Text variant={size} tone="faint">
+          —
+        </Text>
+      )}
       {delta || caption ? (
         <View style={styles.labelRow}>
           {delta ? (

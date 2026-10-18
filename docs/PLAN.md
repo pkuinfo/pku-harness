@@ -40,15 +40,16 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [ ] T4.6 Plugin `courses`: Blackboard announcements + assignments (read-only)
 
 ## M5 Dashboard
-- [ ] T5.1 Widget model + persistence; widget renderer with data bindings + TTL cache
-- [ ] T5.2 `dashboard.*` agent tools; default starter widgets after first login
-- [ ] T5.3 Edit mode: reorder/delete by gesture, pull-to-refresh
+- [x] T5.1 Widget model + persistence; widget renderer with data bindings (`$state` pointers) + TTL cache; loading/error/ready states (2026-10-18)
+- [x] T5.2 `dashboard.*` agent tools (list/sources/upsertWidget/removeWidget/reorder) + `calendar` plugin (today, teaching week); starter widgets on first run (2026-10-18)
+- [x] T5.3 Edit mode: long-press, drag handle reorder, size cycle, delete; pull-to-refresh (2026-10-18)
 
 ## M6 Scheduler & notifications
-- [ ] T6.1 Job model + recurrence engine (unit-tested: one-shot, daily times, every N days, count, until)
-- [ ] T6.2 Notify executor with expo-notifications (exact alarms on Android), re-arm on start
-- [ ] T6.3 Check executor (plugin data source + condition) via expo-background-task; Android exact-time wakeup
-- [ ] T6.4 `scheduler.*` agent tools
+- [x] T6.1 Job model + recurrence engine (unit-tested: one-shot, daily times, every N days, weekly, count, until, DST) (2026-10-18)
+- [x] T6.2 Notify executor: occurrences armed as exact DATE notifications (14-day / 64-per-job / 400 total window), diffed and re-armed on start, change, foreground and background run; verified on emulator to the second (2026-10-18)
+- [x] T6.3 Check executor (read-only tool + condition + `{value}` template): exact-minute foreground timer, expo-background-task (WorkManager) in background (2026-10-18)
+- [ ] T6.5 Android exact-time wakeup for check jobs while the app is dead (native alarm → headless JS); today background checks are inexact (≥15 min)
+- [x] T6.4 `scheduler.*` agent tools: create/update/delete/list/preview/runCheck; dev deep-link tool runner for on-device testing (2026-10-18)
 
 ## M7 Schedule tab
 - [ ] T7.1 Timetable view (today / week), class reminders

@@ -124,10 +124,14 @@ definePlugin({
 
 ## 7. Dashboard
 
-A widget is `{ id, title, spec, bindings: { [statePath]: { plugin, dataSource, args } },
-refresh, position, size }`. On render, the host resolves each binding through the plugin's
-data source (cached by TTL) and feeds results into the spec's state. The agent creates and
-edits widgets with `dashboard.*` tools; the user can reorder, resize and delete by gesture.
+A widget is `{ id, title, size: sm|md|lg, spec, bindings: { [jsonPointer]: { tool, args?,
+path?, ttlMinutes? } }, position }`. Bindings may only use read-only tools. On render the
+host resolves each binding (TTL cache shared by tool + args), writes the value at its pointer
+in the spec's state, and the spec reads it with `{ "$state": "/card" }` or `$template`. Each
+card has loading (skeleton), error (retry) and ready states. The agent creates and edits
+widgets with `dashboard.*` tools (upsert returns the resolved data as a preview); the user
+long-presses for edit mode to drag-reorder, cycle size and delete, and pulls to refresh.
+Starter widgets that need no login (today / teaching week / reminders) seed the first run.
 
 ## 8. Scheduler and notifications
 
@@ -140,12 +144,23 @@ One engine serves dashboard alerts, schedule reminders and to-dos.
 - **Action**: `notify` (static message), or `check` (call a plugin data source, evaluate a
   condition like `balance < 100`, notify only if true, optionally run the agent with the
   result).
-- **Execution**:
-  - `notify` jobs are pre-scheduled as exact local notifications (`expo-notifications`,
-    Android exact alarms). Bounded series are expanded and re-armed on each app start.
-  - `check` jobs run in the background on Android via an exact alarm that wakes a headless
-    JS task (planned native addition to `campus-http` or a sibling module), with
-    `expo-background-task` as the fallback. iOS runs them best-effort.
+- **Execution** (`src/core/scheduler`):
+  - `recurrence.ts` is pure and unit-tested: a series is periods (minute/hour step, day, or
+    Monday-based week) × slots (times × weekdays); slots before `startAt` are skipped, the
+    rest numbered 0…n and cut by `count` / `until`. All times are device-local.
+  - `notify` jobs are armed ahead as exact `DATE` notifications (expo-notifications uses
+    `setExactAndAllowWhileIdle` when the exact-alarm permission is granted). Window: 14 days,
+    ≤ 64 per job, ≤ 400 total (Android caps 500 alarms per app). Identifiers encode
+    `job:<id>:<updatedAt>:<index>`, so `sync()` diffs desired vs scheduled and edits re-arm.
+    `sync()` runs on start, on every change, on foreground and from the background task.
+  - `check` jobs call a **read-only** tool, read a dot path, evaluate the condition
+    (`< <= > >= == != changed always`) and notify with `{value}` filled in. Foreground: a
+    timer fires them on the exact minute. Background: `expo-background-task` (WorkManager,
+    ≥ 15 min, inexact) runs whatever is due via `bootCore()` without UI. An exact background
+    wakeup needs a small native module (alarm → headless JS); tracked as T6.5.
+  - The agent and forms use a friendlier input (`schedule-input.ts`): local
+    `"YYYY-MM-DD HH:mm"` strings, converted to triggers and summarized back as human text
+    plus the next occurrences, so the model can confirm times to the user.
 - **Timetable**: synced from the campus timetable plugin into SQLite; class reminders are
   ordinary `notify` jobs.
 
