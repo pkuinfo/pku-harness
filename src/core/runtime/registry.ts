@@ -1,6 +1,22 @@
-import type { PluginDef, ProviderDef, ToolDef } from './types';
+import type { Capability, PluginDef, ProviderDef, ToolDef } from './types';
 
 export type ToolEntry = { id: string; pluginId: string; name: string; def: ToolDef };
+/**
+ * What this device can give plugins. A phone has no shell or filesystem for plugins, and the
+ * authenticated campus session needs the campus-http native module (T4.1, parked).
+ */
+export const HOST_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>(['network', 'campus-network', 'notifications', 'background']);
+
+const CAPABILITY_LABEL: Record<Capability, string> = {
+  network: '网络',
+  'campus-network': '校园网',
+  'campus-session': '校园账号登录',
+  notifications: '通知',
+  background: '后台运行',
+  shell: '命令行',
+  filesystem: '文件系统',
+};
+
 export type ProviderEntry = { id: string; pluginId: string; def: ProviderDef };
 
 const plugins = new Map<string, PluginDef>();
@@ -26,6 +42,11 @@ export const registry = {
   },
   list(): PluginDef[] {
     return [...plugins.values()];
+  },
+  /** Why a plugin can't run on this device, or null. */
+  unavailable(id: string): string | null {
+    const missing = (plugins.get(id)?.requires ?? []).filter((c) => !HOST_CAPABILITIES.has(c));
+    return missing.length ? `需要${missing.map((c) => CAPABILITY_LABEL[c]).join('、')}，这台设备暂不支持` : null;
   },
   /** Resolve `<plugin>.<tool>`. */
   tool(id: string): ToolEntry | undefined {

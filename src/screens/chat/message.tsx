@@ -6,7 +6,7 @@ import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import type { ChatMessage } from '@/core/agent/chat-store';
 import { GenUIView } from '@/genui/view';
-import { checkSpec } from '@/plugins/ui';
+import { checkSpec } from '@/genui/check';
 import { radius, spacing, useTheme } from '@/theme';
 
 import { ToolChip } from './tool-chip';

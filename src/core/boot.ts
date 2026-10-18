@@ -8,11 +8,12 @@ import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import { remotePlugins } from '@/core/runtime/remote';
 import { startScheduler } from '@/core/scheduler/engine';
+import { installServices } from '@/core/services';
 import { jobStore } from '@/core/scheduler/store';
 import { timetable } from '@/core/timetable/store';
 import { todoStore } from '@/core/todo/store';
 import { kv } from '@/core/store/kv';
-import { builtinPlugins } from '@/plugins';
+import { builtinPlugins } from '@pku-harness/plugins';
 import { getThemePreference, setThemePreference, subscribeThemePreference, type ThemePreference } from '@/theme';
 
 let core: Promise<void> | null = null;
@@ -29,6 +30,7 @@ let app: Promise<void> | null = null;
 export function bootCore(): Promise<void> {
   if (!core) {
     core = (async () => {
+      installServices();
       for (const p of builtinPlugins) registry.register(p);
       await remotePlugins.load().catch((e) => console.warn('remote plugins failed to load', e));
       await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load()]);

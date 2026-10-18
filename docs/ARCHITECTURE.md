@@ -55,6 +55,29 @@ through the runtime.
 
 ## 4. Plugin model
 
+**The app is the harness, not the content.** Every capability is a plugin and every plugin is
+equal. All plugins — including the ones bundled in the app — live in
+[`pkuinfo/pku-harness-plugins`](https://github.com/pkuinfo/pku-harness-plugins), checked out
+here as the git submodule `./plugins`:
+
+| In the plugins repo | Role |
+|---|---|
+| `packages/sdk` (`@pku-harness/sdk`) | The contract: `definePlugin`, tools, providers, `HostServices`, `Capability`, dynamic descriptions; pure helpers (recurrence, schedule input, timetable model, check conditions) with tests |
+| `plugins/<id>` + `plugins/index.ts` | Bundled plugins (`builtinPlugins`), built only on the SDK |
+| `registry/registry.json` | Marketplace index (bundled and remote plugins side by side) |
+| `templates/`, `examples/` | Remote plugin template and the demo-canteen MCP example |
+
+The app resolves `@pku-harness/sdk`, `@pku-harness/plugins` and `@pku-harness/registry`
+through tsconfig paths (Metro honours them). Plugins never import app code: everything outside
+themselves goes through `ctx.services`, implemented by the harness in `src/core/services.ts`
+(registry, remote, genui, scheduler, widgets, todos, timetable). Bundled plugins ship in the
+binary because stores forbid downloading code; community plugins are remote (MCP).
+
+**Device capabilities.** A phone has no shell or filesystem for plugins, limited background
+time, and campus-only hosts. Plugins declare `requires`; `registry.unavailable(id)` compares
+with `HOST_CAPABILITIES` and the harness hides unavailable plugins from the agent, refuses
+their tools and explains why in Settings. Heavier work belongs in remote plugins.
+
 A plugin is a TypeScript object:
 
 ```ts

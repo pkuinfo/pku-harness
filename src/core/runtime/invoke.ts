@@ -35,6 +35,8 @@ export async function invokeTool(
   const entry = registry.tool(id);
   if (!entry) throw new ToolError(`没有这个工具：${id}`, 'not_found');
 
+  const why = registry.unavailable(entry.pluginId);
+  if (why) throw new ToolError(why, 'disabled');
   const settings = pluginSettings.get(entry.pluginId);
   if (!settings.enabled) throw new ToolError(`插件「${registry.get(entry.pluginId)?.name ?? entry.pluginId}」已关闭`, 'disabled');
 

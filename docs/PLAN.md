@@ -30,7 +30,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T2.5 Chat screen: message list, composer, streaming text, tool-call chips, AgentOrb states (2026-10-18)
 
 - [ ] T2.7 Memory plugin: save/search/forget facts, relevant memories in the prompt (as data), review/delete in Settings (reference DeepSeek Harness)
-- [ ] T2.8 Device capabilities: plugins/skills declare `requires` (network, campus-network, background, shell…); host hides what the phone can't run, remote MCP as fallback
+- [x] T2.8 Device capabilities → see T10.2 (2026-10-18)
 
 ## M3 Generative UI
 - [x] T3.1 json-render catalog + registry styled with our components (2026-10-18)
@@ -66,6 +66,12 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T8.2 Remote plugins: dependency-free MCP Streamable-HTTP client (tested against the official SDK server), manifest cached on device, tools mapped via `z.fromJSONSchema`, effects from MCP annotations, untrusted defaults (write/money/public ask), add/refresh/remove UI, `plugins.*` tools (2026-10-18)
 - [x] T8.4 "Ask first" approvals: agent calls whose effect is set to ask raise a native prompt (allow / deny / always allow) over any screen (2026-10-18)
 - [x] T8.3 Notifications (permission, exact alarms, background status, test), appearance (system/dark/light, persisted), data export (JSON, no secrets) and full reset (2026-10-18)
+
+## M10 Plugin ecosystem
+- [x] T10.1 `pkuinfo/pku-harness-plugins`: SDK (contract + pure helpers + tests), all bundled plugins ported, registry + schema + validator, remote template, demo-canteen example, CI, CONTRIBUTING; app consumes it as submodule `./plugins` and implements `HostServices` (2026-10-18)
+- [x] T10.2 Device capabilities: `requires` on plugins, `HOST_CAPABILITIES`, unavailable plugins hidden from the agent and explained in Settings (2026-10-18) — completes T2.8
+- [ ] T10.3 Marketplace screen in the app reading `registry/registry.json` (install remote plugins, show bundled ones as installed)
+- [ ] T10.4 Plugin UI contributions: plugins contribute tabs / screens / settings sections, so Dashboard and Schedule UIs move into their plugins (phase 2 of "harness, not content")
 
 ## M9 End-to-end
 - [x] T9.0 Agent E2E on emulator against a scripted OpenAI-compatible mock model: streaming, tool calls (scheduler / dashboard / ui.render form submit / remote MCP write with approval) (2026-10-18)

@@ -1,4 +1,5 @@
 import type { LanguageModel } from 'ai';
+import { fetch as expoFetch } from 'expo/fetch';
 import { useSyncExternalStore } from 'react';
 
 import { pluginSettings } from '@/core/runtime/plugin-settings';
@@ -131,5 +132,5 @@ export async function getModel(providerId = saved.active): Promise<LanguageModel
     throw new Error('还没有设置 AI 服务的 API Key（设置 → AI 服务）');
   }
   if (entry.def.auth === 'account' && !credential) throw new Error(`请先登录 ${entry.def.name}（设置 → AI 服务）`);
-  return entry.def.createModel({ ...s, credential }) as LanguageModel;
+  return entry.def.createModel({ ...s, credential, fetch: expoFetch as unknown as typeof fetch }) as LanguageModel;
 }

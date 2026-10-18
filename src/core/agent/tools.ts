@@ -1,7 +1,9 @@
 import { tool, type ToolSet } from 'ai';
 
-import { invokeTool } from '@/core/runtime/invoke';
+import { invokeTool, services } from '@/core/runtime/invoke';
+import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
+import { resolveDynamic } from '@/core/runtime/types';
 
 /** Model-facing tool names can't contain dots: `campus-card.getBalance` → `campus-card__getBalance`. */
 export const toModelName = (id: string) => id.replace('.', '__');
@@ -11,8 +13,10 @@ export const fromModelName = (name: string) => name.replace('__', '.');
 export function buildToolSet(signal?: AbortSignal): ToolSet {
   const set: ToolSet = {};
   for (const entry of registry.tools()) {
+    // Only what the user enabled and this device can run is offered to the model.
+    if (!pluginSettings.get(entry.pluginId).enabled || registry.unavailable(entry.pluginId)) continue;
     set[toModelName(entry.id)] = tool({
-      description: `${entry.def.title}. ${entry.def.description}`,
+      description: `${entry.def.title}. ${resolveDynamic(entry.def.description, services)}`,
       inputSchema: entry.def.input,
       execute: async (input: unknown) => {
         try {

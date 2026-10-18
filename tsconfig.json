@@ -8,6 +8,15 @@
       ],
       "@/assets/*": [
         "./assets/*"
+      ],
+      "@pku-harness/sdk": [
+        "./plugins/packages/sdk/src/index.ts"
+      ],
+      "@pku-harness/plugins": [
+        "./plugins/plugins/index.ts"
+      ],
+      "@pku-harness/registry": [
+        "./plugins/registry/schema.ts"
       ]
     }
   },
@@ -16,5 +25,13 @@
     "**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "plugins/**/*.test.ts",
+    "plugins/examples",
+    "plugins/templates",
+    "plugins/scripts",
+    "plugins/node_modules"
   ]
 }

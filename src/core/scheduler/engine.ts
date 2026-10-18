@@ -8,7 +8,7 @@ import { evaluate, fillTemplate, getPath } from './check';
 import { diffArmed, planNotifications } from './plan';
 import { lastOccurrence, nextOccurrence, runsBy } from './recurrence';
 import { jobStore } from './store';
-import { actionSchema, triggerSchema, type Action, type Job, type JobSource, type Trigger } from './types';
+import { actionSchema, triggerSchema, type Job, type JobInput, type JobPatch } from './types';
 
 /**
  * Scheduler engine (docs/ARCHITECTURE.md §8).
@@ -20,15 +20,6 @@ import { actionSchema, triggerSchema, type Action, type Job, type JobSource, typ
  */
 
 export const BACKGROUND_TASK = 'harness-scheduler';
-
-export type JobInput = {
-  title: string;
-  trigger: Trigger;
-  action: Action;
-  source: JobSource;
-  enabled?: boolean;
-  meta?: Record<string, unknown>;
-};
 
 /** Recompute runs / lastRunAt / nextRunAt from the trigger. */
 function derive(job: Job, now: number): Job {
@@ -71,7 +62,7 @@ export async function createJob(input: JobInput): Promise<Job> {
 
 export async function updateJob(
   id: string,
-  patch: Partial<Pick<Job, 'title' | 'trigger' | 'action' | 'enabled' | 'meta'>>,
+  patch: JobPatch,
 ): Promise<Job> {
   const cur = jobStore.get(id);
   if (!cur) throw new Error(`没有这个任务：${id}`);

@@ -7,6 +7,7 @@ import { NativeSwitch } from '@/components/native-switch';
 import { Screen } from '@/components/screen';
 import { Text } from '@/components/text';
 import { usePlugins } from '@/core/runtime/hooks';
+import { registry } from '@/core/runtime/registry';
 import { pluginSettings, usePluginSettings } from '@/core/runtime/plugin-settings';
 import type { PluginDef } from '@/core/runtime/types';
 import { haptics } from '@/utils/haptics';
@@ -15,6 +16,7 @@ import { EFFECTS, effectsOf, pluginIcon } from './effects';
 
 function PluginRow({ plugin }: { plugin: PluginDef }) {
   const settings = usePluginSettings(plugin.id);
+  const why = registry.unavailable(plugin.id);
   const toolCount = Object.keys(plugin.tools).length;
   const effects = effectsOf(plugin);
   const ask = effects.filter((e) => settings.modes[e] === 'ask').map((e) => EFFECTS[e].label);
@@ -25,7 +27,9 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
       icon={pluginIcon(plugin)}
       title={plugin.name}
       subtitle={
-        settings.enabled
+        why
+          ? why
+          : settings.enabled
           ? [toolCount || !plugin.providers ? `${toolCount} 个能力` : `${Object.keys(plugin.providers).length} 个模型服务`, ...notes].join(' · ')
           : '已关闭，AI 无法使用'
       }

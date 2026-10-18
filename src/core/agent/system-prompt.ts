@@ -1,11 +1,14 @@
+import { services } from '@/core/runtime/invoke';
+import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
+import { resolveDynamic } from '@/core/runtime/types';
 
 /** Assemble the system prompt from a fixed core plus each plugin's instructions. */
 export function buildSystemPrompt(now = new Date()) {
   const plugins = registry
     .list()
-    .filter((p) => p.instructions)
-    .map((p) => `### ${p.name} (${p.id})\n${p.instructions}`)
+    .filter((p) => p.instructions && pluginSettings.get(p.id).enabled && !registry.unavailable(p.id))
+    .map((p) => `### ${p.name} (${p.id})\n${resolveDynamic(p.instructions!, services)}`)
     .join('\n\n');
 
   return `你是 PKU Harness，北京大学学生的校园生活助手，运行在学生自己的手机上。

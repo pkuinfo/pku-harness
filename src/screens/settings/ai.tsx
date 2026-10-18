@@ -1,3 +1,4 @@
+import { fetch as expoFetch } from 'expo/fetch';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
@@ -95,7 +96,7 @@ export function AISettings() {
       haptics.success();
       if (entry.def.listModels) {
         const cred = (await aiConfig.credential(entry.id)) ?? undefined;
-        entry.def.listModels({ baseURL: baseURL.trim(), model, credential: cred }).then(setListed).catch(() => {});
+        entry.def.listModels({ baseURL: baseURL.trim(), model, credential: cred, fetch: expoFetch as unknown as typeof fetch }).then(setListed).catch(() => {});
       }
     } catch (e) {
       setStatus({ tone: 'down', text: e instanceof Error ? e.message : String(e) });
