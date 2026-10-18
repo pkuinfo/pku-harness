@@ -36,6 +36,7 @@ export function Settings() {
             subtitle={ai.hasKey ? `${ai.config.name} · ${ai.config.model}` : '未连接 · 默认 DeepSeek'}
             onPress={() => router.push('/ai-settings')}
           />
+          <ListRow icon="bolt" title="AI 记忆" subtitle="它记住了关于你的什么" onPress={() => router.push('/memory')} />
         </ListGroup>
       </FadeIn>
       <FadeIn index={1}>

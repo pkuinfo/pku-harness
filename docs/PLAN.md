@@ -29,7 +29,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T2.4 Agent loop: AI SDK + openai-compatible provider, streaming via expo/fetch, tool calling, session log (2026-10-18)
 - [x] T2.5 Chat screen: message list, composer, streaming text, tool-call chips, AgentOrb states (2026-10-18)
 
-- [ ] T2.7 Memory plugin: save/search/forget facts, relevant memories in the prompt (as data), review/delete in Settings (reference DeepSeek Harness)
+- [x] T2.7 Memory plugin (plugins repo): remember/recall/list/forget/pin, secrets refused, near-duplicates merged; SDK `context` contribution injects relevant memories per turn into the logged user turn as `<context>` data; Settings → AI 记忆 (2026-10-18)
 - [x] T2.8 Device capabilities → see T10.2 (2026-10-18)
 
 ## M3 Generative UI

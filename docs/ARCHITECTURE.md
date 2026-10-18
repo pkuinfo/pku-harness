@@ -138,6 +138,11 @@ definePlugin({
   agent may call its tools without per-call confirmation. Each plugin's permission row in
   Settings has a per-effect switch (`read`/`write`/`money`/`public`) so a user can require
   a tap for some effects. Defaults are set in the plugin manifest.
+- **Request context** (DeepSeek Harness's context plugins): a plugin may define
+  `context({ query, kv, services })`. Before each turn the harness gathers these (800 ms budget
+  each) and prepends them to the user's message as `<context>…</context>` in the model-visible,
+  logged history; the chat UI shows only what the user typed. The memory plugin uses this to
+  add the few memories relevant to the question (pinned ones always).
 - **Approvals**: when an agent call hits an effect set to `ask`, `invokeTool` awaits
   `src/core/runtime/approvals.ts`; the root layout shows a prompt (plugin, tool, effect,
   inputs) with allow / deny / always allow. User taps never ask; the background runtime has no

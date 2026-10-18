@@ -54,6 +54,7 @@ export function ListRow({
   accessory,
   onPress,
   chevron,
+  titleLines = 1,
 }: {
   icon?: IconName;
   iconTint?: string;
@@ -63,6 +64,8 @@ export function ListRow({
   accessory?: ReactNode;
   onPress?: () => void;
   chevron?: boolean;
+  /** Lines before the title truncates (long content rows like memories). */
+  titleLines?: number;
 }) {
   const c = useTheme();
   const content = (
@@ -73,7 +76,7 @@ export function ListRow({
         </View>
       ) : null}
       <View style={styles.texts}>
-        <Text variant="body" numberOfLines={1}>
+        <Text variant="body" numberOfLines={titleLines}>
           {title}
         </Text>
         {subtitle ? (

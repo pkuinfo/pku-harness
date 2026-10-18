@@ -1,5 +1,6 @@
 import { isStepCount, streamText } from 'ai';
 
+import { gatherContext } from './context';
 import { buildSystemPrompt } from './system-prompt';
 import { chatStore, newId, type ChatMessage, type ChatPart } from './chat-store';
 import { getModel } from './provider';
@@ -37,7 +38,11 @@ export async function sendMessage(text: string) {
 
   const userMsg: ChatMessage = { id: newId(), role: 'user', parts: [{ type: 'text', text: trimmed }], createdAt: Date.now() };
   const assistant: ChatMessage = { id: newId(), role: 'assistant', parts: [], createdAt: Date.now() };
-  const history = [...chatStore.get().history, { role: 'user' as const, content: trimmed }];
+  // Plugin request context (memory, …) travels with the user message in the model-visible,
+  // logged history; the chat UI shows only what the user typed.
+  const context = await gatherContext(trimmed);
+  const content = context ? `<context>\n${context}\n</context>\n\n${trimmed}` : trimmed;
+  const history = [...chatStore.get().history, { role: 'user' as const, content }];
   chatStore.set({
     messages: [...chatStore.get().messages, userMsg, assistant],
     history,
