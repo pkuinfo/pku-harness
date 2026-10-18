@@ -73,6 +73,12 @@ themselves goes through `ctx.services`, implemented by the harness in `src/core/
 (registry, remote, genui, scheduler, widgets, todos, timetable). Bundled plugins ship in the
 binary because stores forbid downloading code; community plugins are remote (MCP).
 
+**Plugin UI.** Plugins contribute screens (`contributes.screens`, mounted at
+`/p/<plugin>/<screen>`) and Settings rows (`contributes.settings`). A screen receives `HostUI`
+(`src/core/host-ui.tsx`: the design-system components, haptics, navigation,
+`useStoreVersion()`), `services`, its plugin `kv` and `invoke(tool, input)` (same permissions as
+the agent). Metro blocks `plugins/node_modules` so plugin code shares the app's React.
+
 **Device capabilities.** A phone has no shell or filesystem for plugins, limited background
 time, and campus-only hosts. Plugins declare `requires`; `registry.unavailable(id)` compares
 with `HOST_CAPABILITIES` and the harness hides unavailable plugins from the agent, refuses

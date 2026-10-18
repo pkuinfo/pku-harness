@@ -8,7 +8,10 @@ import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { useAIConfig } from '@/core/agent/provider';
 import { exportData, resetData } from '@/core/data';
+import type { IconName } from '@/components/icon';
 import { usePlugins } from '@/core/runtime/hooks';
+import { pluginSettings } from '@/core/runtime/plugin-settings';
+import { registry } from '@/core/runtime/registry';
 import { haptics } from '@/utils/haptics';
 import { setThemePreference, spacing, useTheme, useThemePreference, type ThemePreference } from '@/theme';
 
@@ -23,7 +26,12 @@ export function Settings() {
   const c = useTheme();
   const pref = useThemePreference();
   const ai = useAIConfig();
-  const pluginCount = usePlugins().length;
+  const plugins = usePlugins();
+  const pluginCount = plugins.length;
+  // Settings rows contributed by enabled plugins (e.g. AI 记忆 from the memory plugin).
+  const contributed = plugins
+    .filter((p) => pluginSettings.get(p.id).enabled && !registry.unavailable(p.id))
+    .flatMap((p) => (p.contributes?.settings ?? []).map((row) => ({ plugin: p, row })));
   return (
     <Screen title="设置" subtitle="Settings">
       <FadeIn index={0}>
@@ -36,9 +44,23 @@ export function Settings() {
             subtitle={ai.hasKey ? `${ai.config.name} · ${ai.config.model}` : '未连接 · 默认 DeepSeek'}
             onPress={() => router.push('/ai-settings')}
           />
-          <ListRow icon="bolt" title="AI 记忆" subtitle="它记住了关于你的什么" onPress={() => router.push('/memory')} />
         </ListGroup>
       </FadeIn>
+      {contributed.length ? (
+        <FadeIn index={1}>
+          <ListGroup title="插件设置">
+            {contributed.map(({ plugin, row }) => (
+              <ListRow
+                key={`${plugin.id}/${row.screen}`}
+                icon={(row.icon as IconName | undefined) ?? (plugin.icon as IconName | undefined) ?? 'puzzle'}
+                title={row.title}
+                subtitle={row.subtitle}
+                onPress={() => router.push({ pathname: '/p/[plugin]/[screen]', params: { plugin: plugin.id, screen: row.screen } })}
+              />
+            ))}
+          </ListGroup>
+        </FadeIn>
+      ) : null}
       <FadeIn index={1}>
         <ListGroup title="插件与权限" footer="授权后，AI 可直接代你操作对应服务；可在每个插件里单独调整。">
           <ListRow icon="puzzle" title="插件" value={`${pluginCount} 个`} onPress={() => router.push('/plugins')} />
