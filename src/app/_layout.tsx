@@ -1,3 +1,5 @@
+import '@/polyfills';
+
 import {
   Inter_400Regular,
   Inter_500Medium,
@@ -8,23 +10,31 @@ import {
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { boot } from '@/core/boot';
 import { useTheme, useThemeName } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({ Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold });
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    boot()
+      .catch((e) => console.error('boot failed', e))
+      .finally(() => setReady(true));
+  }, []);
   const name = useThemeName();
   const c = useTheme();
 
   useEffect(() => {
-    if (fontsLoaded) SplashScreen.hideAsync();
-  }, [fontsLoaded]);
+    if (fontsLoaded && ready) SplashScreen.hideAsync();
+  }, [fontsLoaded, ready]);
 
-  if (!fontsLoaded) return null;
+  if (!fontsLoaded || !ready) return null;
 
   const base = name === 'dark' ? DarkTheme : DefaultTheme;
   const navTheme = {
@@ -38,6 +48,7 @@ export default function RootLayout() {
         <StatusBar style={name === 'dark' ? 'light' : 'dark'} />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="ai-settings" options={{ presentation: 'modal' }} />
         </Stack>
       </ThemeProvider>
     </GestureHandlerRootView>

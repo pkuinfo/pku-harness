@@ -1,0 +1,82 @@
+import type { ModelMessage } from 'ai';
+import * as Crypto from 'expo-crypto';
+import { useSyncExternalStore } from 'react';
+
+import { kv } from '@/core/store/kv';
+
+export type ToolStatus = 'running' | 'done' | 'error';
+
+export type ChatPart =
+  | { type: 'text'; text: string }
+  | { type: 'reasoning'; text: string }
+  | {
+      type: 'tool';
+      callId: string;
+      toolId: string;
+      status: ToolStatus;
+      input?: unknown;
+      output?: unknown;
+      error?: string;
+    }
+  | { type: 'ui'; callId: string; spec: unknown; submitted?: boolean };
+
+export type ChatMessage = {
+  id: string;
+  role: 'user' | 'assistant';
+  parts: ChatPart[];
+  createdAt: number;
+};
+
+export type ChatState = {
+  messages: ChatMessage[];
+  /** Exact model-visible history (AI SDK messages), kept separately from the UI view. */
+  history: ModelMessage[];
+  status: 'idle' | 'streaming';
+  error?: string;
+};
+
+const store = kv('chat');
+let state: ChatState = { messages: [], history: [], status: 'idle' };
+const listeners = new Set<() => void>();
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+
+function emit() {
+  listeners.forEach((l) => l());
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const { messages, history } = state;
+    store.set('current', { messages, history }).catch(() => {});
+  }, 400);
+}
+
+export const newId = () => Crypto.randomUUID();
+
+export const chatStore = {
+  get: () => state,
+  set(patch: Partial<ChatState>) {
+    state = { ...state, ...patch };
+    emit();
+  },
+  /** Immutable update of one message. */
+  updateMessage(id: string, fn: (m: ChatMessage) => ChatMessage) {
+    state = { ...state, messages: state.messages.map((m) => (m.id === id ? fn(m) : m)) };
+    emit();
+  },
+  async load() {
+    const saved = await store.get<Pick<ChatState, 'messages' | 'history'>>('current');
+    if (saved) state = { ...state, ...saved, status: 'idle' };
+    listeners.forEach((l) => l());
+  },
+  clear() {
+    state = { messages: [], history: [], status: 'idle' };
+    emit();
+  },
+  subscribe(l: () => void) {
+    listeners.add(l);
+    return () => listeners.delete(l);
+  },
+};
+
+export function useChat() {
+  return useSyncExternalStore(chatStore.subscribe, chatStore.get);
+}
