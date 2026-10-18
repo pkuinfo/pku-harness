@@ -10,14 +10,14 @@ export default function TabsLayout() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   return (
-    <Tabs style={{ backgroundColor: c.bg }}>
+    <Tabs style={{ flex: 1, backgroundColor: c.bg }}>
       <TabSlot style={{ flex: 1 }} />
       <TabList asChild>
         <View
-          style={[
+          style={StyleSheet.flatten([
             styles.bar,
             { backgroundColor: c.surface, borderTopColor: c.border, paddingBottom: Math.max(insets.bottom, spacing.sm) },
-          ]}>
+          ])}>
           <TabTrigger name="chat" href="/" asChild>
             <TabButton icon="chat" label="对话" />
           </TabTrigger>
