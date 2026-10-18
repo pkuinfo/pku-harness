@@ -5,7 +5,7 @@ Versions and adoption numbers as of the survey date; re-check before adopting.
 
 | Area | Package | Verdict | Why |
 |---|---|---|---|
-| Exact-time JS while app is killed | `react-native-notify-kit` (maintained Notifee fork) | **use for T6.5** | AlarmManager / alarm-clock triggers, `DELIVERED` headless event on Android, Expo config plugin, New Arch only. Notifee itself was archived 2026-04. |
+| Exact-time JS while app is killed | `react-native-notify-kit` (maintained Notifee fork) | **adopted (T6.5), verified on device** | AlarmManager / alarm-clock triggers, `DELIVERED` headless event on Android, Expo config plugin, New Arch only. Notifee itself was archived 2026-04. |
 | | own Expo module (alarm → `HeadlessJsTaskService`) | fallback | ~150 lines Kotlin + config plugin if notify-kit fails on SDK 58 bridgeless. |
 | | `expo-background-task` | keep | Periodic refresh only (WorkManager, ≥ 15 min, inexact). |
 | Home-screen widgets | `expo-widgets` (first-party) | try first | Android + iOS `createWidget`, @expo/ui Compose. |

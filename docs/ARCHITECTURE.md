@@ -195,8 +195,11 @@ One engine serves dashboard alerts, schedule reminders and to-dos.
   - `check` jobs call a **read-only** tool, read a dot path, evaluate the condition
     (`< <= > >= == != changed always`) and notify with `{value}` filled in. Foreground: a
     timer fires them on the exact minute. Background: `expo-background-task` (WorkManager,
-    ≥ 15 min, inexact) runs whatever is due via `bootCore()` without UI. An exact background
-    wakeup needs a small native module (alarm → headless JS); tracked as T6.5.
+    ≥ 15 min, inexact) runs whatever is due via `bootCore()` without UI. For exact timing while
+    the app is killed, each enabled check job also gets a react-native-notify-kit trigger at its
+    next run (`exact-wake.ts`): AlarmManager `setExactAndAllowWhileIdle`, silent MIN channel; the
+    DELIVERED event starts a headless JS task that runs the due checks, re-arms and dismisses the
+    placeholder.
   - The agent and forms use a friendlier input (`schedule-input.ts`): local
     `"YYYY-MM-DD HH:mm"` strings, converted to triggers and summarized back as human text
     plus the next occurrences, so the model can confirm times to the user.

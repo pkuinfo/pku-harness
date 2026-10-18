@@ -50,7 +50,8 @@
         {
           "color": "#F0444F"
         }
-      ]
+      ],
+      "react-native-notify-kit"
     ],
     "experiments": {
       "typedRoutes": true,

@@ -99,6 +99,27 @@ export const catalog = defineCatalog(schema, {
       slots: [],
       description: 'Pick one option from a short list (≤ 8). Bind with value: { "$bindState": "/form/<field>" }.',
     },
+    Sparkline: {
+      props: z.object({ values: z.array(z.number()), tone: z.enum(['accent', 'up', 'down', 'info']).nullable() }),
+      slots: [],
+      description: 'Small trend line for a series of numbers (e.g. daily spending). Bind values with { "$state": "/series" }.',
+    },
+    Ring: {
+      props: z.object({
+        value: z.number().describe('0 to 1'),
+        label: z.string().nullable().describe('centre text, e.g. "72%"'),
+        caption: z.string().nullable(),
+        tone: z.enum(['accent', 'up', 'down', 'warn']).nullable(),
+        size: z.enum(['sm', 'md', 'lg']).nullable(),
+      }),
+      slots: [],
+      description: 'Circular progress, e.g. data quota used or semester progress.',
+    },
+    DateTime: {
+      props: z.object({ label: z.string(), value: z.string().nullable(), mode: z.enum(['date', 'time', 'datetime']).nullable() }),
+      slots: [],
+      description: 'Native date/time picker field. Bind with value: { "$bindState": "/form/<field>" }; the value is local "YYYY-MM-DD HH:mm".',
+    },
     Button: {
       props: z.object({
         label: z.string(),

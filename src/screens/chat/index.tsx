@@ -7,11 +7,12 @@ import { AgentOrb } from '@/components/agent-orb';
 import { Button, IconButton } from '@/components/button';
 import { FadeIn } from '@/components/fade-in';
 import { PressableScale } from '@/components/pressable-scale';
+import { ShaderBackdrop } from '@/components/shader-backdrop';
 import { Text } from '@/components/text';
 import { chatStore, useChat } from '@/core/agent/chat-store';
 import { useAIConfig } from '@/core/agent/provider';
 import { sendMessage, stopGeneration } from '@/core/agent/run';
-import { radius, spacing, useTheme } from '@/theme';
+import { glassTokens, radius, spacing, useTheme, useThemeName } from '@/theme';
 
 import { Composer } from './composer';
 import { MessageView } from './message';
@@ -26,6 +27,7 @@ export function Chat() {
   const { hasKey, config } = useAIConfig();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const busy = chat.status === 'streaming';
+  const glass = glassTokens[useThemeName()];
 
   useEffect(() => {
     const id = setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
@@ -48,6 +50,8 @@ export function Chat() {
 
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior="padding">
+      {/* Hero moment: the living backdrop only while the conversation is empty. */}
+      {empty ? <ShaderBackdrop energy={0.8} /> : null}
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <AgentOrb size={36} state={busy ? 'thinking' : 'idle'} />
         <View style={{ flex: 1 }}>
@@ -89,7 +93,10 @@ export function Chat() {
                       accessibilityRole="button"
                       accessibilityLabel={s}
                       onPress={() => sendMessage(s)}
-                      style={[styles.suggestion, { backgroundColor: c.surface, borderColor: c.border }]}>
+                      style={[
+                        styles.suggestion,
+                        { backgroundColor: glass.surface, borderColor: glass.rim[0], backgroundImage: `linear-gradient(180deg, ${glass.sheen[0]}, ${glass.sheen[1]})` },
+                      ]}>
                       <Text variant="callout">{s}</Text>
                     </PressableScale>
                   </FadeIn>

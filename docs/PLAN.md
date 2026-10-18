@@ -19,7 +19,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T1.5 4-tab shell (Chat, Dashboard, Schedule, Settings) with placeholder screens, verified on emulator (2026-10-18)
 - [x] T1.7 Brand system: SVG/Skia logo + generated icons, SkSL shader backdrop, glass tokens, motion curves (2026-10-18)
 - [x] T1.6 First-run welcome experience with expressive, signature motion (Skia/Reanimated hero, staged reveal of the four tabs, consent → AI setup) (2026-10-18)
-- [ ] T1.8 Motion pass across the app with the brand system (chat empty state hero, glass chrome, shared transitions)
+- [~] T1.8 Motion pass: chat empty state on the shader backdrop with glass suggestions (2026-10-18); glass chrome and shared transitions todo
 
 ## M2 Core runtime
 - [x] T2.1 Store: expo-sqlite DB with migrations + KV; SecureStore wrapper (2026-10-18)
@@ -35,7 +35,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 ## M3 Generative UI
 - [x] T3.1 json-render catalog + registry styled with our components (2026-10-18)
 - [x] T3.2 `ui.render` tool; inline rendering in chat; form submit → next agent message (2026-10-18)
-- [ ] T3.3 Custom catalog components: StatCard, Sparkline, ProgressRing, ChoiceList, DateTimeField, PaymentQR
+- [x] T3.3 Catalog components: Sparkline, Ring (animated progress), DateTime (native picker, bound) — Stat/Choice already present; PaymentQR waits for the campus-card plugin (2026-10-18)
 
 ## M4 Campus access
 - [ ] T4.1 `modules/campus-http` Expo module (Android/OkHttp): sessions, cookie jars, redirect control, HTTP/1.1, extra trust anchor — PARKED (see session notes)
@@ -54,7 +54,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T6.1 Job model + recurrence engine (unit-tested: one-shot, daily times, every N days, weekly, count, until, DST) (2026-10-18)
 - [x] T6.2 Notify executor: occurrences armed as exact DATE notifications (14-day / 64-per-job / 400 total window), diffed and re-armed on start, change, foreground and background run; verified on emulator to the second (2026-10-18)
 - [x] T6.3 Check executor (read-only tool + condition + `{value}` template): exact-minute foreground timer, expo-background-task (WorkManager) in background (2026-10-18)
-- [ ] T6.5 Android exact-time wakeup for check jobs while the app is dead: spike `react-native-notify-kit` trigger + `DELIVERED` headless event (docs/ECOSYSTEM.md), fallback own alarm→HeadlessJs module; today background checks are inexact (≥15 min)
+- [x] T6.5 Exact background checks: react-native-notify-kit AlarmManager trigger (`setExactAndAllowWhileIdle`) per check job on a silent MIN channel; its DELIVERED headless event boots the runtime, runs due checks, re-arms and removes the placeholder. Verified with the app process killed: alarm 08:41:00, result notification 08:41:03 (dev bundle load) (2026-10-18)
 - [x] T6.4 `scheduler.*` agent tools: create/update/delete/list/preview/runCheck; dev deep-link tool runner for on-device testing (2026-10-18)
 
 ## M7 Schedule tab

@@ -5,6 +5,7 @@ import { cancelNotification, listScheduledNotifications, notifyAt, notifyNow } f
 import { invokeTool } from '@/core/runtime/invoke';
 
 import { evaluate, fillTemplate, getPath } from './check';
+import { dismissWake, EventType, isWakeEvent, notifee, syncWakeups } from './exact-wake';
 import { diffArmed, planNotifications } from './plan';
 import { lastOccurrence, nextOccurrence, runsBy } from './recurrence';
 import { jobStore } from './store';
@@ -154,6 +155,7 @@ async function syncNow() {
   for (const n of schedule) {
     await notifyAt(new Date(n.at), { title: n.title, body: n.body, url: n.url, data: { jobId: n.jobId } }, n.identifier);
   }
+  await syncWakeups(jobStore.list()).catch((e) => console.warn('exact wake-ups failed', e));
   await ensureBackgroundTask();
 }
 
@@ -207,6 +209,14 @@ export async function startScheduler() {
   if (!jobStore.isLoaded()) await jobStore.load();
   await runDueChecks();
   changed();
+  // A wake trigger firing while the app is open: the foreground timer usually got there first,
+  // so just make sure checks ran and remove the placeholder.
+  notifee.onForegroundEvent(async (e) => {
+    if (e.type !== EventType.DELIVERED || !isWakeEvent(e)) return;
+    await runDueChecks();
+    await dismissWake(e);
+    changed();
+  });
   AppState.addEventListener('change', async (s) => {
     if (s !== 'active') return;
     await runDueChecks();

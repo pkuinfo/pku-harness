@@ -3,9 +3,12 @@ import { Switch, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
+import { DateTimeField } from '@/components/date-time-field';
 import { Field } from '@/components/field';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
+import { ProgressRing } from '@/components/progress-ring';
+import { Sparkline } from '@/components/sparkline';
 import { Stat } from '@/components/stat';
 import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
@@ -127,6 +130,18 @@ function ProgressBar({ label, value, tone }: { label: string | null; value: numb
   );
 }
 
+const pad2 = (n: number) => String(n).padStart(2, '0');
+const toLocal = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+const fromLocal = (s: string | null | undefined) => {
+  const m = s ? /^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/.exec(s) : null;
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : null;
+};
+
+function DateTimeBound({ label, value, mode, binding }: { label: string; value: string | null; mode: 'date' | 'time' | 'datetime' | null; binding?: string }) {
+  const [v, setV] = useBoundProp<string>(value ?? '', binding);
+  return <DateTimeField label={label} value={fromLocal(v)} onChange={(d) => setV(toLocal(d))} mode={mode ?? 'datetime'} />;
+}
+
 const components: Components<typeof catalog> = {
   Column: ({ props, children }) => <View style={{ gap: gapOf(props.gap) }}>{children}</View>,
   Row: ({ props, children }) => (
@@ -206,6 +221,17 @@ const components: Components<typeof catalog> = {
   TextField: ({ props, bindings }) => <TextFieldBound {...props} binding={bindings?.value} />,
   Toggle: ({ props, bindings }) => <ToggleRow label={props.label} value={props.value} binding={bindings?.value} />,
   Choice: ({ props, bindings }) => <ChoiceBound {...props} binding={bindings?.value} />,
+  Sparkline: ({ props }) => <Sparkline values={Array.isArray(props.values) ? props.values : []} tone={props.tone ?? 'accent'} />,
+  Ring: ({ props }) => (
+    <ProgressRing
+      value={typeof props.value === 'number' ? props.value : 0}
+      label={props.label ?? undefined}
+      caption={props.caption ?? undefined}
+      tone={props.tone ?? 'accent'}
+      size={props.size === 'sm' ? 64 : props.size === 'lg' ? 120 : 88}
+    />
+  ),
+  DateTime: ({ props, bindings }) => <DateTimeBound label={props.label} value={props.value} mode={props.mode} binding={bindings?.value} />,
   Button: ({ props, emit, loading }) => (
     <Button title={props.label} variant={props.variant ?? 'primary'} loading={loading} onPress={() => emit('press')} />
   ),
