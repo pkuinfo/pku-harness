@@ -1,3 +1,4 @@
+export * from './brand';
 export * from './colors';
 export * from './motion';
 export * from './radius';

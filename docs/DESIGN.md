@@ -20,9 +20,27 @@ heroes. It should feel like an instrument, not a brochure.
   neutral = graphite. Always paired with an icon or sign, never colour alone.
 - **Motion is the personality.** Springs, not linear tweens. Everything enters, nothing
   pops. Lists stagger. The agent "breathes" (a soft animated orb) while thinking.
-- **Restraint.** No decorative gradients behind content, no card-for-everything, no emoji
-  icons. Effects (glow, shader backgrounds, particles) are reserved for 2–3 hero moments:
-  the agent orb, the login screen, and the payment-code screen.
+- **Restraint where it counts.** No card-for-everything, no emoji icons, nothing decorative
+  behind dense data. Expressive effects (shader backdrop, glass, orbiting mark) concentrate
+  in hero moments: welcome, the agent's presence, setup and payment-code screens.
+
+## 1b. Brand system (2026-10-18)
+
+- **Mark**: a "P" whose bowl is an open orbit with the agent as a bright bead travelling on it
+  (PKU + harness + agent). Geometry lives once in `src/theme/brand.ts`; `<Logo>` (Skia) draws
+  it in-app and can perform (draw-on intro, orbiting bead); `bun scripts/render-icons.ts`
+  renders the app icon, adaptive icon (fg/bg/monochrome), splash and favicon from the same
+  geometry. Never redraw the mark by hand.
+- **Shader backdrop** (`<ShaderBackdrop>`): SkSL domain-warped colour fields on the GPU,
+  palettes in `backdropPalettes`. Rendered at 1/4 resolution and updated at ~24 fps (the field
+  is soft and slow, so this is invisible but keeps the UI thread free and saves battery).
+  Hero moments only: welcome, chat empty state, AI setup.
+- **Liquid glass**: iOS 26 uses the system glass (expo-glass-effect) where available; Android
+  and older iOS use the glass tokens (`glassTokens`: translucent surface, top sheen gradient,
+  specular rim) via CSS `backgroundImage` gradients or Skia panels over the backdrop.
+- **Motion curves** (`curves` in `src/theme/motion.ts`): strong ease-out for entering and
+  responding, ease-in-out for on-screen movement, the iOS sheet curve for sheets. Never
+  ease-in on UI. Off-screen art is unmounted; long-running loops only on the visible page.
 
 ## 2. Tokens
 

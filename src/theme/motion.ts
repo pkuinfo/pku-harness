@@ -21,3 +21,13 @@ export const stagger = {
 
 /** Scale applied to pressables while pressed. */
 export const pressScale = 0.97;
+
+/** Easing curves (cubic-bezier control points); build with `Easing.bezier(...curves.out)`. */
+export const curves = {
+  /** Strong ease-out for anything entering or responding. */
+  out: [0.23, 1, 0.32, 1],
+  /** On-screen movement and morphs. */
+  inOut: [0.77, 0, 0.175, 1],
+  /** iOS sheet curve. */
+  sheet: [0.32, 0.72, 0, 1],
+} as const;

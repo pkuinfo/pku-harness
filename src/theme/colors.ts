@@ -132,3 +132,25 @@ export const courseColors = {
     { fill: 'rgba(219, 39, 119, 0.12)', ink: '#B81F63' },
   ],
 } as const;
+
+/** Shader backdrop fields (src/components/shader-backdrop.tsx): canvas + four colour fields. */
+export const backdropPalettes = {
+  dark: { bg: '#07080A', c1: '#8E0F1E', c2: '#E8283A', c3: '#3A1466', c4: '#F29A4A' },
+  light: { bg: '#F7F3F2', c1: '#F7C9CD', c2: '#F06A75', c3: '#D9CCF5', c4: '#FFD9B0' },
+} as const;
+
+/** Liquid-glass layers: base fill, top sheen and specular rim (3 stops each). */
+export const glassTokens = {
+  dark: {
+    fill: 'rgba(255,255,255,0.05)',
+    sheen: ['rgba(255,255,255,0.14)', 'rgba(255,255,255,0.02)', 'rgba(255,255,255,0.05)'],
+    rim: ['rgba(255,255,255,0.45)', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.22)'],
+    surface: 'rgba(20,22,26,0.62)',
+  },
+  light: {
+    fill: 'rgba(255,255,255,0.35)',
+    sheen: ['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.25)'],
+    rim: ['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0.7)'],
+    surface: 'rgba(255,255,255,0.72)',
+  },
+} as const;

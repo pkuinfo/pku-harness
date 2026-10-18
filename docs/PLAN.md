@@ -17,7 +17,9 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T1.3 Motion primitives: AnimatedNumber, Stat, press feedback hook, stagger helper, haptics wrapper (2026-10-18)
 - [x] T1.4 AgentOrb (Skia/Reanimated) and custom TabBar with animated pill (2026-10-18)
 - [x] T1.5 4-tab shell (Chat, Dashboard, Schedule, Settings) with placeholder screens, verified on emulator (2026-10-18)
-- [ ] T1.6 First-run welcome experience with expressive, signature motion (Skia/Reanimated hero, staged reveal of the four tabs, consent + AI/campus setup), and a motion pass across the app (shared transitions, list choreography, number rolls, haptics)
+- [x] T1.7 Brand system: SVG/Skia logo + generated icons, SkSL shader backdrop, glass tokens, motion curves (2026-10-18)
+- [x] T1.6 First-run welcome experience with expressive, signature motion (Skia/Reanimated hero, staged reveal of the four tabs, consent → AI setup) (2026-10-18)
+- [ ] T1.8 Motion pass across the app with the brand system (chat empty state hero, glass chrome, shared transitions)
 
 ## M2 Core runtime
 - [x] T2.1 Store: expo-sqlite DB with migrations + KV; SecureStore wrapper (2026-10-18)
@@ -26,6 +28,9 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T2.6 Provider plugins: `providers` contribution + registry, per-provider settings/keys (migrated from v0), AI settings picker with live `/models` listing and connection test; DeepSeek (default, DeepSeek Harness catalog) + OpenAI-compatible built in; `account` auth kind with `signIn()` hook (2026-10-18)
 - [x] T2.4 Agent loop: AI SDK + openai-compatible provider, streaming via expo/fetch, tool calling, session log (2026-10-18)
 - [x] T2.5 Chat screen: message list, composer, streaming text, tool-call chips, AgentOrb states (2026-10-18)
+
+- [ ] T2.7 Memory plugin: save/search/forget facts, relevant memories in the prompt (as data), review/delete in Settings (reference DeepSeek Harness)
+- [ ] T2.8 Device capabilities: plugins/skills declare `requires` (network, campus-network, background, shell…); host hides what the phone can't run, remote MCP as fallback
 
 ## M3 Generative UI
 - [x] T3.1 json-render catalog + registry styled with our components (2026-10-18)

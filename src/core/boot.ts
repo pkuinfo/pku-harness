@@ -16,6 +16,13 @@ import { builtinPlugins } from '@/plugins';
 import { getThemePreference, setThemePreference, subscribeThemePreference, type ThemePreference } from '@/theme';
 
 let core: Promise<void> | null = null;
+let onboarded = true;
+
+/** Whether the first-run welcome has been completed (read during boot). */
+export const isOnboarded = () => onboarded;
+export const markOnboarded = () => {
+  onboarded = true;
+};
 let app: Promise<void> | null = null;
 
 /** Runtime without UI: plugins, settings, AI config, jobs. Used by background tasks too. */
@@ -37,6 +44,7 @@ export function boot(): Promise<void> {
       await bootCore();
       installApprovalHandler();
       const prefs = kv('prefs');
+      onboarded = !!(await prefs.get<boolean>('onboarded'));
       const theme = await prefs.get<ThemePreference>('theme');
       if (theme) setThemePreference(theme);
       subscribeThemePreference(() => prefs.set('theme', getThemePreference()));

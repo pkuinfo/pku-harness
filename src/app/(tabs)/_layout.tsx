@@ -1,14 +1,17 @@
+import { Redirect } from 'expo-router';
 import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { TabButton } from '@/components/tab-bar';
+import { isOnboarded } from '@/core/boot';
 import { spacing, useTheme } from '@/theme';
 
 /** Four-tab shell: Chat · Dashboard · Schedule · Settings (docs/ARCHITECTURE.md §2). */
 export default function TabsLayout() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
+  if (!isOnboarded()) return <Redirect href="/welcome" />;
   return (
     <Tabs style={{ flex: 1, backgroundColor: c.bg }}>
       <TabSlot style={{ flex: 1 }} />

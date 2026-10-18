@@ -51,6 +51,7 @@ export default function RootLayout() {
         <StatusBar style={name === 'dark' ? 'light' : 'dark'} />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
           <Stack.Screen name="(tabs)" />
+          <Stack.Screen name="welcome" options={{ animation: 'fade', gestureEnabled: false }} />
           <Stack.Screen name="ai-settings" options={{ presentation: 'modal' }} />
           <Stack.Screen name="todo/[id]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="reminder/[id]" options={{ presentation: 'modal' }} />
