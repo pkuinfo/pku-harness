@@ -76,6 +76,6 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 
 ## M9 End-to-end
 - [x] T9.0 Agent E2E on emulator against a scripted OpenAI-compatible mock model: streaming, tool calls (scheduler / dashboard / ui.render form submit / remote MCP write with approval) (2026-10-18)
-- [ ] T9.1 E2E on emulator: login → ask balance → build dashboard widget → low-balance check job → notification fires
-- [ ] T9.2 E2E: timetable sync → class reminder; "remind me every 3 days, 16 times"
-- [ ] T9.3 Polish pass with `impeccable` + design review checklist; README for contributors
+- [ ] T9.1 E2E on emulator: login → ask balance → build dashboard widget → low-balance check job → notification fires — blocked on M4 (campus-http parked); the widget → check job → exact notification half is verified with calendar data (T6.3/T6.5)
+- [~] T9.2 E2E: "every 3 days, 16 times" verified end to end (agent + form → 10 exact alarms in the 14-day window); class reminders verified with manual courses (odd-week cadence); campus timetable sync blocked on M4
+- [~] T9.3 README for contributors done (2026-10-18); every screen checked on the emulator in dark and light; full impeccable review pass todo
