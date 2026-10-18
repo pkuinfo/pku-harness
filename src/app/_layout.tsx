@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { boot } from '@/core/boot';
+import { useNotificationRouting } from '@/core/notify/use-routing';
 import { useTheme, useThemeName } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -29,6 +30,7 @@ export default function RootLayout() {
   }, []);
   const name = useThemeName();
   const c = useTheme();
+  useNotificationRouting();
 
   useEffect(() => {
     if (fontsLoaded && ready) SplashScreen.hideAsync();
