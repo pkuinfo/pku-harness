@@ -143,7 +143,8 @@ function DateTimeBound({ label, value, mode, binding }: { label: string; value: 
 }
 
 const components: Components<typeof catalog> = {
-  Column: ({ props, children }) => <View style={{ gap: gapOf(props.gap) }}>{children}</View>,
+  // Grows inside a Row (so sparklines etc. get the width); harmless in vertical parents.
+  Column: ({ props, children }) => <View style={{ gap: gapOf(props.gap), flexGrow: 1, flexShrink: 1 }}>{children}</View>,
   Row: ({ props, children }) => (
     <View
       style={{
