@@ -15,6 +15,7 @@ export const icons = {
   send: { ios: 'arrow.up', android: 'arrow_upward' },
   stop: { ios: 'stop.fill', android: 'stop' },
   plus: { ios: 'plus', android: 'add' },
+  minus: { ios: 'minus', android: 'remove' },
   close: { ios: 'xmark', android: 'close' },
   check: { ios: 'checkmark', android: 'check' },
   chevronRight: { ios: 'chevron.right', android: 'chevron_right' },

@@ -51,6 +51,10 @@ export default function RootLayout() {
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="ai-settings" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="todo/[id]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="reminder/[id]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="course/[id]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="semester" options={{ presentation: 'modal' }} />
         </Stack>
       </ThemeProvider>
     </GestureHandlerRootView>

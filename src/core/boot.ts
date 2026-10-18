@@ -7,6 +7,8 @@ import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import { startScheduler } from '@/core/scheduler/engine';
 import { jobStore } from '@/core/scheduler/store';
+import { timetable } from '@/core/timetable/store';
+import { todoStore } from '@/core/todo/store';
 import { kv } from '@/core/store/kv';
 import { builtinPlugins } from '@/plugins';
 import { getThemePreference, setThemePreference, subscribeThemePreference, type ThemePreference } from '@/theme';
@@ -19,7 +21,7 @@ export function bootCore(): Promise<void> {
   if (!core) {
     core = (async () => {
       for (const p of builtinPlugins) registry.register(p);
-      await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load()]);
+      await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load()]);
     })();
   }
   return core;

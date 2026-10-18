@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import { definePlugin, defineTool } from '@/core/runtime/types';
 import { formatLocal } from '@/core/scheduler/schedule-input';
+import { timetable } from '@/core/timetable/store';
 
 type Semester = { name: string; start: string; weeks: number };
 
@@ -65,6 +66,7 @@ export const calendarPlugin = definePlugin({
       effect: 'write',
       execute: async (input, ctx) => {
         await ctx.kv.set('semester', input);
+        await timetable.reloadSemester();
         return { saved: input, ...semesterWeek(input, new Date()) };
       },
     }),

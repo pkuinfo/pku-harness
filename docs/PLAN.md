@@ -17,6 +17,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T1.3 Motion primitives: AnimatedNumber, Stat, press feedback hook, stagger helper, haptics wrapper (2026-10-18)
 - [x] T1.4 AgentOrb (Skia/Reanimated) and custom TabBar with animated pill (2026-10-18)
 - [x] T1.5 4-tab shell (Chat, Dashboard, Schedule, Settings) with placeholder screens, verified on emulator (2026-10-18)
+- [ ] T1.6 First-run welcome experience with expressive, signature motion (Skia/Reanimated hero, staged reveal of the four tabs, consent + AI/campus setup), and a motion pass across the app (shared transitions, list choreography, number rolls, haptics)
 
 ## M2 Core runtime
 - [x] T2.1 Store: expo-sqlite DB with migrations + KV; SecureStore wrapper (2026-10-18)
@@ -48,12 +49,12 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T6.1 Job model + recurrence engine (unit-tested: one-shot, daily times, every N days, weekly, count, until, DST) (2026-10-18)
 - [x] T6.2 Notify executor: occurrences armed as exact DATE notifications (14-day / 64-per-job / 400 total window), diffed and re-armed on start, change, foreground and background run; verified on emulator to the second (2026-10-18)
 - [x] T6.3 Check executor (read-only tool + condition + `{value}` template): exact-minute foreground timer, expo-background-task (WorkManager) in background (2026-10-18)
-- [ ] T6.5 Android exact-time wakeup for check jobs while the app is dead (native alarm → headless JS); today background checks are inexact (≥15 min)
+- [ ] T6.5 Android exact-time wakeup for check jobs while the app is dead: spike `react-native-notify-kit` trigger + `DELIVERED` headless event (docs/ECOSYSTEM.md), fallback own alarm→HeadlessJs module; today background checks are inexact (≥15 min)
 - [x] T6.4 `scheduler.*` agent tools: create/update/delete/list/preview/runCheck; dev deep-link tool runner for on-device testing (2026-10-18)
 
 ## M7 Schedule tab
-- [ ] T7.1 Timetable view (today / week), class reminders
-- [ ] T7.2 To-dos with reminders; jobs list (create/edit by hand)
+- [x] T7.1 Timetable: courses (weekday, time, place, weeks incl. 单/双周), day list with live status/countdown, week grid with now line, semester form, class reminders (N min before; odd/even weeks → 2-week interval) — model unit-tested (2026-10-18)
+- [x] T7.2 To-dos (quick add, native checkbox, due chips, reminders via scheduler, done pauses reminder) and reminders list/editor (once/repeat, day/week/hour/minute, times, weekdays, count/until, live preview); `todo.*` / `timetable.*` tools (2026-10-18)
 
 ## M8 Settings & plugins
 - [x] T8.1 Plugins screen: list, enable/disable, per-effect modes (auto/ask/off), scopes, tool list (2026-10-18)

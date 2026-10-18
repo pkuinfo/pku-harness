@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { useColorScheme } from 'react-native';
 
-import { themes, type ThemeColors, type ThemeName } from './colors';
+import { courseColors, themes, type ThemeColors, type ThemeName } from './colors';
 
 export type ThemePreference = 'system' | ThemeName;
 
@@ -37,4 +37,10 @@ export function useThemeName(): ThemeName {
 /** Active semantic colours. */
 export function useTheme(): ThemeColors {
   return themes[useThemeName()];
+}
+
+/** Timetable course colour for a palette index. */
+export function useCourseColor(index: number) {
+  const list = courseColors[useThemeName()];
+  return list[((index % list.length) + list.length) % list.length];
 }

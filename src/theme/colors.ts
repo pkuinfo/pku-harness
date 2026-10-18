@@ -105,3 +105,30 @@ const light: ThemeColors = {
 
 export const themes = { dark, light } as const;
 export type ThemeName = keyof typeof themes;
+
+/**
+ * Course colours for the timetable: 8 hues, tuned per theme (fill = tinted background,
+ * ink = text/edge). Index with `course.color % 8`.
+ */
+export const courseColors = {
+  dark: [
+    { fill: 'rgba(61, 139, 255, 0.18)', ink: '#7FB2FF' },
+    { fill: 'rgba(46, 189, 133, 0.18)', ink: '#5FD3A5' },
+    { fill: 'rgba(240, 185, 11, 0.18)', ink: '#F4CB4C' },
+    { fill: 'rgba(240, 68, 79, 0.18)', ink: '#F57A82' },
+    { fill: 'rgba(167, 112, 255, 0.18)', ink: '#BE97FF' },
+    { fill: 'rgba(0, 190, 205, 0.18)', ink: '#4DD3DE' },
+    { fill: 'rgba(255, 128, 64, 0.18)', ink: '#FFA375' },
+    { fill: 'rgba(236, 72, 153, 0.18)', ink: '#F27AB6' },
+  ],
+  light: [
+    { fill: 'rgba(31, 111, 235, 0.12)', ink: '#1A5FCC' },
+    { fill: 'rgba(14, 159, 110, 0.12)', ink: '#0B7F58' },
+    { fill: 'rgba(183, 134, 11, 0.14)', ink: '#8C6608' },
+    { fill: 'rgba(200, 16, 46, 0.10)', ink: '#B00E28' },
+    { fill: 'rgba(124, 58, 237, 0.12)', ink: '#6A2FD6' },
+    { fill: 'rgba(0, 150, 165, 0.12)', ink: '#00788A' },
+    { fill: 'rgba(230, 92, 0, 0.12)', ink: '#B84A00' },
+    { fill: 'rgba(219, 39, 119, 0.12)', ink: '#B81F63' },
+  ],
+} as const;
