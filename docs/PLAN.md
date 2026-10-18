@@ -58,8 +58,9 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 
 ## M8 Settings & plugins
 - [x] T8.1 Plugins screen: list, enable/disable, per-effect modes (auto/ask/off), scopes, tool list (2026-10-18)
-- [ ] T8.2 Remote plugin (MCP over HTTP) client + manifest format (marketplace groundwork)
-- [~] T8.3 Notifications (permission, exact alarms, background status, test), appearance (system/dark/light, persisted); data export/reset todo
+- [x] T8.2 Remote plugins: dependency-free MCP Streamable-HTTP client (tested against the official SDK server), manifest cached on device, tools mapped via `z.fromJSONSchema`, effects from MCP annotations, untrusted defaults (write/money/public ask), add/refresh/remove UI, `plugins.*` tools (2026-10-18)
+- [x] T8.4 "Ask first" approvals: agent calls whose effect is set to ask raise a native prompt (allow / deny / always allow) over any screen (2026-10-18)
+- [x] T8.3 Notifications (permission, exact alarms, background status, test), appearance (system/dark/light, persisted), data export (JSON, no secrets) and full reset (2026-10-18)
 
 ## M9 End-to-end
 - [ ] T9.1 E2E on emulator: login → ask balance → build dashboard widget → low-balance check job → notification fires

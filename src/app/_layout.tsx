@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { ApprovalPrompt } from '@/components/approval-prompt';
 import { boot } from '@/core/boot';
 import { useNotificationRouting } from '@/core/notify/use-routing';
 import { useTheme, useThemeName } from '@/theme';
@@ -55,7 +56,9 @@ export default function RootLayout() {
           <Stack.Screen name="reminder/[id]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="course/[id]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="semester" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="plugins/add" options={{ presentation: 'modal' }} />
         </Stack>
+        <ApprovalPrompt />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

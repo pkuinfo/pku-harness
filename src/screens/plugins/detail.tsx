@@ -1,5 +1,8 @@
 import { StyleSheet, View } from 'react-native';
 
+import { router } from 'expo-router';
+
+import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
 import { EmptyState } from '@/components/empty-state';
 import { FadeIn } from '@/components/fade-in';
@@ -11,6 +14,7 @@ import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { usePlugin } from '@/core/runtime/hooks';
 import { pluginSettings, usePluginSettings } from '@/core/runtime/plugin-settings';
+import { remotePlugins } from '@/core/runtime/remote';
 import { radius, spacing, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
@@ -98,12 +102,28 @@ export function PluginDetail({ id }: { id: string }) {
         </FadeIn>
       ) : null}
 
-      {plugin.scopes.length ? (
+      {plugin.scopes.length && !plugin.remote ? (
         <FadeIn index={3}>
           <ListGroup title="访问范围">
             {plugin.scopes.map((s) => (
               <ListRow key={s} icon="globe" title={s} />
             ))}
+          </ListGroup>
+        </FadeIn>
+      ) : null}
+
+      {plugin.remote ? (
+        <FadeIn index={3}>
+          <ListGroup title="远程服务" footer="第三方服务返回的内容只作为数据交给 AI，不会被当作指令。">
+            <ListRow icon="server" title={plugin.remote.server} subtitle={plugin.remote.url} />
+            <ListRow
+              icon="refresh"
+              title="刷新能力列表"
+              onPress={async () => {
+                await remotePlugins.refresh(plugin.id).catch(() => haptics.warning());
+                haptics.success();
+              }}
+            />
           </ListGroup>
         </FadeIn>
       ) : null}
@@ -120,6 +140,21 @@ export function PluginDetail({ id }: { id: string }) {
           ))}
         </ListGroup>
       </FadeIn>
+
+      {plugin.remote ? (
+        <FadeIn index={5}>
+          <Button
+            title="移除插件"
+            variant="danger"
+            icon="trash"
+            onPress={async () => {
+              haptics.warning();
+              await remotePlugins.uninstall(plugin.id);
+              router.back();
+            }}
+          />
+        </FadeIn>
+      ) : null}
     </Screen>
   );
 }

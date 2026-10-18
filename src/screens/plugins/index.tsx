@@ -1,5 +1,4 @@
 import { router } from 'expo-router';
-import { View } from 'react-native';
 
 import { Chip } from '@/components/chip';
 import { FadeIn } from '@/components/fade-in';
@@ -10,7 +9,6 @@ import { Text } from '@/components/text';
 import { usePlugins } from '@/core/runtime/hooks';
 import { pluginSettings, usePluginSettings } from '@/core/runtime/plugin-settings';
 import type { PluginDef } from '@/core/runtime/types';
-import { spacing } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { EFFECTS, effectsOf, pluginIcon } from './effects';
@@ -55,7 +53,8 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
 export function PluginsScreen() {
   const plugins = usePlugins();
   const core = plugins.filter((p) => p.core);
-  const services = plugins.filter((p) => !p.core);
+  const services = plugins.filter((p) => !p.core && !p.remote);
+  const remote = plugins.filter((p) => p.remote);
   return (
     <Screen title="插件" subtitle="Plugins" back>
       <FadeIn index={0}>
@@ -80,11 +79,13 @@ export function PluginsScreen() {
         </ListGroup>
       </FadeIn>
       <FadeIn index={3}>
-        <View style={{ gap: spacing.sm }}>
-          <ListGroup title="插件市场" footer="远程插件通过 MCP 连接，不在本机运行第三方代码，也拿不到你的校园密码。">
-            <ListRow icon="globe" title="浏览插件市场" subtitle="即将开放" />
-          </ListGroup>
-        </View>
+        <ListGroup title="远程插件" footer="远程插件通过 MCP 连接，不在本机运行第三方代码，也拿不到你的校园密码。">
+          {remote.map((p) => (
+            <PluginRow key={p.id} plugin={p} />
+          ))}
+          <ListRow icon="plus" title="添加远程插件" subtitle="输入 MCP 地址" onPress={() => router.push('/plugins/add')} />
+          <ListRow icon="globe" title="插件市场" subtitle="即将开放" />
+        </ListGroup>
       </FadeIn>
     </Screen>
   );

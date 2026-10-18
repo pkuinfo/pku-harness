@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
  * Secrets live only in the OS keystore (Android Keystore / iOS Keychain), never in SQLite,
  * logs, or network requests to servers we run. See AGENTS.md principle 6.
  */
-export type SecretKey = 'campus.username' | 'campus.password' | 'campus.otpSecret' | 'ai.apiKey';
+export type SecretKey = 'campus.username' | 'campus.password' | 'campus.otpSecret' | 'ai.apiKey' | `ai.${string}.apiKey` | `remote.${string}.token`;
 
 const options: SecureStore.SecureStoreOptions = {
   keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,

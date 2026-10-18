@@ -33,20 +33,20 @@ export async function invokeTool(
   opts: { actor: Actor; signal?: AbortSignal },
 ): Promise<unknown> {
   const entry = registry.tool(id);
-  if (!entry) throw new ToolError(`Unknown tool ${id}`, 'not_found');
+  if (!entry) throw new ToolError(`没有这个工具：${id}`, 'not_found');
 
   const settings = pluginSettings.get(entry.pluginId);
-  if (!settings.enabled) throw new ToolError(`Plugin ${entry.pluginId} is turned off`, 'disabled');
+  if (!settings.enabled) throw new ToolError(`插件「${registry.get(entry.pluginId)?.name ?? entry.pluginId}」已关闭`, 'disabled');
 
   const parsed = entry.def.input.safeParse(rawInput ?? {});
   if (!parsed.success) throw new ToolError(parsed.error.message, 'invalid_input');
 
   const mode = settings.modes[entry.def.effect];
-  if (mode === 'off') throw new ToolError(`${entry.def.title} is turned off in Settings`, 'disabled');
+  if (mode === 'off') throw new ToolError(`「${entry.def.title}」在设置中被禁止`, 'disabled');
   // A user tapping a button has already expressed intent; only agent/scheduler calls prompt.
   if (mode === 'ask' && opts.actor !== 'user') {
     const ok = askHandler ? await askHandler(entry, parsed.data) : false;
-    if (!ok) throw new ToolError(`User declined ${entry.def.title}`, 'declined');
+    if (!ok) throw new ToolError(`用户拒绝了「${entry.def.title}」`, 'declined');
   }
 
   try {

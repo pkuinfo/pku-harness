@@ -43,6 +43,8 @@ export interface PluginDef {
   version: string;
   /** Icon name from src/components/icon.tsx (kept as a string so core doesn't import UI). */
   icon?: string;
+  /** Remote (MCP) plugin: where its tools run. Absent for built-ins. */
+  remote?: { url: string; server: string };
   /** Part of the app itself: always on, can't be disabled in Settings. */
   core?: boolean;
   /** Default per-effect modes; the user can change them in Settings → 插件. */

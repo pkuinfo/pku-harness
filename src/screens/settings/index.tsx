@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { View } from 'react-native';
+import { Alert, Share, View } from 'react-native';
 
 import { FadeIn } from '@/components/fade-in';
 import { ListGroup, ListRow } from '@/components/list-group';
@@ -7,7 +7,9 @@ import { Screen } from '@/components/screen';
 import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { useAIConfig } from '@/core/agent/provider';
-import { registry } from '@/core/runtime/registry';
+import { exportData, resetData } from '@/core/data';
+import { usePlugins } from '@/core/runtime/hooks';
+import { haptics } from '@/utils/haptics';
 import { setThemePreference, spacing, useTheme, useThemePreference, type ThemePreference } from '@/theme';
 
 const THEME_OPTIONS: { label: string; value: ThemePreference }[] = [
@@ -21,7 +23,7 @@ export function Settings() {
   const c = useTheme();
   const pref = useThemePreference();
   const ai = useAIConfig();
-  const pluginCount = registry.list().length;
+  const pluginCount = usePlugins().length;
   return (
     <Screen title="设置" subtitle="Settings">
       <FadeIn index={0}>
@@ -52,6 +54,38 @@ export function Settings() {
       <FadeIn index={3}>
         <ListGroup title="通知">
           <ListRow icon="bell" title="提醒与通知" subtitle="精确提醒、后台检查" onPress={() => router.push('/notifications')} />
+        </ListGroup>
+      </FadeIn>
+      <FadeIn index={4}>
+        <ListGroup title="数据" footer="所有数据只保存在这台手机上。导出内容不包含密码和 API Key。">
+          <ListRow
+            icon="send2"
+            title="导出数据"
+            subtitle="提醒、待办、课表、看板与设置（JSON）"
+            onPress={async () => {
+              const data = await exportData();
+              await Share.share({ title: 'PKU Harness 数据', message: JSON.stringify(data, null, 2) });
+            }}
+          />
+          <ListRow
+            icon="trash"
+            iconTint={c.down}
+            title="清除所有数据"
+            subtitle="删除本机上的全部数据和已保存的密钥"
+            onPress={() =>
+              Alert.alert('清除所有数据？', '提醒、待办、课表、看板、对话和已保存的密钥都会被删除，无法恢复。', [
+                { text: '取消', style: 'cancel' },
+                {
+                  text: '清除',
+                  style: 'destructive',
+                  onPress: async () => {
+                    await resetData();
+                    haptics.success();
+                  },
+                },
+              ])
+            }
+          />
         </ListGroup>
       </FadeIn>
     </Screen>

@@ -79,6 +79,13 @@ definePlugin({
   speaks MCP over HTTP (or a small HTTP tool schema). The app fetches their tool list,
   exposes those tools to the agent and renders their UI through the same component catalog.
   No third-party JavaScript runs in the app.
+- **Remote plugins today** (`src/core/runtime/remote.ts`, `src/core/mcp/client.ts`): the user
+  (or the agent, after an approval) adds an MCP Streamable-HTTP URL and optional bearer token
+  (SecureStore). The manifest and tool list are cached; each MCP tool becomes a registry tool
+  (`mcp-<server>.<tool>`) with input from `z.fromJSONSchema`, effect `read` when
+  `readOnlyHint`, else `write`. Results are returned as `{ source, data }` and the plugin's
+  prompt section marks them as data. Defaults for remote plugins: read auto, everything else
+  ask.
 - **Permissions** are granted per plugin in Settings. A remote plugin never receives the
   campus password. It can receive only what the user granted (for example a
   service-scoped session token), and the grant is visible and revocable.
@@ -108,6 +115,10 @@ definePlugin({
   agent may call its tools without per-call confirmation. Each plugin's permission row in
   Settings has a per-effect switch (`read`/`write`/`money`/`public`) so a user can require
   a tap for some effects. Defaults are set in the plugin manifest.
+- **Approvals**: when an agent call hits an effect set to `ask`, `invokeTool` awaits
+  `src/core/runtime/approvals.ts`; the root layout shows a prompt (plugin, tool, effect,
+  inputs) with allow / deny / always allow. User taps never ask; the background runtime has no
+  prompt, so `ask` there means decline.
 - **Untrusted content**: text coming from campus services (forum posts, announcements) is
   wrapped as data in tool results, never concatenated into instructions.
 

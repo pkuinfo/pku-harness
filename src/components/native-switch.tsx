@@ -15,7 +15,7 @@ export function NativeSwitch({
   label?: string;
 }) {
   return (
-    <NativeHost>
+    <NativeHost accessible accessibilityRole="switch" accessibilityLabel={label} accessibilityState={{ checked: value, disabled }}>
       <Switch value={value} onValueChange={onValueChange} disabled={disabled} testID={label} />
     </NativeHost>
   );
