@@ -1,11 +1,20 @@
+import { Platform } from 'react-native';
+
 import type { Capability, PluginDef, ProviderDef, ToolDef } from './types';
 
 export type ToolEntry = { id: string; pluginId: string; name: string; def: ToolDef };
 /**
  * What this device can give plugins. A phone has no shell or filesystem for plugins, and the
- * authenticated campus session needs the campus-http native module (T4.1, parked).
+ * authenticated campus session needs the campus-http native module (Android today).
  */
-export const HOST_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>(['network', 'campus-network', 'notifications', 'background']);
+export const HOST_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
+  'network',
+  'campus-network',
+  'notifications',
+  'background',
+  // modules/campus-http is Android-only for now.
+  ...(Platform.OS === 'android' ? (['campus-session'] as const) : []),
+]);
 
 const CAPABILITY_LABEL: Record<Capability, string> = {
   network: '网络',

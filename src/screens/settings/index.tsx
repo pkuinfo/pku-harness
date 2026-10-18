@@ -7,6 +7,7 @@ import { Screen } from '@/components/screen';
 import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { useAIConfig } from '@/core/agent/provider';
+import { useCampusAccount } from '@/core/campus/account';
 import { exportData, resetData } from '@/core/data';
 import type { IconName } from '@/components/icon';
 import { usePlugins } from '@/core/runtime/hooks';
@@ -26,6 +27,7 @@ export function Settings() {
   const c = useTheme();
   const pref = useThemePreference();
   const ai = useAIConfig();
+  const campus = useCampusAccount();
   const plugins = usePlugins();
   const pluginCount = plugins.length;
   // Settings rows contributed by enabled plugins (e.g. AI 记忆 from the memory plugin).
@@ -36,7 +38,12 @@ export function Settings() {
     <Screen title="设置" subtitle="Settings">
       <FadeIn index={0}>
         <ListGroup title="账号">
-          <ListRow icon="person" title="校园账号" subtitle="未登录 · IAAA 统一身份认证" onPress={() => router.push('/plugins')} />
+          <ListRow
+            icon="person"
+            title="校园账号"
+            subtitle={campus.signedIn ? `${campus.username} · 已登录` : '未登录 · IAAA 统一身份认证'}
+            onPress={() => router.push('/campus')}
+          />
           <ListRow
             icon="sparkles"
             iconTint={c.accent}

@@ -227,6 +227,11 @@ One engine serves dashboard alerts, schedule reminders and to-dos.
   because React Native `fetch` cannot: disable redirects and read `Location`, keep isolated
   cookie jars per service, force HTTP/1.1, or trust the extra certificate some campus hosts
   need. Every plugin talks to campus hosts through this module via `ctx.campus`.
+- **Plugins never get credentials.** The harness (`src/core/campus`) signs in per service
+  (`card`: IAAA → portal ssoLogin → redirectToCard → berserker-auth JWT, refreshed on 401;
+  `its`: ITS web login) and plugins call `services.campus.request(service, req)` to receive
+  responses. Cookies are persisted in SecureStore per session. The `campus-session`
+  capability is available where the native module exists (Android).
 - **Reference**: `../pkucli` is the protocol reference for every service. Port behaviour
   from it rather than rediscovering it; credit the source file in comments.
 

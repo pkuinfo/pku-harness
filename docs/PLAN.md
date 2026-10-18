@@ -38,10 +38,10 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T3.3 Catalog components: Sparkline, Ring (animated progress), DateTime (native picker, bound) — Stat/Choice already present; PaymentQR waits for the campus-card plugin (2026-10-18)
 
 ## M4 Campus access
-- [ ] T4.1 `modules/campus-http` Expo module (Android/OkHttp): sessions, cookie jars, redirect control, HTTP/1.1, extra trust anchor — PARKED (see session notes)
-- [ ] T4.2 IAAA login in TS (RSA, OTP optional), credential storage, login screen + Settings account row
-- [ ] T4.3 Plugin `campus-card`: balance, transactions, payment code
-- [ ] T4.4 Plugin `netfee`: network fee balance and usage
+- [x] T4.1 `modules/campus-http` Expo module (Android/OkHttp): named sessions with own cookie jars (persisted in SecureStore), manual redirects, HTTP/1.1, no proxy, AlphaSSL CA 2025 extra anchor; verified on device against iaaa.pku.edu.cn (2026-10-18)
+- [~] T4.2 IAAA login in TS (RSA PKCS#1 with tests, OTP optional), credentials in SecureStore, Settings → 校园账号 screen; wrong-credential path verified on device with a fake account (2026-10-18). Successful sign-in awaits the user's own login
+- [~] T4.3 Plugin `campus-card` (plugins repo): balance + transactions via the portal SSO → synjones-auth JWT chain (harness adapter, 401 refresh); payment code todo. Needs a signed-in account to verify
+- [~] T4.4 Plugin `netfee` (plugins repo): balance / usage from its.pku.edu.cn via harness-held ITS session; parser tested. Needs a signed-in account to verify
 - [ ] T4.5 Plugin `timetable`: course table + class times (treehole API), academic calendar
 - [ ] T4.6 Plugin `courses`: Blackboard announcements + assignments (read-only)
 

@@ -2,6 +2,7 @@ import * as BackgroundTask from 'expo-background-task';
 import * as Notifications from 'expo-notifications';
 
 import { chatStore } from '@/core/agent/chat-store';
+import { signOut } from '@/core/campus/account';
 import { aiConfig } from '@/core/agent/provider';
 import { seedStarterWidgets } from '@/core/dashboard/starter';
 import { widgetStore } from '@/core/dashboard/store';
@@ -34,6 +35,7 @@ export async function exportData() {
 /** Delete all local data and secrets, cancel notifications, then reload stores to a fresh state. */
 export async function resetData() {
   await Notifications.cancelAllScheduledNotificationsAsync();
+  await signOut().catch(() => {});
   await BackgroundTask.unregisterTaskAsync(BACKGROUND_TASK).catch(() => {});
   for (const m of remotePlugins.list()) await remotePlugins.uninstall(m.id);
   const db = await getDb();

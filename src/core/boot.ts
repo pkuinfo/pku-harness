@@ -1,4 +1,5 @@
 import { aiConfig } from '@/core/agent/provider';
+import { campusAccount } from '@/core/campus/account';
 import { chatStore } from '@/core/agent/chat-store';
 import { seedStarterWidgets } from '@/core/dashboard/starter';
 import { widgetStore } from '@/core/dashboard/store';
@@ -33,7 +34,7 @@ export function bootCore(): Promise<void> {
       installServices();
       for (const p of builtinPlugins) registry.register(p);
       await remotePlugins.load().catch((e) => console.warn('remote plugins failed to load', e));
-      await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load()]);
+      await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load(), campusAccount.load()]);
     })();
   }
   return core;

@@ -1,3 +1,4 @@
+import { campusAccount, campusRequest } from '@/core/campus/account';
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';
 import { services } from '@/core/runtime/invoke';
@@ -73,6 +74,17 @@ const host: HostServices = {
     update: updateTodo,
     setDone: setTodoDone,
     remove: deleteTodo,
+  },
+  campus: {
+    status: () => {
+      const s = campusAccount.get();
+      return { signedIn: s.signedIn, username: s.username };
+    },
+    request: async (service, req) => {
+      if (!campusAccount.get().signedIn) throw new Error('还没有登录校园账号（设置 → 校园账号）');
+      const res = await campusRequest(service, req);
+      return { status: res.status, url: res.url, headers: res.headers, body: res.body };
+    },
   },
   timetable: {
     get: () => timetable.get(),
