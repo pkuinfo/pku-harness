@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import '@/core/campus/adapters';
 import { campusAccount, campusRequest } from '@/core/campus/account';
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';

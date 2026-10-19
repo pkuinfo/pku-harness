@@ -13,7 +13,7 @@ import { iaaaSignIn, PORTAL_APP, type IaaaApp } from './iaaa';
  * `services.campus.request`, never the password.
  */
 
-export type CampusService = 'card' | 'its' | 'treehole' | 'blackboard';
+export type CampusService = 'card' | 'its' | 'treehole' | 'blackboard' | (string & {});
 
 type State = { signedIn: boolean; username: string | null; signedInAt: number | null; name?: string | null };
 
@@ -46,7 +46,8 @@ async function setState(next: State) {
   await store.set('state', next);
 }
 
-async function credentials() {
+/** The stored IAAA credentials (adapters only; never leaves the harness). */
+export async function credentials() {
   const [username, password] = await Promise.all([secrets.get('campus.username'), secrets.get('campus.password')]);
   if (!username || !password) throw new Error('还没有登录校园账号（设置 → 校园账号）');
   return { username, password };
@@ -93,6 +94,7 @@ export async function signOut() {
   ]);
   itsReady = false;
   bbReady = false;
+  await Promise.all([...adapters.values()].map((a) => a.reset().catch(() => {})));
   await setState({ signedIn: false, username: null, signedInAt: null });
 }
 
@@ -328,5 +330,24 @@ export function campusRequest(service: CampusService, req: RequestOptions): Prom
   if (service === 'card') return cardRequest(req);
   if (service === 'treehole') return treeholeRequest(req);
   if (service === 'blackboard') return bbRequest(req);
-  return itsRequest(req);
+  if (service === 'its') return itsRequest(req);
+  const adapter = adapters.get(service);
+  if (!adapter) throw new Error(`没有这个校园服务：${service}`);
+  return adapter.request(req);
+}
+
+// ── More services (src/core/campus/adapters/*) ────────────────────────────────────────────────
+
+export type CampusAdapter = {
+  /** Authenticated request; the adapter signs in (iaaaSignIn) and re-logs in as needed. */
+  request(req: RequestOptions): Promise<CampusResponse>;
+  /** Forget the service session (sign-out). */
+  reset(): Promise<void>;
+};
+
+const adapters = new Map<string, CampusAdapter>();
+
+/** Register a campus service adapter under its `services.campus.request` id. */
+export function registerCampusService(id: string, adapter: CampusAdapter) {
+  adapters.set(id, adapter);
 }

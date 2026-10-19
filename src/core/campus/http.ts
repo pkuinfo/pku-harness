@@ -13,7 +13,8 @@ export const MOBILE_UA =
   'PKUANDROID2.2.0_SM-S938B Dalvik/2.1.0 (Linux; U; Android 15; SM-S938B Build/BP1A.250305.020) okhttp/4.12.0';
 export const APP_HEADERS = { 'x-requested-with': 'cn.edu.pku.PKUAndroid' };
 
-export type CampusSessionId = 'iaaa' | 'card' | 'its' | 'treehole' | 'blackboard';
+/** One cookie jar per service; adapters pick their own id (e.g. 'bdkj'). */
+export type CampusSessionId = 'iaaa' | 'card' | 'its' | 'treehole' | 'blackboard' | (string & {});
 
 const cookieKey = (id: CampusSessionId) => `campus.cookies.${id}` as const;
 
