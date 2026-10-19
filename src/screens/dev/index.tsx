@@ -34,8 +34,13 @@ export function DevTools() {
         setOut('running…');
       })
       .then(() => invokeTool(tool, input ? JSON.parse(input) : {}, { actor: actor === 'agent' ? 'agent' : 'user' }))
-      .then((r) => setOut(JSON.stringify(r, null, 2)))
-      .catch((e) => setOut(`error: ${e instanceof Error ? e.message : String(e)}`));
+      .then((r) => JSON.stringify(r, null, 2))
+      .catch((e) => `error: ${e instanceof Error ? e.message : String(e)}`)
+      .then((text) => {
+        setOut(text);
+        // Machine-readable copy for the device test runner (adb logcat), dev builds only.
+        console.log(`[dev-tool] ${tool} n=${n ?? ''} ${JSON.stringify(text)}`);
+      });
   }, [tool, input, n, actor]);
   return (
     <Screen title="Dev" subtitle={tool ?? 'no tool'} back>
