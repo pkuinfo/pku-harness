@@ -5,6 +5,7 @@ import { kv } from '@/core/store/kv';
 import { secrets } from '@/core/store/secrets';
 
 import { APP_HEADERS, campusFetch, cookieValue, FORM, form, resetSession, type CampusResponse, type RequestOptions } from './http';
+import { credentials } from './credentials';
 import { iaaaSignIn, PORTAL_APP, type IaaaApp } from './iaaa';
 
 /**
@@ -46,12 +47,7 @@ async function setState(next: State) {
   await store.set('state', next);
 }
 
-/** The stored IAAA credentials (adapters only; never leaves the harness). */
-export async function credentials() {
-  const [username, password] = await Promise.all([secrets.get('campus.username'), secrets.get('campus.password')]);
-  if (!username || !password) throw new Error('还没有登录校园账号（设置 → 校园账号）');
-  return { username, password };
-}
+export { credentials } from './credentials';
 
 /**
  * Sign in: verify with IAAA (the portal app), then store the credentials. When IAAA wants a

@@ -2,7 +2,7 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { secrets } from '@/core/store/secrets';
 
-import { credentials } from './account';
+import { credentials } from './credentials';
 import { campusFetch, form, FORM, resetSession } from './http';
 import { totp } from './totp';
 
