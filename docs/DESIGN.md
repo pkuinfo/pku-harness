@@ -36,9 +36,13 @@ heroes. It should feel like an instrument, not a brochure.
     A7/A9): 北大红 #8B0012 for brand fills (`theme.brand`: primary buttons, selection, the
     user's bubble tint), the auxiliary bronze / sand / slate / navy only as light in the
     aurora or accents. `theme.accent` is the legible red for text and icons.
-  - **Aurora** (`<Aurora>`): three dim radial lights (Skia), Lissajous drift over 36 s on the UI
-    thread; paused when its screen is not focused, still with reduced motion. The tabs layout
-    paints one for all tabs (`BackdropProvided`); standalone screens and sheets paint their own.
+  - **Aurora** (`<Aurora>`): three dim radial lights (plain views with native radial-gradient
+    backgrounds, moved by transforms), Lissajous drift over 36 s on the UI thread in ~15 steps a
+    second; paused when its screen is not focused, still with reduced motion, and resting after
+    10 s without a touch (a streaming reply keeps it awake: `useAuroraAwake`). No Skia here: an
+    Android TextureView can't be captured by the tab bar's blur and repainted every frame. The
+    tabs layout paints one for all tabs (`BackdropProvided`); standalone screens and sheets paint
+    their own.
   - **Glass** (`<Glass>`, `GlassEdges`, `glassMaterial`): iOS 26 → system `GlassView`
     (expo-glass-effect is iOS-only); elsewhere a fill of 2.5–5 % white (dark) / 22–50 % white
     (light), one hairline edge, and a 1 px light line along the top edge. Semantic
@@ -52,7 +56,9 @@ heroes. It should feel like an instrument, not a brochure.
   out of the composer's corner, assistant parts rise in, panels lift and settle on press.
 - **Motion curves** (`curves` in `src/theme/motion.ts`): strong ease-out for entering and
   responding, ease-in-out for on-screen movement, the iOS sheet curve for sheets. Never
-  ease-in on UI. Off-screen art is unmounted; long-running loops only on the visible page.
+  ease-in on UI. Off-screen art is unmounted; long-running loops only on the visible page, and
+  they stop when their reason does (the logo's bead glides home when the agent finishes). An
+  idle app draws no frames.
 
 ## 2. Tokens
 
