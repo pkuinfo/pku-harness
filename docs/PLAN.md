@@ -76,7 +76,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T10.5 Dashboard and Schedule UIs live in plugins: harness tab slots (`contributes.tabs`), modal plugin screens at `/m/<plugin>/<screen>`, richer HostUI (theme, pickers, sheet, genui, sortable list); dashboard plugin owns its tab, new schedule plugin owns the schedule tab + forms; app-owned screens deleted (2026-10-18)
 
 - [x] T4.7 pkucli services as plugins (parallel agents, parsers tested, 158 tests): `treehole` (forum read/follow/post/reply), `grades`, `campus-events` (talks/activities), `elective` (read-only), `finance` (cwfw, campus network), `room-booking` (bdkj), `course-catalog` (dean + elective query), `calendar` official 校历 + semester sync, campus-card monthly stats, Blackboard content/assignment detail/recordings; harness adapters `bdkj`, `cwfw`, `elective` via the adapter registry (2026-10-18). Live verification in progress
-- [ ] T4.8 IAAA 手机令牌 authenticator: bind TOTP, auto-fill OTP in sign-ins and course-token exchanges, dashboard widget with hourglass (in progress)
+- [x] T4.8 IAAA 手机令牌 authenticator: bind TOTP, auto-fill OTP in sign-ins and course-token exchanges, dashboard widget with hourglass. Bound on the real account; cwfw sign-in auto-filled the code (finance.rewards live); bind success moment + falling-grain hourglass (2026-10-19)
 - [ ] T4.9 Host capabilities requested by the ports: public HTTP for plugins (`services.http`, scoped), binary/multipart request bodies + file picker (Blackboard submission), card recharge helper (token-in-body signing)
 
 ## M9 End-to-end
@@ -85,5 +85,5 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T9.2 E2E: "every 3 days, 16 times" verified end to end (agent + form → 10 exact alarms in the 14-day window); class reminders verified with manual courses (odd-week cadence); course-sync on the real account (11 courses with rooms) (2026-10-18)
 - [x] T9.3 Read-tool matrix on the real account (37 tools via the dev deep link + logcat runner): all pass except treehole (needs the user's SMS code) and elective supplements/search (empty outside the add/drop window). Fixed on the way: dean course-catalog dropdown markup, calendar Vite bundle, bdkj 2026 site, write → cached-read invalidation (2026-10-18)
 - [x] T9.4 UI sweep on device, both themes: tab bar layout regression, plugins-screen icon crash, collapsed-header bleed-through, folded tool-call log, nested genui cards, zh-CN dates (Hermes ignores the locale), authenticator consent text, widget number/label consistency (2026-10-18)
-- [ ] T9.5 Still open: treehole SMS verification and the pay-code screen need the user; exact-alarm permission is a system setting the user grants
+- [~] T9.5 Treehole SMS verification done by the user, treehole read tools live; `elective.*` untestable mid-semester (site closed); pay-code screen and exact-alarm permission still open (2026-10-19)
 - [~] T9.3 README for contributors done (2026-10-18); every screen checked on the emulator in dark and light; full impeccable review pass todo
