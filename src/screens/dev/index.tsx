@@ -29,6 +29,10 @@ export function DevTools() {
   useEffect(() => {
     if (!__DEV__ || !tool) return;
     Promise.resolve()
+      .then(() => {
+        // Clear the previous result so a reader never mistakes it for this tool's output.
+        setOut('running…');
+      })
       .then(() => invokeTool(tool, input ? JSON.parse(input) : {}, { actor: actor === 'agent' ? 'agent' : 'user' }))
       .then((r) => setOut(JSON.stringify(r, null, 2)))
       .catch((e) => setOut(`error: ${e instanceof Error ? e.message : String(e)}`));
