@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import type { Spec } from '@json-render/core';
 import { View } from 'react-native';
 import Animated, { withSpring, withTiming, type EntryAnimationsValues } from 'react-native-reanimated';
@@ -36,7 +37,11 @@ function hasOwnCard(spec: Spec) {
   return false;
 }
 
-export function MessageView({
+/**
+ * One message. Memoised on the message object (immutable; only the streaming reply changes) so a
+ * token re-renders one row, not the whole conversation.
+ */
+export const MessageView = memo(function MessageView({
   message,
   onSubmitForm,
   streaming = false,
@@ -101,4 +106,4 @@ export function MessageView({
       })}
     </View>
   );
-}
+}, (a, b) => a.message === b.message && a.streaming === b.streaming);

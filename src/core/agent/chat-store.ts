@@ -40,8 +40,29 @@ let state: ChatState = { messages: [], history: [], status: 'idle' };
 const listeners = new Set<() => void>();
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 
+/**
+ * Streaming appends a delta per token; re-rendering the conversation for each one saturated the
+ * JS thread (taps and scrolling stalled mid-reply). State changes at once, but subscribers hear
+ * about it at most every NOTIFY_MS (leading + trailing), which still reads as live typing.
+ */
+const NOTIFY_MS = 50;
+let notifyTimer: ReturnType<typeof setTimeout> | null = null;
+let lastNotify = 0;
+
+function notify() {
+  if (notifyTimer) return;
+  const wait = NOTIFY_MS - (Date.now() - lastNotify);
+  const run = () => {
+    notifyTimer = null;
+    lastNotify = Date.now();
+    listeners.forEach((l) => l());
+  };
+  if (wait <= 0) run();
+  else notifyTimer = setTimeout(run, wait);
+}
+
 function emit() {
-  listeners.forEach((l) => l());
+  notify();
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     const { messages, history } = state;

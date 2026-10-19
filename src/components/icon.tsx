@@ -13,6 +13,7 @@ export const icons = {
   schedule: { ios: 'calendar', android: 'calendar_month' },
   settings: { ios: 'gearshape', android: 'settings' },
   send: { ios: 'arrow.up', android: 'arrow_upward' },
+  down: { ios: 'arrow.down', android: 'arrow_downward' },
   stop: { ios: 'stop.fill', android: 'stop' },
   plus: { ios: 'plus', android: 'add' },
   minus: { ios: 'minus', android: 'remove' },

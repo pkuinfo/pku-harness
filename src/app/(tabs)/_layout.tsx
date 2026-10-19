@@ -1,7 +1,7 @@
 import { BlurTargetView, BlurView } from 'expo-blur';
 import { Redirect, usePathname } from 'expo-router';
 import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
-import { useRef, useState, type ComponentRef } from 'react';
+import { useRef, useState, type ComponentRef, type RefObject } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,6 +9,7 @@ import { Aurora } from '@/components/aurora';
 import { TabButton, TabIndicator } from '@/components/tab-bar';
 import { isOnboarded } from '@/core/boot';
 import { BackdropProvided } from '@/hooks/use-backdrop';
+import { TabsBlurTarget, useFloatingOverlay } from '@/hooks/use-floating-overlay';
 import { TabBarInset } from '@/hooks/use-tab-bar-inset';
 import { glassMaterial, spacing, useTheme, useThemeName } from '@/theme';
 
@@ -40,6 +41,9 @@ export default function TabsLayout() {
           </BlurTargetView>
         </BackdropProvided>
       </TabBarInset>
+      {/* A screen's floating element (src/hooks/use-floating-overlay.ts), outside the blur target
+          so it can frost the content beneath like the bar does. */}
+      <FloatingOverlay target={target} />
       {/* TabList must stay a direct child of Tabs (expo-router/ui finds triggers there); the
           glass layers sit inside it and are ignored as non-triggers. */}
       <TabList asChild>
@@ -69,7 +73,19 @@ export default function TabsLayout() {
   );
 }
 
+/** Its own subscriber, so a screen updating its overlay never re-renders the whole tab shell. */
+function FloatingOverlay({ target }: { target: RefObject<ComponentRef<typeof View> | null> }) {
+  const overlay = useFloatingOverlay();
+  if (!overlay) return null;
+  return (
+    <View pointerEvents="box-none" style={[styles.overlay, { bottom: overlay.bottom }]}>
+      <TabsBlurTarget value={target}>{overlay.node}</TabsBlurTarget>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  overlay: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   edge: { position: 'absolute', top: 0, left: 0, right: 0, height: StyleSheet.hairlineWidth },
   light: { position: 'absolute', top: 0, left: '15%', right: '15%', height: 1 },
   dock: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', paddingTop: spacing.xs, paddingHorizontal: spacing.sm },

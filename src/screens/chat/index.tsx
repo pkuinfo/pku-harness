@@ -1,7 +1,7 @@
-import { router } from 'expo-router';
-import { useEffect, useRef, type ComponentRef } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { KeyboardChatScrollView, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
+import { ScrollView, StyleSheet, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { KeyboardChatScrollView, useKeyboardState, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -14,12 +14,17 @@ import { chatStore, useChat } from '@/core/agent/chat-store';
 import { useAIConfig } from '@/core/agent/provider';
 import { interruptedTurn, retryLast, sendMessage, stopGeneration } from '@/core/agent/run';
 import { radius, spacing } from '@/theme';
+import { floatingOverlay } from '@/hooks/use-floating-overlay';
 import { useFocusEnter } from '@/hooks/use-focus-enter';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 
 import { AgentStatus } from './agent-status';
 import { Composer } from './composer';
+import { JumpToLatest } from './jump-to-latest';
 import { MessageView } from './message';
+
+/** Within this many px of the end counts as "at the latest" (and re-pins following). */
+const NEAR_END = 72;
 
 const SUGGESTIONS = ['校园卡还剩多少钱？', '帮我把余额和网费放到看板上', '每天早上 8 点检查余额，低于 100 元提醒我', '今天有什么课？'];
 
@@ -40,10 +45,62 @@ export function Chat() {
   // The reply started when the last user message was sent.
   const startedAt = chat.messages.findLast((m) => m.role === 'user')?.createdAt ?? 0;
 
-  useEffect(() => {
-    const id = setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
-    return () => clearTimeout(id);
-  }, [chat.messages]);
+  // Follow the end only while the reader is there (Claude / ChatGPT behaviour). Dragging away
+  // unpins; reaching the end again, sending, or tapping the pill re-pins. Following is driven by
+  // content size, so late layout (Markdown, tool cards) still lands at the very end.
+  const pinned = useRef(true);
+  const dragging = useRef(false);
+  const [away, setAway] = useState(false);
+  const [unread, setUnread] = useState(false);
+
+  // Measured sizes: scroll to the real end (contentHeight − viewport) instead of scrollToEnd.
+  const size = useRef({ content: 0, viewport: 0 });
+  const scrollEnd = useCallback((animated: boolean) => {
+    const y = Math.max(0, size.current.content - size.current.viewport);
+    scroll.current?.scrollTo({ y, animated });
+  }, []);
+
+  const toEnd = useCallback(
+    (animated: boolean) => {
+      pinned.current = true;
+      dragging.current = false;
+      setAway(false);
+      setUnread(false);
+      scrollEnd(animated);
+    },
+    [scrollEnd],
+  );
+
+  const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
+    size.current = { content: contentSize.height, viewport: layoutMeasurement.height };
+    const distance = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    if (dragging.current) {
+      // Any pull away from the end while the finger is down hands control to the reader.
+      if (distance > 8) pinned.current = false;
+    } else if (distance < NEAR_END && !pinned.current) {
+      pinned.current = true;
+      setUnread(false);
+    }
+    setAway(!pinned.current);
+  }, []);
+
+  // A message the user just sent always brings the view back to the end, even when unpinned.
+  const lastUserId = chat.messages.findLast((m) => m.role === 'user')?.id;
+  const seenUserId = useRef(lastUserId);
+
+  const onContentSizeChange = useCallback((_w: number, h: number) => {
+    size.current.content = h;
+    if (lastUserId !== seenUserId.current) {
+      seenUserId.current = lastUserId;
+      toEnd(true);
+    } else if (pinned.current && !dragging.current) {
+      // Never move the list under a finger.
+      scrollEnd(!busy);
+    } else {
+      setUnread(true);
+    }
+  }, [busy, lastUserId, toEnd, scrollEnd]);
 
   const submitForm = (callId: string, form: Record<string, unknown>, label?: string) => {
     for (const m of chatStore.get().messages) {
@@ -58,6 +115,23 @@ export function Chat() {
   };
 
   const empty = chat.messages.length === 0;
+
+  // The jump pill floats just above the composer, in the tabs' overlay (outside the blur target,
+  // so it frosts the messages like the tab bar does). Hidden while typing and off this tab.
+  const [composerHeight, setComposerHeight] = useState(0);
+  const [focused, setFocused] = useState(true);
+  useFocusEffect(
+    useCallback(() => {
+      setFocused(true);
+      return () => setFocused(false);
+    }, []),
+  );
+  const typing = useKeyboardState((k) => k.isVisible);
+  const showJump = away && !empty && focused && !typing;
+  useEffect(() => {
+    floatingOverlay.set(showJump ? { bottom: bar + composerHeight + spacing.sm, node: <JumpToLatest unread={unread} onPress={() => toEnd(true)} /> } : null);
+  }, [showJump, bar, composerHeight, unread, toEnd]);
+  useEffect(() => () => floatingOverlay.set(null), []);
 
   return (
     <View className="flex-1">
@@ -80,7 +154,18 @@ export function Chat() {
         keyboardLiftBehavior="whenAtEnd"
         style={{ flex: 1 }}
         contentContainerStyle={[styles.list, empty && { flexGrow: 1, justifyContent: 'center' }]}
-        keyboardShouldPersistTaps="handled">
+        keyboardShouldPersistTaps="handled"
+        onScroll={onScroll}
+        scrollEventThrottle={32}
+        onLayout={(e) => (size.current.viewport = e.nativeEvent.layout.height)}
+        // Only a finger unpins. Android also fires momentum events for programmatic scrolls, so
+        // a fling keeps "dragging" until its momentum ends, and nothing else sets it.
+        onScrollBeginDrag={() => (dragging.current = true)}
+        onScrollEndDrag={(e) => {
+          if (Math.abs(e.nativeEvent.velocity?.y ?? 0) < 0.05) dragging.current = false;
+        }}
+        onMomentumScrollEnd={() => (dragging.current = false)}
+        onContentSizeChange={onContentSizeChange}>
         {empty ? (
           <FadeIn style={styles.heroWrap}>
             <Glass radius={radius.xl} style={styles.hero}>
@@ -130,7 +215,7 @@ export function Chat() {
       </KeyboardChatScrollView>
       </Animated.View>
 
-      <Animated.View style={lift}>
+      <Animated.View style={lift} onLayout={(e) => setComposerHeight(Math.round(e.nativeEvent.layout.height))}>
         <Composer busy={busy} onSend={sendMessage} onStop={stopGeneration} glass={empty} />
       </Animated.View>
       <View style={{ height: bar }} />

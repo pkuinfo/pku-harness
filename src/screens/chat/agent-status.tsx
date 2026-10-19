@@ -8,12 +8,12 @@ import { registry } from '@/core/runtime/registry';
 import { typography, useTheme } from '@/theme';
 
 /** Claude Code's spinner glyphs, cycled so the agent visibly breathes while it works. */
-const GLYPHS = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'];
+export const GLYPHS = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'];
 
 type Phase = { verb: string; detail?: string };
 
 /** What the agent is doing right now, read from the reply being built. */
-function phaseOf(reply: ChatMessage | undefined): Phase {
+export function phaseOf(reply: ChatMessage | undefined): Phase {
   const parts = reply?.role === 'assistant' ? reply.parts : [];
   const running = [...parts].reverse().find((p) => p.type === 'tool' && p.status === 'running');
   if (running && running.type === 'tool') {
