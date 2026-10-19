@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 
 import { APP_HEADERS, campusFetch, form, FORM } from './http';
+import { currentCodeAsync } from './otp';
 import { encryptPkcs1 } from './rsa';
 import { askVerification } from './verify';
 
@@ -62,7 +63,25 @@ export async function iaaaSendCode(app: IaaaApp, username: string): Promise<stri
 export async function iaaaSignIn(app: IaaaApp, username: string, password: string, service: string): Promise<string> {
   const check = await iaaaPrecheck(app, username).catch(() => ({ mode: 'none' as const, otpBound: true }));
   if (check.mode === 'none') return iaaaLogin(app, username, password);
-  if (check.mode === 'otp' && !check.otpBound) throw new IaaaError('账号要求手机令牌，但还没有绑定。请先在 iaaa.pku.edu.cn 绑定手机 App', 'OTP_UNBOUND');
+  if (check.mode === 'otp' && !check.otpBound) throw new IaaaError('账号要求手机令牌，但还没有绑定。可在「设置 → 手机令牌」绑定', 'OTP_UNBOUND');
+  if (check.mode === 'otp') {
+    // The harness's own authenticator (otp.ts): answer with its code instead of prompting.
+    // Wait for the next code when this one is about to roll over; prompt if IAAA rejects it.
+    let auto = await currentCodeAsync(username);
+    if (auto && auto.remainingSeconds < 3) {
+      const waitMs = auto.remainingSeconds * 1000 + 200;
+      await new Promise((r) => setTimeout(r, waitMs));
+      auto = await currentCodeAsync(username);
+    }
+    if (auto) {
+      try {
+        return await iaaaLogin(app, username, password, { otp: auto.code });
+      } catch (e) {
+        // Wrong password is not an OTP problem; anything else falls through to the prompt.
+        if (e instanceof IaaaError && e.message === '学号或密码错误') throw e;
+      }
+    }
+  }
   const sentTo = check.mode === 'otp' ? undefined : await iaaaSendCode(app, username);
   const code = await askVerification({
     mode: check.mode,

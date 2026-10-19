@@ -1,3 +1,4 @@
+import { requireOptionalNativeModule } from 'expo';
 import { router } from 'expo-router';
 import { useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { View } from 'react-native';
@@ -12,6 +13,7 @@ import { Field } from '@/components/field';
 import { EmptyState } from '@/components/empty-state';
 import { FadeIn } from '@/components/fade-in';
 import { Glass, GlassEdges } from '@/components/glass';
+import { Hourglass } from '@/components/hourglass';
 import { Icon } from '@/components/icon';
 import { ListGroup, ListRow } from '@/components/list-group';
 import { NativeCheckbox } from '@/components/native-checkbox';
@@ -131,6 +133,7 @@ const components = {
   SheetScreen,
   Sparkline,
   Ring: ProgressRing,
+  Hourglass,
   GenUI,
   SortableList,
   PluginWidget,
@@ -175,6 +178,12 @@ function subscribe(l: () => void) {
   return () => listeners.delete(l);
 }
 
+/**
+ * expo-clipboard's native module, looked up optionally: it is in package.json but only present
+ * in dev builds made after it was added, and its JS wrapper throws at import when missing.
+ */
+const clipboardModule = requireOptionalNativeModule<{ setStringAsync(text: string, options: object): Promise<boolean> }>('ExpoClipboard');
+
 export const hostUI: HostUI = {
   components,
   haptics,
@@ -194,4 +203,5 @@ export const hostUI: HostUI = {
   refreshAll,
   formatAgo,
   useSecureDisplay,
+  clipboard: clipboardModule ? { setString: (text) => clipboardModule.setStringAsync(text, {}).then(() => undefined) } : undefined,
 };

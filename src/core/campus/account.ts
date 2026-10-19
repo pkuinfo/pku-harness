@@ -86,6 +86,8 @@ export async function signOut() {
     secrets.delete('campus.password'),
     secrets.delete('campus.card.jwt'),
     secrets.delete('campus.treehole'),
+    // The 手机令牌 key belongs to this account; signing out removes it from the device.
+    secrets.delete('campus.otpSecret'),
     resetSession('iaaa'),
     resetSession('card'),
     resetSession('its'),

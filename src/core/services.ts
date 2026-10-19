@@ -2,6 +2,7 @@ import { z } from 'zod';
 
 import '@/core/campus/adapters';
 import { campusAccount, campusRequest } from '@/core/campus/account';
+import { bindFinish, bindStart, currentCodeAsync, otpStatus, unbindLocal } from '@/core/campus/otp';
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';
 import { services } from '@/core/runtime/invoke';
@@ -105,6 +106,22 @@ const host: HostServices = {
       const res = await campusRequest(service, req);
       return { status: res.status, url: res.url, headers: res.headers, body: res.body };
     },
+    // 手机令牌 (src/core/campus/otp.ts). `services` is one shared object without caller identity,
+    // so these can't check which plugin calls; the boundary is that only plugins compiled into the
+    // app (reviewed in the plugins repo) ever receive `services` — remote MCP plugins run elsewhere
+    // and only see tool calls. None of these return the secret.
+    otp: async () => {
+      const { signedIn, username } = campusAccount.get();
+      if (!signedIn || !username) return null;
+      return currentCodeAsync(username);
+    },
+    otpStatus,
+    otpBindStart: async () => {
+      if (!campusAccount.get().signedIn) throw new Error('还没有登录校园账号（设置 → 校园账号）');
+      return bindStart();
+    },
+    otpBindFinish: (smsCode) => bindFinish(smsCode),
+    otpUnbindLocal: unbindLocal,
   },
   timetable: {
     get: () => timetable.get(),
