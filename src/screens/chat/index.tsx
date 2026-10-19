@@ -13,7 +13,7 @@ import { Text } from '@/components/text';
 import { chatStore, useChat } from '@/core/agent/chat-store';
 import { useAIConfig } from '@/core/agent/provider';
 import { interruptedTurn, retryLast, sendMessage, stopGeneration } from '@/core/agent/run';
-import { radius, spacing, useTheme } from '@/theme';
+import { radius, spacing } from '@/theme';
 import { useFocusEnter } from '@/hooks/use-focus-enter';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 
@@ -25,7 +25,6 @@ const SUGGESTIONS = ['校园卡还剩多少钱？', '帮我把余额和网费放
 
 /** Chat tab: the agent conversation (docs/ARCHITECTURE.md §5–6). */
 export function Chat() {
-  const c = useTheme();
   const insets = useSafeAreaInsets();
   const bar = useTabBarInset();
   const enter = useFocusEnter();
@@ -61,10 +60,10 @@ export function Chat() {
   const empty = chat.messages.length === 0;
 
   return (
-    <View style={{ flex: 1 }}>
-      <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
+    <View className="flex-1">
+      <View className="flex-row items-center gap-3 px-4 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
         <Logo size={32} orbiting={busy} />
-        <View style={{ flex: 1 }}>
+        <View className="flex-1">
           <Text variant="headline">PKU Harness</Text>
           <Text variant="caption" tone="faint">
             {hasKey ? `${config.name} · ${config.model}` : '未连接 AI 服务'}
@@ -73,7 +72,7 @@ export function Chat() {
         {!empty ? <IconButton icon="plus" label="新对话" variant="ghost" onPress={() => chatStore.clear()} /> : null}
       </View>
 
-      <Animated.View style={[{ flex: 1 }, enter]}>
+      <Animated.View className="flex-1" style={enter}>
       {/* Keyboard-aware chat list: lifts with the keyboard (minus the tab bar it covers). */}
       <KeyboardChatScrollView
         ref={scroll}
@@ -97,7 +96,7 @@ export function Chat() {
                   <Button title="连接 AI 服务" icon="key" onPress={() => router.push('/ai-settings')} />
                 </FadeIn>
               ) : (
-                <View style={styles.suggestions}>
+                <View className="flex-row flex-wrap justify-center gap-2">
                   {SUGGESTIONS.map((s, i) => (
                     <FadeIn key={s} index={i + 1}>
                       <Glass radius={radius.md} onPress={() => sendMessage(s)} accessibilityLabel={s} style={styles.suggestion}>
@@ -122,7 +121,7 @@ export function Chat() {
           </View>
         ) : null}
         {chat.error ? (
-          <View style={[styles.error, { backgroundColor: c.downMuted }]}>
+          <View className="rounded-md bg-down-muted p-3">
             <Text variant="callout" tone="down">
               {chat.error}
             </Text>
@@ -139,12 +138,10 @@ export function Chat() {
   );
 }
 
+// FadeIn, Glass and KeyboardChatScrollView take no className, so their layout stays in style.
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   list: { padding: spacing.lg, gap: spacing.xl },
   heroWrap: { alignSelf: 'stretch' },
   hero: { alignItems: 'center', gap: spacing.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.xl },
-  suggestions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm },
   suggestion: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  error: { padding: spacing.md, borderRadius: radius.md },
 });

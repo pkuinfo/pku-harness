@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { StyleSheet, View, type ScrollViewProps } from 'react-native';
+import { View, type ScrollViewProps } from 'react-native';
 import Animated, { Extrapolation, interpolate, useAnimatedReaction, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -9,7 +9,8 @@ import { useBackdropProvided } from '@/hooks/use-backdrop';
 import { useFocusEnter } from '@/hooks/use-focus-enter';
 import { MAX_CONTENT_WIDTH } from '@/hooks/use-layout';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
-import { glassMaterial, spacing, useTheme, useThemeName } from '@/theme';
+import { glassMaterial, spacing, useThemeName } from '@/theme';
+import { cx } from '@/utils/cx';
 
 import { Aurora } from './aurora';
 import { IconButton } from './button';
@@ -17,6 +18,8 @@ import { Text } from './text';
 
 /** Scroll distance over which the large title hands over to the compact bar. */
 const COLLAPSE = 56;
+const CONTENT = { maxWidth: MAX_CONTENT_WIDTH } as const;
+const HEADER = { maxWidth: MAX_CONTENT_WIDTH, transformOrigin: 'left bottom' } as const;
 
 /**
  * Standard screen: aurora backdrop (unless a layout already paints it), large title header and
@@ -41,7 +44,6 @@ export function Screen({
   /** Pushed screens: show a back button that pops the stack. */
   back?: boolean;
 }) {
-  const c = useTheme();
   const m = glassMaterial[useThemeName()];
   const insets = useSafeAreaInsets();
   const bar = useTabBarInset();
@@ -70,11 +72,11 @@ export function Screen({
   const compactStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.get(), [COLLAPSE * 0.6, COLLAPSE], [0, 1], Extrapolation.CLAMP) }));
   const compactTitle = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(y.get(), [COLLAPSE * 0.6, COLLAPSE], [6, 0], Extrapolation.CLAMP) }] }));
 
-  const backButton = back ? <IconButton icon="back" label="返回" variant="ghost" onPress={() => router.back()} style={styles.back} /> : null;
+  const backButton = back ? <IconButton icon="back" label="返回" variant="ghost" onPress={() => router.back()} className="-ml-2 mb-0.5" /> : null;
   const header = (
-    <Animated.View style={[styles.header, largeStyle]}>
+    <Animated.View className="w-full flex-row items-end gap-3 self-center px-4 pb-3 pt-4" style={[HEADER, largeStyle]}>
       {backButton}
-      <View style={{ flex: 1, gap: spacing.xxs }}>
+      <View className="flex-1 gap-0.5">
         {subtitle ? (
           <Text variant="micro" tone="faint">
             {subtitle.toUpperCase()}
@@ -90,9 +92,9 @@ export function Screen({
 
   if (!scroll) {
     return (
-      <View style={{ flex: 1, backgroundColor: provided ? 'transparent' : c.bg, paddingTop: insets.top, paddingBottom: bar }}>
+      <View className={cx('flex-1', provided ? 'bg-transparent' : 'bg-bg')} style={{ paddingTop: insets.top, paddingBottom: bar }}>
         {backdrop}
-        <Animated.View style={[{ flex: 1 }, enter]}>
+        <Animated.View className="flex-1" style={enter}>
           {header}
           {children}
         </Animated.View>
@@ -100,53 +102,36 @@ export function Screen({
     );
   }
   return (
-    <View style={{ flex: 1, backgroundColor: provided ? 'transparent' : c.bg }}>
+    <View className={cx('flex-1', provided ? 'bg-transparent' : 'bg-bg')}>
       {backdrop}
       <Animated.ScrollView
-        style={[{ flex: 1 }, enter]}
+        className="flex-1"
+        style={enter}
         contentContainerStyle={[{ paddingTop: insets.top, paddingBottom: spacing.xxxl + bar }, contentContainerStyle]}
         scrollIndicatorInsets={{ bottom: bar }}
         scrollEventThrottle={16}
         onScroll={onScroll}
         {...scrollProps}>
         {header}
-        <View style={styles.body}>{children}</View>
+        <View className="w-full gap-6 self-center px-4" style={CONTENT}>
+          {children}
+        </View>
       </Animated.ScrollView>
       {/* Compact bar: appears once the large title has scrolled away. */}
-      <Animated.View pointerEvents={collapsed ? 'box-none' : 'none'} style={[styles.compact, { paddingTop: insets.top }, compactStyle]}>
-        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.bg, opacity: 0.86 }]} />
-        <View pointerEvents="none" style={[styles.compactEdge, { backgroundColor: m.edge }]} />
-        <View style={styles.compactRow}>
-          <View style={styles.compactSide}>{backButton}</View>
-          <Animated.View style={[{ flex: 1, alignItems: 'center' }, compactTitle]}>
+      <Animated.View pointerEvents={collapsed ? 'box-none' : 'none'} className="absolute left-0 right-0 top-0" style={[{ paddingTop: insets.top }, compactStyle]}>
+        <View pointerEvents="none" className="absolute inset-0 bg-bg opacity-[0.86]" />
+        <View pointerEvents="none" className="absolute bottom-0 left-0 right-0 h-[0.5px]" style={{ backgroundColor: m.edge }} />
+        <View className="h-13 flex-row items-center px-2">
+          <View className="w-24 flex-row items-center">{backButton}</View>
+          <Animated.View className="flex-1 items-center" style={compactTitle}>
             <Text variant="bodyStrong" numberOfLines={1}>
               {title}
             </Text>
           </Animated.View>
-          <View style={[styles.compactSide, { alignItems: 'flex-end' }]}>{trailing}</View>
+          <View className="w-24 flex-row items-center justify-end">{trailing}</View>
         </View>
       </Animated.View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  header: {
-    width: '100%',
-    maxWidth: MAX_CONTENT_WIDTH,
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
-    paddingBottom: spacing.md,
-    gap: spacing.md,
-    transformOrigin: 'left bottom',
-  },
-  back: { marginLeft: -spacing.sm, marginBottom: spacing.xxs },
-  body: { width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center', paddingHorizontal: spacing.lg, gap: spacing.xl },
-  compact: { position: 'absolute', top: 0, left: 0, right: 0 },
-  compactEdge: { position: 'absolute', left: 0, right: 0, bottom: 0, height: StyleSheet.hairlineWidth },
-  compactRow: { height: 52, flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.sm },
-  compactSide: { width: 96, flexDirection: 'row', alignItems: 'center' },
-});

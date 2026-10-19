@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, { FadeIn, FadeOut, useAnimatedReaction, useAnimatedStyle, useSharedValue, withSpring, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -82,14 +82,14 @@ function Row({
 
   const handle = (
     <GestureDetector gesture={pan}>
-      <View style={[styles.handle, { height }]} accessibilityRole="adjustable" accessibilityLabel="拖动调整位置">
+      <View className="w-12 items-center justify-center" style={{ height }} accessibilityRole="adjustable" accessibilityLabel="拖动调整位置">
         <Icon name="drag" size={20} color={c.textFaint} />
       </View>
     </GestureDetector>
   );
 
   return (
-    <Animated.View entering={FadeIn} exiting={FadeOut} style={[styles.row, { height }, style]}>
+    <Animated.View entering={FadeIn} exiting={FadeOut} className="absolute left-0 right-0" style={[{ height }, style]}>
       {renderRow(id, handle)}
     </Animated.View>
   );
@@ -120,8 +120,3 @@ export function SortableList({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: { position: 'absolute', left: 0, right: 0 },
-  handle: { width: 48, alignItems: 'center', justifyContent: 'center' },
-});

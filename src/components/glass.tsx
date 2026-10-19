@@ -50,18 +50,16 @@ export function Glass({ children, style, radius = radii.lg, tone = 'regular', on
     ) : (
       <View
         pointerEvents="none"
+        className="absolute inset-0 overflow-hidden border-[0.5px]"
         style={[
-          StyleSheet.absoluteFill,
           shape,
           {
-            overflow: 'hidden',
-            borderWidth: StyleSheet.hairlineWidth,
             borderColor: brand ? m.brandEdge : m.edge,
             backgroundColor: brand ? m.brand : tone === 'strong' ? m.fillStrong : m.fill,
           },
         ]}>
-        <View style={[styles.topLight, { left: inset, right: inset, backgroundImage: m.topLight }]} />
-        {interactive ? <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: m.pressed }, liftStyle]} /> : null}
+        <View className="absolute top-0 h-px" style={{ left: inset, right: inset, backgroundImage: m.topLight }} />
+        {interactive ? <Animated.View className="absolute inset-0" style={[{ backgroundColor: m.pressed }, liftStyle]} /> : null}
       </View>
     );
 
@@ -96,10 +94,6 @@ export function Glass({ children, style, radius = radii.lg, tone = 'regular', on
   );
 }
 
-const styles = StyleSheet.create({
-  topLight: { position: 'absolute', top: 0, height: 1 },
-});
-
 /**
  * The glass details for a panel that paints its own fill (`theme.surface*`): one hairline edge
  * and the top-edge light. Place as the first child of a positioned, rounded container.
@@ -110,8 +104,9 @@ export function GlassEdges({ radius = radii.lg }: { radius?: number }) {
   return (
     <View
       pointerEvents="none"
-      style={[StyleSheet.absoluteFill, { borderRadius: radius, borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, borderColor: m.edge, overflow: 'hidden' }]}>
-      <View style={[styles.topLight, { left: inset, right: inset, backgroundImage: m.topLight }]} />
+      className="absolute inset-0 overflow-hidden border-[0.5px]"
+      style={{ borderRadius: radius, borderCurve: 'continuous', borderColor: m.edge }}>
+      <View className="absolute top-0 h-px" style={{ left: inset, right: inset, backgroundImage: m.topLight }} />
     </View>
   );
 }

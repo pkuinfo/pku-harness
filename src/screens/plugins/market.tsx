@@ -1,7 +1,7 @@
 import { router, useFocusEffect } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useCallback, useMemo, useState } from 'react';
-import { RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { RefreshControl, TextInput, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
@@ -16,7 +16,7 @@ import { usePlugins } from '@/core/runtime/hooks';
 import { loadMarketplace, type MarketState, type RegistryEntry } from '@/core/runtime/marketplace';
 import { HOST_CAPABILITIES } from '@/core/runtime/registry';
 import type { Capability } from '@/core/runtime/types';
-import { fonts, radius, spacing, typography, useTheme } from '@/theme';
+import { fonts, radius, typography, useTheme } from '@/theme';
 
 type Filter = 'all' | 'builtin' | 'remote';
 
@@ -40,14 +40,14 @@ function EntryCard({ entry, installed }: { entry: RegistryEntry; installed: bool
     }
   };
   return (
-    <View style={[styles.card, { backgroundColor: c.surface }]}>
-      <View style={styles.head}>
-        <View style={[styles.icon, { backgroundColor: c.accentMuted }]}>
+    <View className="gap-3 rounded-lg bg-surface p-4" style={{ borderCurve: 'continuous' }}>
+      <View className="flex-row items-center gap-3">
+        <View className="h-10 w-10 items-center justify-center rounded-md bg-accent-muted" style={{ borderCurve: 'continuous' }}>
           <Icon name={(entry.icon as IconName) ?? 'puzzle'} size={20} color={c.accent} />
         </View>
-        <View style={{ flex: 1, gap: spacing.xxs }}>
-          <View style={styles.titleRow}>
-            <Text variant="bodyStrong" numberOfLines={1} style={{ flexShrink: 1 }}>
+        <View className="flex-1 gap-0.5">
+          <View className="flex-row items-center gap-1">
+            <Text variant="bodyStrong" numberOfLines={1} className="shrink">
               {entry.name}
             </Text>
             {entry.verified ? <Icon name="shield" size={14} color={c.up} /> : null}
@@ -60,13 +60,13 @@ function EntryCard({ entry, installed }: { entry: RegistryEntry; installed: bool
       <Text variant="callout" tone="muted">
         {entry.description}
       </Text>
-      <View style={styles.chips}>
+      <View className="flex-row flex-wrap gap-1">
         {entry.tags.map((t) => (
           <Chip key={t} label={t} />
         ))}
         {missing.length ? <Chip label="此设备不支持" tone="warn" icon="warning" /> : null}
       </View>
-      <View style={styles.actions}>
+      <View className="flex-row gap-2">
         <Button
           title={installed ? (entry.kind === 'builtin' ? '已内置' : '已安装') : entry.endpoint ? '安装' : '填写地址'}
           size="sm"
@@ -117,11 +117,11 @@ export function Marketplace() {
       back
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={c.accent} colors={[c.accent]} progressBackgroundColor={c.surface} />}>
       <FadeIn index={0}>
-        <View style={{ gap: spacing.md }}>
+        <View className="gap-3">
           <Text variant="callout" tone="muted">
             所有插件平等：内置的随应用发布，社区的通过 MCP 远程运行。想贡献？在 pkuinfo/pku-harness-plugins 提交 PR。
           </Text>
-          <View style={[styles.search, { backgroundColor: c.surface2, borderColor: c.border }]}>
+          <View className="flex-row items-center gap-2 rounded-sm border-[0.5px] border-edge bg-surface-2 px-3">
             <Icon name="search" size={16} color={c.textFaint} />
             <TextInput
               value={query}
@@ -129,7 +129,8 @@ export function Marketplace() {
               placeholder="搜索插件"
               placeholderTextColor={c.textFaint}
               accessibilityLabel="搜索插件"
-              style={[styles.input, { color: c.text }]}
+              className="flex-1 py-2 text-fg"
+              style={{ fontFamily: fonts.regular, fontSize: typography.body.fontSize }}
             />
           </View>
           <Segmented options={FILTERS} value={filter} onChange={setFilter} />
@@ -138,12 +139,12 @@ export function Marketplace() {
       {error && !state ? (
         <EmptyState icon="warning" title="插件市场暂时打不开" message={error} action={<Button title="重试" size="sm" variant="secondary" onPress={() => load(true)} />} />
       ) : !state ? (
-        <View style={{ gap: spacing.md }}>
+        <View className="gap-3">
           <Skeleton height={140} rounded={radius.lg} />
           <Skeleton height={140} rounded={radius.lg} />
         </View>
       ) : (
-        <View style={{ gap: spacing.md }}>
+        <View className="gap-3">
           {state.stale ? <Chip label="离线：显示上次的列表" tone="warn" icon="warning" /> : null}
           {entries.length === 0 ? <EmptyState icon="puzzle" title="没有匹配的插件" /> : null}
           {entries.map((e, i) => (
@@ -156,21 +157,3 @@ export function Marketplace() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  card: { padding: spacing.lg, gap: spacing.md, borderRadius: radius.lg, borderCurve: 'continuous' },
-  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-  icon: { width: 40, height: 40, borderRadius: radius.md, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
-  titleRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.xs },
-  actions: { flexDirection: 'row', gap: spacing.sm },
-  search: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.sm,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  input: { flex: 1, fontFamily: fonts.regular, fontSize: typography.body.fontSize, paddingVertical: spacing.sm },
-});

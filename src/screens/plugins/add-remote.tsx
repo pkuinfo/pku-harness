@@ -10,7 +10,6 @@ import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import type { McpServerInfo, McpTool } from '@/core/mcp/client';
 import { effectOf, probeRemote, remotePlugins } from '@/core/runtime/remote';
-import { spacing } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { EFFECTS } from './effects';
@@ -84,7 +83,7 @@ export function AddRemotePlugin({ initialUrl = '', initialName = '' }: { initial
         </Surface>
       ) : null}
       {probe ? (
-        <View style={{ gap: spacing.lg }}>
+        <View className="gap-4">
           <Field label="名称" value={name} onChangeText={setName} />
           <ListGroup title={`${probe.server?.name ?? '服务'} · ${probe.tools.length} 个能力`}>
             {probe.tools.map((t) => {

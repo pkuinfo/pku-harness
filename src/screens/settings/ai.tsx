@@ -1,6 +1,6 @@
 import { fetch as expoFetch } from 'expo/fetch';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
@@ -15,7 +15,8 @@ import { usePlugins } from '@/core/runtime/hooks';
 import { usePluginSettings } from '@/core/runtime/plugin-settings';
 import type { ProviderEntry } from '@/core/runtime/registry';
 import type { ProviderModel } from '@/core/runtime/types';
-import { radius, spacing, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
+import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
 
 function ProviderCard({ entry, selected, onPress }: { entry: ProviderEntry; selected: boolean; onPress: () => void }) {
@@ -31,14 +32,18 @@ function ProviderCard({ entry, selected, onPress }: { entry: ProviderEntry; sele
       accessibilityLabel={entry.def.name}
       onPress={onPress}
       disabled={!enabled}
-      style={[
-        styles.card,
-        { backgroundColor: selected ? c.accentMuted : c.surface, borderColor: selected ? c.accent : 'transparent', opacity: enabled ? 1 : 0.5 },
-      ]}>
-      <View style={[styles.cardIcon, { backgroundColor: selected ? c.accent : c.surface3 }]}>
+      className={cx(
+        'flex-row items-center gap-3 rounded-lg border p-3',
+        selected ? 'border-accent bg-accent-muted' : 'border-transparent bg-surface',
+        enabled ? 'opacity-100' : 'opacity-50',
+      )}
+      style={{ borderCurve: 'continuous' }}>
+      <View
+        className={cx('h-9 w-9 items-center justify-center rounded-md', selected ? 'bg-accent' : 'bg-surface-3')}
+        style={{ borderCurve: 'continuous' }}>
         <Icon name={icon} size={18} color={selected ? c.onAccent : c.text} />
       </View>
-      <View style={{ flex: 1, gap: spacing.xxs }}>
+      <View className="flex-1 gap-0.5">
         <Text variant="bodyStrong">{entry.def.name}</Text>
         <Text variant="caption" tone="muted" numberOfLines={2}>
           {enabled ? entry.def.description : '插件已关闭'}
@@ -51,7 +56,6 @@ function ProviderCard({ entry, selected, onPress }: { entry: ProviderEntry; sele
 
 /** Settings → AI 服务: pick a provider plugin, model, endpoint and credential; test it. */
 export function AISettings() {
-  const c = useTheme();
   const { config, keys } = useAIConfig();
   const plugins = usePlugins();
   const providers = plugins.flatMap((p) => Object.entries(p.providers ?? {}).map(([k, def]) => ({ id: `${p.id}.${k}`, pluginId: p.id, def })));
@@ -140,19 +144,19 @@ export function AISettings() {
         AI 服务也是插件。密钥只保存在本机的安全存储中，只会发送给你选择的服务商。
       </Text>
 
-      <View style={{ gap: spacing.sm }}>
+      <View className="gap-2">
         {providers.map((p) => (
           <ProviderCard key={p.id} entry={p} selected={p.id === entry.id} onPress={() => select(p.id)} />
         ))}
       </View>
 
-      <Animated.View key={entry.id} entering={FadeIn} layout={LinearTransition} style={{ gap: spacing.lg }}>
+      <Animated.View key={entry.id} entering={FadeIn} layout={LinearTransition} className="gap-4">
         {models.length ? (
-          <View style={{ gap: spacing.sm }}>
+          <View className="gap-2">
             <Text variant="callout" tone="muted">
               模型
             </Text>
-            <View style={styles.models}>
+            <View className="gap-2">
               {models.map((m) => (
                 <PressableScale
                   key={m.id}
@@ -163,7 +167,11 @@ export function AISettings() {
                     haptics.select();
                     setModel(m.id);
                   }}
-                  style={[styles.model, { borderColor: model === m.id ? c.accent : c.border, backgroundColor: model === m.id ? c.accentMuted : c.surface2 }]}>
+                  className={cx(
+                    'gap-0.5 rounded-md border px-4 py-3',
+                    model === m.id ? 'border-accent bg-accent-muted' : 'border-edge bg-surface-2',
+                  )}
+                  style={{ borderCurve: 'continuous' }}>
                   <Text variant="callout" tone={model === m.id ? 'accent' : 'default'}>
                     {m.name ?? m.id}
                   </Text>
@@ -188,7 +196,7 @@ export function AISettings() {
         )}
 
         {entry.def.auth === 'apiKey' ? (
-          <View style={{ gap: spacing.sm }}>
+          <View className="gap-2">
             <SecretField label="API Key" value={credential} onChangeText={setCredential} placeholder="sk-…" hint={entry.def.credentialHint} />
             {hasKey ? <Chip label={credential.trim() === savedCredential ? '已保存在本机安全存储' : '有改动，保存后生效'} tone={credential.trim() === savedCredential ? 'up' : 'warn'} icon="lock" /> : null}
           </View>
@@ -211,7 +219,7 @@ export function AISettings() {
         ) : null}
 
         {status ? (
-          <Animated.View entering={FadeIn} style={[styles.status, { backgroundColor: status.tone === 'up' ? c.upMuted : c.downMuted }]}>
+          <Animated.View entering={FadeIn} className={cx('rounded-md p-3', status.tone === 'up' ? 'bg-up-muted' : 'bg-down-muted')}>
             <Text variant="callout" tone={status.tone}>
               {status.text}
             </Text>
@@ -228,26 +236,3 @@ function mergeModels(catalog: ProviderModel[], listed: ProviderModel[] | null): 
   const known = new Set(catalog.map((m) => m.id));
   return [...catalog, ...listed.filter((m) => !known.has(m.id)).slice(0, 12)];
 }
-
-const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-  },
-  cardIcon: { width: 36, height: 36, borderRadius: radius.md, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
-  models: { gap: spacing.sm },
-  model: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.md,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    gap: spacing.xxs,
-  },
-  status: { padding: spacing.md, borderRadius: radius.md },
-});

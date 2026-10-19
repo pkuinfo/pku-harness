@@ -7,7 +7,7 @@ import { Icon } from '@/components/icon';
 import { Logo } from '@/components/logo';
 import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
-import { pkuBrand, radius, setThemePreference, spacing, useThemePreference, type ThemePreference } from '@/theme';
+import { pkuBrand, radius, setThemePreference, spacing, useTheme, useThemePreference, type ThemePreference } from '@/theme';
 
 const SWATCHES: [keyof typeof pkuBrand, string][] = [
   ['red', '北大红'],
@@ -24,11 +24,14 @@ const SWATCHES: [keyof typeof pkuBrand, string][] = [
 export function DesignBoard() {
   const insets = useSafeAreaInsets();
   const pref = useThemePreference();
+  const c = useTheme();
   return (
-    <View style={{ flex: 1 }}>
+    <View className="flex-1">
       <Aurora />
-      <ScrollView contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxxl, paddingHorizontal: spacing.lg, gap: spacing.xl }}>
-        <View style={{ gap: spacing.xs }}>
+      <ScrollView
+        contentContainerClassName="gap-6 px-4"
+        contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxxl }}>
+        <View className="gap-1">
           <Text variant="micro" tone="faint">
             DESIGN · GLASS + LIGHT
           </Text>
@@ -49,7 +52,7 @@ export function DesignBoard() {
           <Text variant="headline" align="center">
             今天想让我做什么？
           </Text>
-          <View style={styles.wrap}>
+          <View className="flex-row flex-wrap justify-center gap-2">
             {['校园卡余额还剩多少', '明天几点有课', '每晚 10 点提醒我交作业'].map((s) => (
               <Glass key={s} radius={radius.md} onPress={() => {}} accessibilityLabel={s} style={styles.chip}>
                 <Text variant="callout">{s}</Text>
@@ -58,7 +61,7 @@ export function DesignBoard() {
           </View>
         </Glass>
 
-        <View style={styles.row}>
+        <View className="flex-row gap-3">
           <Glass style={[styles.tile, { flex: 1.4 }]} onPress={() => {}} accessibilityLabel="校园卡">
             <Text variant="micro" tone="faint">
               校园卡
@@ -68,7 +71,7 @@ export function DesignBoard() {
               今日消费 ¥23.00
             </Text>
           </Glass>
-          <View style={{ flex: 1, gap: spacing.md }}>
+          <View className="flex-1 gap-3">
             <Glass style={styles.tile} onPress={() => {}} accessibilityLabel="网费">
               <Text variant="micro" tone="faint">
                 网费
@@ -85,15 +88,15 @@ export function DesignBoard() {
         </View>
 
         <Glass tone="strong" style={{ padding: spacing.lg, gap: spacing.md }}>
-          <View style={styles.between}>
+          <View className="flex-row items-center justify-between">
             <Text variant="bodyStrong">下一节课</Text>
             <Text variant="caption" tone="accent">
               18 分钟后
             </Text>
           </View>
-          <View style={{ flexDirection: 'row', gap: spacing.md }}>
-            <View style={{ width: 4, borderRadius: 2, backgroundColor: pkuBrand.slate }} />
-            <View style={{ gap: spacing.xxs }}>
+          <View className="flex-row gap-3">
+            <View className="w-1 rounded-[2px] bg-pku-slate" />
+            <View className="gap-0.5">
               <Text variant="headline">数据结构与算法</Text>
               <Text variant="caption" tone="muted">
                 10:10–12:00 · 理教 107
@@ -102,9 +105,9 @@ export function DesignBoard() {
           </View>
         </Glass>
 
-        <View style={styles.row}>
+        <View className="flex-row gap-3">
           <Glass tone="brand" radius={radius.md} onPress={() => {}} accessibilityLabel="连接 AI 服务" style={[styles.button, { flex: 1 }]}>
-            <Icon name="key" size={18} color="#FFFFFF" />
+            <Icon name="key" size={18} color={c.onBrand} />
             <Text variant="bodyStrong" tone="onAccent">
               连接 AI 服务
             </Text>
@@ -119,7 +122,7 @@ export function DesignBoard() {
             问点什么，或让我帮你做点什么…
           </Text>
           <Glass tone="brand" radius={radius.md} onPress={() => {}} accessibilityLabel="发送" style={styles.send}>
-            <Icon name="send" size={18} color="#FFFFFF" />
+            <Icon name="send" size={18} color={c.onBrand} />
           </Glass>
         </Glass>
 
@@ -127,10 +130,10 @@ export function DesignBoard() {
           <Text variant="micro" tone="faint">
             北京大学视觉形象识别系统 · 标准色与辅助色
           </Text>
-          <View style={styles.wrap}>
+          <View className="flex-row flex-wrap justify-center gap-2">
             {SWATCHES.map(([k, label]) => (
-              <View key={k} style={{ alignItems: 'center', gap: spacing.xxs, width: 64 }}>
-                <View style={[styles.swatch, { backgroundColor: pkuBrand[k] }]} />
+              <View key={k} className="w-16 items-center gap-0.5">
+                <View className="h-11 w-11 rounded-md" style={{ borderCurve: 'continuous', backgroundColor: pkuBrand[k] }} />
                 <Text variant="micro" tone="muted">
                   {label}
                 </Text>
@@ -143,13 +146,11 @@ export function DesignBoard() {
   );
 }
 
+// Glass takes no className, so its layout stays in style.
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'center' },
   chip: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  row: { flexDirection: 'row', gap: spacing.md },
   tile: { padding: spacing.lg, gap: spacing.xs },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   button: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.xl, paddingVertical: spacing.md },
   send: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
-  swatch: { width: 44, height: 44, borderRadius: radius.md, borderCurve: 'continuous' },
 });

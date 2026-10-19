@@ -1,9 +1,9 @@
 import type { TabTriggerSlotProps } from 'expo-router/ui';
 import { useEffect } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withSequence, withSpring } from 'react-native-reanimated';
 
-import { radius, spacing, springs, typography, useTheme } from '@/theme';
+import { spacing, springs, typography, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { Icon, type IconName } from './icon';
@@ -44,8 +44,8 @@ export function TabButton({ icon, label, isFocused, onPress, ref: _ref, ...props
         if (!isFocused) haptics.select();
         onPress?.(e);
       }}
-      style={styles.tab}>
-      <View style={styles.iconSlot}>
+      className="flex-1 items-center justify-center gap-0.5 py-2">
+      <View className="h-8 w-[60px] items-center justify-center">
         <Animated.View style={iconStyle}>
           <Icon name={icon} size={22} color={isFocused ? c.accent : c.textMuted} />
         </Animated.View>
@@ -57,7 +57,6 @@ export function TabButton({ icon, label, isFocused, onPress, ref: _ref, ...props
 
 /** The highlight behind the active tab's icon, sliding between tabs with a spring. */
 export function TabIndicator({ index, count, width }: { index: number; count: number; width: number }) {
-  const c = useTheme();
   const tabW = (width - TAB_BAR_PAD.side * 2) / count;
   const x = useSharedValue(TAB_BAR_PAD.side + index * tabW + (tabW - TAB_WELL.width) / 2);
   const stretch = useSharedValue(1);
@@ -69,11 +68,11 @@ export function TabIndicator({ index, count, width }: { index: number; count: nu
   }, [index, tabW, width, x, stretch]);
   const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }, { scaleX: stretch.get() }] }));
   if (width <= 0 || index < 0) return null;
-  return <Animated.View pointerEvents="none" style={[styles.indicator, { backgroundColor: c.accentMuted, top: TAB_BAR_PAD.top + TAB_BAR_PAD.well }, style]} />;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      className="absolute left-0 h-8 w-[60px] rounded-md bg-accent-muted"
+      style={[{ borderCurve: 'continuous', top: TAB_BAR_PAD.top + TAB_BAR_PAD.well }, style]}
+    />
+  );
 }
-
-const styles = StyleSheet.create({
-  tab: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.xxs, paddingVertical: TAB_BAR_PAD.well },
-  iconSlot: { width: TAB_WELL.width, height: TAB_WELL.height, alignItems: 'center', justifyContent: 'center' },
-  indicator: { position: 'absolute', left: 0, width: TAB_WELL.width, height: TAB_WELL.height, borderRadius: radius.md, borderCurve: 'continuous' },
-});

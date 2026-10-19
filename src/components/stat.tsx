@@ -1,6 +1,6 @@
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
-import { spacing, type TypographyVariant } from '@/theme';
+import type { TypographyVariant } from '@/theme';
 
 import { AnimatedNumber } from './animated-number';
 import { Chip, type ChipTone } from './chip';
@@ -33,8 +33,8 @@ export function Stat({
   caption?: string;
 }) {
   return (
-    <View style={styles.wrap}>
-      <View style={styles.labelRow}>
+    <View className="gap-1">
+      <View className="flex-row items-center gap-1">
         {icon ? <Icon name={icon} size={14} /> : null}
         <Text variant="callout" tone="muted">
           {label}
@@ -48,7 +48,7 @@ export function Stat({
         </Text>
       )}
       {delta || caption ? (
-        <View style={styles.labelRow}>
+        <View className="flex-row items-center gap-1">
           {delta ? (
             <Chip
               label={delta}
@@ -66,8 +66,3 @@ export function Stat({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: spacing.xs },
-  labelRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-});

@@ -1,8 +1,8 @@
 import { DatePickerDialog, TimePickerDialog } from '@expo/ui/jetpack-compose';
 import { useState } from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
+import { Platform, View } from 'react-native';
 
-import { radius, spacing, useTheme, type ThemeColors } from '@/theme';
+import { useTheme, type ThemeColors } from '@/theme';
 
 import { Icon } from './icon';
 import { NativeHost } from './native-host';
@@ -38,6 +38,7 @@ export function pickerColors(c: ThemeColors) {
   };
 }
 
+const CURVE = { borderCurve: 'continuous' } as const;
 const pad = (n: number) => String(n).padStart(2, '0');
 const WEEKDAY = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
 
@@ -92,24 +93,25 @@ export function DateTimeField({
     : placeholder;
 
   return (
-    <View style={{ gap: spacing.xs }}>
+    <View className="gap-1">
       <Text variant="callout" tone="muted">
         {label}
       </Text>
-      <View style={styles.row}>
+      <View className="flex-row items-center gap-2">
         <PressableScale
           accessibilityRole="button"
           accessibilityLabel={`${label}：${text}`}
           onPress={() => setStep(mode === 'time' ? 'time' : 'date')}
           scaleTo={0.98}
-          style={[styles.field, { backgroundColor: c.surface2, borderColor: c.border }]}>
+          className="min-h-12 flex-1 flex-row items-center gap-2 rounded-md border border-edge bg-surface-2 px-3"
+          style={CURVE}>
           <Icon name={mode === 'time' ? 'clock' : 'schedule'} size={18} color={c.textMuted} />
-          <Text variant="body" tone={value ? 'default' : 'faint'} style={{ flex: 1 }}>
+          <Text variant="body" tone={value ? 'default' : 'faint'} className="flex-1">
             {text}
           </Text>
         </PressableScale>
         {value && onClear ? (
-          <PressableScale accessibilityRole="button" accessibilityLabel={`清除${label}`} onPress={onClear} style={styles.clear}>
+          <PressableScale accessibilityRole="button" accessibilityLabel={`清除${label}`} onPress={onClear} className="size-10 items-center justify-center">
             <Icon name="close" size={18} color={c.textFaint} />
           </PressableScale>
         ) : null}
@@ -151,19 +153,3 @@ function defaultValue() {
   d.setHours(d.getHours() + 1, 0, 0, 0);
   return d;
 }
-
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-  field: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    minHeight: 48,
-    paddingHorizontal: spacing.md,
-    borderRadius: radius.md,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-  },
-  clear: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
-});

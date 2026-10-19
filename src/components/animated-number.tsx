@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { StyleSheet, View, type StyleProp, type TextStyle } from 'react-native';
+import { View, type StyleProp, type TextStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useReducedMotion,
@@ -33,7 +33,7 @@ export function AnimatedNumber({
   const text = format(value);
   const lineHeight = (typography[variant] as TextStyle).lineHeight ?? 24;
   return (
-    <View style={styles.row} accessible accessibilityLabel={text}>
+    <View className="flex-row items-start" accessible accessibilityLabel={text}>
       {text.split('').map((ch, i) => {
         const key = `${text.length - i}`; // keyed from the right so digits keep identity
         return DIGITS.includes(ch) ? (
@@ -74,7 +74,7 @@ function Digit({
   }, [digit, lineHeight, reduced, y]);
   const animated = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
   return (
-    <View style={{ height: lineHeight, overflow: 'hidden' }}>
+    <View className="overflow-hidden" style={{ height: lineHeight }}>
       <Animated.View style={animated}>
         {DIGITS.split('').map((d) => (
           <Animated.Text
@@ -87,7 +87,3 @@ function Digit({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'flex-start' },
-});

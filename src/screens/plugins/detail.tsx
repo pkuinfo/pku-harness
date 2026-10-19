@@ -1,4 +1,4 @@
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
 import { router } from 'expo-router';
 
@@ -15,7 +15,8 @@ import { Text } from '@/components/text';
 import { usePlugin } from '@/core/runtime/hooks';
 import { pluginSettings, usePluginSettings } from '@/core/runtime/plugin-settings';
 import { remotePlugins } from '@/core/runtime/remote';
-import { radius, spacing, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
+import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
 
 import { EFFECTS, effectsOf, MODE_OPTIONS, pluginIcon } from './effects';
@@ -38,11 +39,11 @@ export function PluginDetail({ id }: { id: string }) {
   return (
     <Screen title={plugin.name} subtitle={`${plugin.id} · v${plugin.version}`} back>
       <FadeIn index={0}>
-        <View style={styles.hero}>
-          <View style={[styles.heroIcon, { backgroundColor: c.accentMuted }]}>
+        <View className="flex-row items-center gap-4">
+          <View className="h-[52px] w-[52px] items-center justify-center rounded-lg bg-accent-muted" style={{ borderCurve: 'continuous' }}>
             <Icon name={pluginIcon(plugin)} size={26} color={c.accent} />
           </View>
-          <Text variant="callout" tone="muted" style={{ flex: 1 }}>
+          <Text variant="callout" tone="muted" className="flex-1">
             {plugin.description}
           </Text>
         </View>
@@ -74,16 +75,16 @@ export function PluginDetail({ id }: { id: string }) {
 
       {effects.length && settings.enabled ? (
         <FadeIn index={2}>
-          <View style={{ gap: spacing.sm }}>
-            <Text variant="micro" tone="faint" style={styles.label}>
+          <View className="gap-2">
+            <Text variant="micro" tone="faint" className="px-4">
               AI 代你操作时
             </Text>
-            <View style={[styles.group, { backgroundColor: c.surface }]}>
+            <View className="overflow-hidden rounded-lg bg-surface" style={{ borderCurve: 'continuous' }}>
               {effects.map((e, i) => (
-                <View key={e} style={[styles.effect, i > 0 && { borderTopColor: c.border, borderTopWidth: StyleSheet.hairlineWidth }]}>
-                  <View style={styles.effectHead}>
+                <View key={e} className={cx('gap-3 p-4', i > 0 && 'border-t-[0.5px] border-edge')}>
+                  <View className="flex-row items-center gap-2">
                     <Chip label={EFFECTS[e].label} tone={EFFECTS[e].tone} />
-                    <Text variant="caption" tone="muted" style={{ flex: 1 }}>
+                    <Text variant="caption" tone="muted" className="flex-1">
                       {EFFECTS[e].hint}
                     </Text>
                   </View>
@@ -95,7 +96,7 @@ export function PluginDetail({ id }: { id: string }) {
                 </View>
               ))}
             </View>
-            <Text variant="caption" tone="faint" style={styles.label}>
+            <Text variant="caption" tone="faint" className="px-4">
               你在界面上亲手点击的操作不受这里限制。
             </Text>
           </View>
@@ -158,19 +159,3 @@ export function PluginDetail({ id }: { id: string }) {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  hero: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
-  heroIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  label: { paddingHorizontal: spacing.lg },
-  group: { borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden' },
-  effect: { padding: spacing.lg, gap: spacing.md },
-  effectHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-});

@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View, useWindowDimensions } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import Animated, {
   Easing,
   FadeIn,
@@ -23,7 +23,7 @@ import { Aurora } from '@/components/aurora';
 import { Text } from '@/components/text';
 import { markOnboarded } from '@/core/boot';
 import { kv } from '@/core/store/kv';
-import { curves, radius, spacing, useTheme } from '@/theme';
+import { curves, spacing } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { AgentArt, DashboardArt, HeroArt, PluginArt, ReminderArt, useParallax } from './pages';
@@ -43,28 +43,27 @@ const PAGES: Page[] = [
 export const ONBOARDED_KEY = 'onboarded';
 
 function Dot({ scroll, index, width }: { scroll: ReturnType<typeof useSharedValue<number>>; index: number; width: number }) {
-  const c = useTheme();
   const style = useAnimatedStyle(() => {
     const d = Math.abs(scroll.get() / width - index);
     return { width: interpolate(d, [0, 1], [22, 6], 'clamp'), opacity: interpolate(d, [0, 1], [1, 0.35], 'clamp') };
   });
-  return <Animated.View style={[styles.dot, { backgroundColor: c.text }, style]} />;
+  return <Animated.View className="h-1.5 rounded-full bg-fg" style={style} />;
 }
 
 function PageView({ page, index, scroll, width, active, near }: { page: Page; index: number; scroll: ReturnType<typeof useSharedValue<number>>; width: number; active: boolean; near: boolean }) {
   const art = useParallax(scroll, index, width, 1.4);
   const copy = useParallax(scroll, index, width, 0.6);
   return (
-    <View style={[styles.page, { width }]}>
-      <Animated.View style={[styles.art, art]}>
+    <View className="flex-1 gap-8 px-6" style={{ width }}>
+      <Animated.View className="min-h-[300px] items-center justify-center" style={art}>
         {/* Only the current page and its neighbours mount their (animated) art. */}
         {!near ? null : index === 0 ? <HeroArt /> : index === 1 ? <AgentArt active={active} /> : index === 2 ? <DashboardArt active={active} /> : index === 3 ? <ReminderArt active={active} /> : <PluginArt active={active} />}
       </Animated.View>
-      <Animated.View style={[styles.copy, copy]}>
+      <Animated.View className="gap-3" style={copy}>
         <Text variant="micro" tone="accent">
           {page.kicker}
         </Text>
-        <Text variant="display" style={styles.title}>
+        <Text variant="display" style={{ lineHeight: 50 }}>
           {page.title}
         </Text>
         <Text variant="body" tone="muted">
@@ -77,7 +76,6 @@ function PageView({ page, index, scroll, width, active, near }: { page: Page; in
 
 /** First-run welcome: shader backdrop, parallax pages, consent, then into the app. */
 export function Welcome() {
-  const c = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const scroll = useSharedValue(0);
@@ -131,7 +129,7 @@ export function Welcome() {
   }));
 
   return (
-    <View style={[styles.root, { backgroundColor: c.bg }]}>
+    <View className="flex-1 bg-bg">
       <Aurora shift={pageProgress} />
       <Animated.ScrollView
         ref={pager}
@@ -140,23 +138,23 @@ export function Welcome() {
         showsHorizontalScrollIndicator={false}
         onScroll={onScroll}
         scrollEventThrottle={16}
-        style={{ flex: 1 }}
+        className="flex-1"
         contentContainerStyle={{ paddingTop: insets.top + spacing.xxl }}>
         {PAGES.map((p, i) => (
           <PageView key={p.kicker} page={p} index={i} scroll={scroll} width={width} active={page === i} near={Math.abs(page - i) <= 1} />
         ))}
       </Animated.ScrollView>
 
-      <Animated.View style={[styles.footer, { paddingBottom: insets.bottom + spacing.lg }, footerStyle]}>
-        <View style={styles.dots}>
+      <Animated.View className="gap-3 px-6" style={[{ paddingBottom: insets.bottom + spacing.lg }, footerStyle]}>
+        <View className="mb-2 flex-row gap-1 self-center">
           {PAGES.map((p, i) => (
             <Dot key={p.kicker} scroll={scroll} index={i} width={width} />
           ))}
         </View>
         {last ? (
-          <Animated.View entering={FadeIn} style={styles.consent}>
+          <Animated.View entering={FadeIn} className="flex-row items-center gap-2">
             <NativeCheckbox label="同意条款" value={agreed} onValueChange={setAgreed} />
-            <Text variant="caption" tone="muted" style={{ flex: 1 }}>
+            <Text variant="caption" tone="muted" className="flex-1">
               我已了解：AI 会按我在设置里授予的权限代我操作校园服务；校园密码只保存在本机。
             </Text>
           </Animated.View>
@@ -174,15 +172,3 @@ export function Welcome() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  root: { flex: 1 },
-  page: { flex: 1, paddingHorizontal: spacing.xl, gap: spacing.xxl },
-  art: { minHeight: 300, alignItems: 'center', justifyContent: 'center' },
-  copy: { gap: spacing.md },
-  title: { lineHeight: 50 },
-  footer: { paddingHorizontal: spacing.xl, gap: spacing.md },
-  dots: { flexDirection: 'row', gap: spacing.xs, alignSelf: 'center', marginBottom: spacing.sm },
-  dot: { height: 6, borderRadius: radius.full },
-  consent: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-});

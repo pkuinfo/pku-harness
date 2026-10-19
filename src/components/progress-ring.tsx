@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { Easing, useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
@@ -27,7 +27,7 @@ export function ProgressRing({ value, label, caption, tone = 'accent', size = 88
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={c.surface3} strokeWidth={stroke} fill="none" />
         <AnimatedCircle cx={size / 2} cy={size / 2} r={r} stroke={color} strokeWidth={stroke} fill="none" strokeLinecap="round" strokeDasharray={`${len} ${len}`} animatedProps={props} />
       </Svg>
-      <View style={[StyleSheet.absoluteFill, styles.center]}>
+      <View className="absolute inset-0 items-center justify-center">
         {label ? <Text variant="numberM">{label}</Text> : null}
         {caption ? (
           <Text variant="micro" tone="faint">
@@ -38,5 +38,3 @@ export function ProgressRing({ value, label, caption, tone = 'accent', size = 88
     </View>
   );
 }
-
-const styles = StyleSheet.create({ center: { alignItems: 'center', justifyContent: 'center' } });

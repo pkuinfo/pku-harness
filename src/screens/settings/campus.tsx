@@ -9,7 +9,6 @@ import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { signIn, signOut, useCampusAccount } from '@/core/campus/account';
 import { invokeTool } from '@/core/runtime/invoke';
-import { spacing } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 /**
@@ -96,7 +95,7 @@ const isNetworkError = (e: unknown) => {
 function Status({ message }: { message: { tone: 'up' | 'down'; text: string; network?: boolean } }) {
   return (
     <Surface level={2}>
-      <View style={{ gap: spacing.xs }}>
+      <View className="gap-1">
         <Text variant="callout" tone={message.tone}>
           {message.text}
         </Text>

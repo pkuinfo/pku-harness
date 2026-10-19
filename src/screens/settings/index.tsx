@@ -14,7 +14,7 @@ import { usePlugins } from '@/core/runtime/hooks';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import { haptics } from '@/utils/haptics';
-import { setThemePreference, spacing, useTheme, useThemePreference, type ThemePreference } from '@/theme';
+import { setThemePreference, useTheme, useThemePreference, type ThemePreference } from '@/theme';
 
 const THEME_OPTIONS: { label: string; value: ThemePreference }[] = [
   { label: '跟随系统', value: 'system' },
@@ -79,8 +79,8 @@ export function Settings() {
         </ListGroup>
       </FadeIn>
       <FadeIn index={2}>
-        <View style={{ gap: spacing.sm }}>
-          <Text variant="micro" tone="faint" style={{ paddingHorizontal: spacing.lg }}>
+        <View className="gap-2">
+          <Text variant="micro" tone="faint" className="px-4">
             外观
           </Text>
           <Segmented options={THEME_OPTIONS} value={pref} onChange={setThemePreference} />

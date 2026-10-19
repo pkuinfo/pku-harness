@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, {
   Easing,
   interpolate,
@@ -16,7 +16,8 @@ import { AnimatedNumber } from '@/components/animated-number';
 import { Icon, type IconName } from '@/components/icon';
 import { Logo } from '@/components/logo';
 import { Text } from '@/components/text';
-import { curves, glassMaterial, radius, spacing, useTheme, useThemeName } from '@/theme';
+import { curves, glassMaterial, useTheme, useThemeName } from '@/theme';
+import { cx } from '@/utils/cx';
 
 const EASE_OUT = Easing.bezier(...curves.out);
 
@@ -39,12 +40,7 @@ export function GlassChip({ icon, label, style }: { icon?: IconName; label: stri
   const c = useTheme();
   const g = glassMaterial[useThemeName()];
   return (
-    <View
-      style={[
-        styles.chip,
-        { backgroundColor: g.fillStrong, borderColor: g.edge },
-        style,
-      ]}>
+    <View className="flex-row items-center gap-1 rounded-md border-[0.5px] px-3 py-2" style={[{ backgroundColor: g.fillStrong, borderColor: g.edge }, style]}>
       {icon ? <Icon name={icon} size={16} color={c.accent} /> : null}
       <Text variant="callout">{label}</Text>
     </View>
@@ -60,9 +56,9 @@ export function AgentArt({ active }: { active: boolean }) {
   const reduced = useReducedMotion();
   const lines = ['每天早上 8 点查校园卡余额', '低于 ¥100 就提醒我', '好的，已创建：每天 08:00 · 低于 ¥100 通知'];
   return (
-    <View style={{ alignItems: 'center', gap: spacing.xl }}>
+    <View className="items-center gap-6">
       <Logo size={112} orbiting={active} />
-      <View style={{ gap: spacing.sm, width: '100%' }}>
+      <View className="w-full gap-2">
         {lines.map((l, i) => (
           <Bubble key={l} text={l} mine={i < 2} delay={reduced ? 0 : 300 + i * 650} active={active} />
         ))}
@@ -72,7 +68,6 @@ export function AgentArt({ active }: { active: boolean }) {
 }
 
 function Bubble({ text, mine, delay, active }: { text: string; mine: boolean; delay: number; active: boolean }) {
-  const c = useTheme();
   const g = glassMaterial[useThemeName()];
   const style = useAnimatedStyle(() => ({
     opacity: withDelay(active ? delay : 0, withTiming(active ? 1 : 0, { duration: 420, easing: EASE_OUT })),
@@ -80,13 +75,8 @@ function Bubble({ text, mine, delay, active }: { text: string; mine: boolean; de
   }));
   return (
     <Animated.View
-      style={[
-        styles.bubble,
-        mine
-          ? { alignSelf: 'flex-end', backgroundColor: c.brand }
-          : { alignSelf: 'flex-start', backgroundColor: g.fillStrong, borderColor: g.edge, borderWidth: StyleSheet.hairlineWidth },
-        style,
-      ]}>
+      className={cx('max-w-[82%] rounded-xl px-4 py-3', mine ? 'self-end bg-brand' : 'self-start border-[0.5px]')}
+      style={[{ borderCurve: 'continuous' }, mine ? null : { backgroundColor: g.fillStrong, borderColor: g.edge }, style]}>
       <Text variant="callout" tone={mine ? 'onAccent' : 'default'}>
         {text}
       </Text>
@@ -109,10 +99,13 @@ export function DashboardArt({ active }: { active: boolean }) {
     { label: '教学周', icon: 'schedule', value: vals[2], fmt: (n) => `第 ${n.toFixed(0)} 周` },
   ];
   return (
-    <View style={styles.tiles}>
+    <View className="w-full flex-row flex-wrap gap-3">
       {tiles.map((t) => (
-        <View key={t.label} style={[styles.tile, t.wide && { flexBasis: '100%' }, { backgroundColor: g.fillStrong, borderColor: g.edge }]}>
-          <View style={styles.tileHead}>
+        <View
+          key={t.label}
+          className={cx('grow gap-1 rounded-lg border-[0.5px] p-4', t.wide ? 'basis-full' : 'basis-[40%]')}
+          style={{ borderCurve: 'continuous', backgroundColor: g.fillStrong, borderColor: g.edge }}>
+          <View className="flex-row items-center gap-1">
             <Icon name={t.icon} size={14} />
             <Text variant="caption" tone="muted">
               {t.label}
@@ -133,7 +126,7 @@ export function ReminderArt({ active }: { active: boolean }) {
     { time: '每 3 天', text: '交水费 · 共 16 次', icon: 'repeat' as IconName },
   ];
   return (
-    <View style={{ gap: spacing.md, width: '100%' }}>
+    <View className="w-full gap-3">
       {items.map((it, i) => (
         <TimelineRow key={it.time} {...it} index={i} active={active} />
       ))}
@@ -160,12 +153,14 @@ function TimelineRow({ time, text, icon, index, active }: { time: string; text: 
     ],
   }));
   return (
-    <Animated.View style={[styles.row, { backgroundColor: g.fillStrong, borderColor: g.edge }, enter]}>
-      <Animated.View style={[styles.dot, { backgroundColor: c.accent }, pulse]} />
-      <Text variant="bodyStrong" style={{ width: 64, fontVariant: ['tabular-nums'] }}>
+    <Animated.View
+      className="flex-row items-center gap-3 rounded-lg border-[0.5px] p-3"
+      style={[{ borderCurve: 'continuous', backgroundColor: g.fillStrong, borderColor: g.edge }, enter]}>
+      <Animated.View className="h-2 w-2 rounded-full bg-accent" style={pulse} />
+      <Text variant="bodyStrong" className="w-16" style={{ fontVariant: ['tabular-nums'] }}>
         {time}
       </Text>
-      <Text variant="callout" style={{ flex: 1 }}>
+      <Text variant="callout" className="flex-1">
         {text}
       </Text>
       <Icon name={icon} size={16} color={c.textMuted} />
@@ -185,7 +180,7 @@ export function PluginArt({ active }: { active: boolean }) {
     { icon: 'puzzle', label: '社区插件' },
   ];
   return (
-    <View style={styles.cloud}>
+    <View className="flex-row flex-wrap justify-center gap-3 px-2">
       {chips.map((ch, i) => (
         <Drifting key={ch.label} index={i} active={active}>
           <GlassChip icon={ch.icon} label={ch.label} />
@@ -210,38 +205,3 @@ function Drifting({ index, active, children }: { index: number; active: boolean;
   }));
   return <Animated.View style={style}>{children}</Animated.View>;
 }
-
-const styles = StyleSheet.create({
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    borderRadius: radius.md,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  bubble: { maxWidth: '82%', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.xl, borderCurve: 'continuous' },
-  tiles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, width: '100%' },
-  tile: {
-    flexGrow: 1,
-    flexBasis: '40%',
-    padding: spacing.lg,
-    gap: spacing.xs,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  tileHead: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: spacing.md,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
-  },
-  dot: { width: 8, height: 8, borderRadius: radius.full },
-  cloud: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.md, paddingHorizontal: spacing.sm },
-});
