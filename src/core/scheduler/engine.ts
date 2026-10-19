@@ -1,8 +1,10 @@
 import * as BackgroundTask from 'expo-background-task';
 import { AppState } from 'react-native';
 
+import { live } from '@/core/dashboard/live-store';
 import { cancelNotification, listScheduledNotifications, notifyAt, notifyNow } from '@/core/notify';
 import { invokeTool } from '@/core/runtime/invoke';
+import { registry } from '@/core/runtime/registry';
 
 import { evaluate, fillTemplate, getPath } from './check';
 import { dismissWake, EventType, isWakeEvent, notifee, syncWakeups } from './exact-wake';
@@ -98,6 +100,8 @@ export async function runCheck(job: Job, now = Date.now()): Promise<{ notified: 
   const a = job.action;
   try {
     const result = await invokeTool(a.tool, a.args ?? {}, { actor: 'scheduler' });
+    // Share the fresh result with dashboard widgets bound to the same source.
+    if (registry.tool(a.tool)?.def.effect === 'read') live.prime({ tool: a.tool, args: a.args }, result);
     const value = getPath(result, a.condition.path);
     const hit = evaluate(a.condition, value, job.lastValue);
     if (hit) {

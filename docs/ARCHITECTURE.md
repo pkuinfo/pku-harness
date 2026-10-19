@@ -173,14 +173,36 @@ definePlugin({
 
 ## 7. Dashboard
 
-A widget is `{ id, title, size: sm|md|lg, spec, bindings: { [jsonPointer]: { tool, args?,
-path?, ttlMinutes? } }, position }`. Bindings may only use read-only tools. On render the
-host resolves each binding (TTL cache shared by tool + args), writes the value at its pointer
-in the spec's state, and the spec reads it with `{ "$state": "/card" }` or `$template`. Each
-card has loading (skeleton), error (retry) and ready states. The agent creates and edits
-widgets with `dashboard.*` tools (upsert returns the resolved data as a preview); the user
-long-presses for edit mode to drag-reorder, cycle size and delete, and pulls to refresh.
-Starter widgets that need no login (today / teaching week / reminders) seed the first run.
+The dashboard is itself a plugin (`dashboard`, filling the harness's dashboard tab slot). It
+shows two kinds of widget side by side, in one ordered list:
+
+| Kind | Who draws it | Data |
+|---|---|---|
+| **AI-built** `{ spec, bindings }` | the agent writes a generative-UI spec (`dashboard.upsertWidget`) | `bindings: { [jsonPointer]: { tool, args?, path?, ttlMinutes? } }`, read-only tools only, written into the spec's state (`{ "$state": "/card" }`, `$template`) |
+| **Plugin-provided** `{ source: { plugin, widget, config? } }` | the plugin's own native component (`contributes.widgets`), mounted by the host's `PluginWidget` inside an error boundary | the component calls `host.useToolData(tool, args, { ttlMinutes })` |
+
+The agent checks `dashboard.catalog` first and places a plugin widget when one fits
+(`dashboard.addPluginWidget`), building its own only otherwise. The user gets the same choice in
+the dashboard's widget gallery (`/m/dashboard/gallery`, live previews; "添加" calls the same
+tool). The dashboard draws the card chrome (title, freshness, long-press to edit) for both.
+
+**Refresh: stale-while-revalidate, owned by the host** (`src/core/dashboard/live.ts`, the
+TanStack Query model). Every read-tool result lives in one store keyed by tool + args, shared by
+AI-built widgets, plugin widgets, plugin screens and scheduled checks:
+
+- The last value is persisted (SQLite `cache`), so a cold start shows numbers immediately, with
+  "3 分钟前" freshness; a skeleton appears only when nothing was ever fetched.
+- A value is stale after its TTL (default 5 min; balances 5–15, slow data 60+). Stale queries
+  that are *on a focused screen* refetch on screen focus, when the app returns to the
+  foreground, and on a 30 s tick while visible. Hidden tabs and the background never poll.
+- Pull-to-refresh forces every query on screen and ends when they settle; each card has retry.
+- Identical concurrent requests share one promise. A failed refresh keeps the last value and
+  marks it ("刷新失败 · 10 分钟前").
+- Scheduled checks (§8) prime the store with their result, so a background balance check also
+  updates the widget. Background freshness is the scheduler's job, never the dashboard's.
+
+Edit mode (long-press): drag to reorder, cycle size, delete. Starter widgets that need no login
+(today / teaching week / reminders) seed the first run.
 
 ## 8. Scheduler and notifications
 

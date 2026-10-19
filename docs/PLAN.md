@@ -49,6 +49,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T5.1 Widget model + persistence; widget renderer with data bindings (`$state` pointers) + TTL cache; loading/error/ready states (2026-10-18)
 - [x] T5.2 `dashboard.*` agent tools (list/sources/upsertWidget/removeWidget/reorder) + `calendar` plugin (today, teaching week); starter widgets on first run (2026-10-18)
 - [x] T5.3 Edit mode: long-press, drag handle reorder, size cycle, delete; pull-to-refresh (2026-10-18)
+- [x] T5.4 Plugin-provided widgets (`contributes.widgets`, `PluginWidget`, `dashboard.catalog` / `addPluginWidget`, widget gallery) + stale-while-revalidate live store (persisted last value, focus / foreground / interval revalidation, dedupe, checks prime it; `host.useToolData`); widgets in campus-card, netfee, timetable (2026-10-18)
 
 ## M6 Scheduler & notifications
 - [x] T6.1 Job model + recurrence engine (unit-tested: one-shot, daily times, every N days, weekly, count, until, DST) (2026-10-18)

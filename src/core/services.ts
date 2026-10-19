@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import { campusAccount, campusRequest } from '@/core/campus/account';
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';
@@ -66,6 +68,23 @@ const host: HostServices = {
     reorder: (ids) => widgetStore.reorder(ids),
     preview: (w) => resolveWidgetState(w, true),
     resolve: (w, force) => resolveWidgetState(w, force ?? false),
+    catalog: () =>
+      registry.list().flatMap((p) => {
+        if (!pluginSettings.get(p.id).enabled || registry.unavailable(p.id)) return [];
+        return Object.entries(p.contributes?.widgets ?? {}).map(([widget, c]) => {
+          const sizes = c.sizes?.length ? c.sizes : (['sm', 'md', 'lg'] as const).slice();
+          return {
+            plugin: p.id,
+            pluginName: p.name,
+            widget,
+            title: c.title,
+            description: c.description,
+            sizes,
+            defaultSize: c.defaultSize ?? sizes[0],
+            config: c.configSchema ? (z.toJSONSchema(c.configSchema) as Record<string, unknown>) : undefined,
+          };
+        });
+      }),
   },
   todos: {
     list: () => todoStore.list(),

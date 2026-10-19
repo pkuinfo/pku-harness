@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useSyncExternalStore, type ReactNode } from 'react';
+import { useMemo, useSyncExternalStore, type ReactNode } from 'react';
 import { View } from 'react-native';
 
 import type { Spec } from '@json-render/core';
@@ -7,6 +7,7 @@ import type { Spec } from '@json-render/core';
 import { Button, IconButton } from '@/components/button';
 import { Chip } from '@/components/chip';
 import { DateTimeField } from '@/components/date-time-field';
+import { ErrorBoundary } from '@/components/error-boundary';
 import { Field } from '@/components/field';
 import { EmptyState } from '@/components/empty-state';
 import { FadeIn } from '@/components/fade-in';
@@ -28,8 +29,14 @@ import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { WeekdayPicker } from '@/components/weekday-picker';
 import { sendMessage } from '@/core/agent/run';
+import { formatAgo, refreshAll, useBindings, useToolData, useWidgetData } from '@/core/dashboard/live-hooks';
 import { widgetStore } from '@/core/dashboard/store';
-import type { HostComponents, HostTheme, HostUI } from '@/core/runtime/types';
+import { usePlugin } from '@/core/runtime/hooks';
+import { invokeTool, services } from '@/core/runtime/invoke';
+import { usePluginSettings } from '@/core/runtime/plugin-settings';
+import { registry } from '@/core/runtime/registry';
+import type { HostComponents, HostTheme, HostUI, WidgetSize } from '@/core/runtime/types';
+import { kv } from '@/core/store/kv';
 import { jobStore } from '@/core/scheduler/store';
 import { timetable } from '@/core/timetable/store';
 import { todoStore } from '@/core/todo/store';
@@ -57,6 +64,41 @@ function Column({ gap = 'md', children }: { gap?: keyof typeof GAP; children: Re
 
 function GenUI({ spec, onSubmit }: { spec: Record<string, unknown>; onSubmit?: (form: Record<string, unknown>, label?: string) => void }) {
   return <GenUIView spec={spec as unknown as Spec} onSubmit={onSubmit} />;
+}
+
+function WidgetNotice({ icon, text }: { icon: string; text: string }) {
+  const c = useTheme();
+  return (
+    <View style={{ flexDirection: 'row', gap: spacing.sm, alignItems: 'center' }}>
+      <Icon name={icon as 'warning'} size={16} color={c.warn} />
+      <Text variant="caption" tone="muted" numberOfLines={3} style={{ flex: 1 }}>
+        {text}
+      </Text>
+    </View>
+  );
+}
+
+/** A plugin's native dashboard widget, with its store and tool access, isolated by an error boundary. */
+function PluginWidget({ source, size }: { source: { plugin: string; widget: string; config?: Record<string, unknown> }; size: WidgetSize }) {
+  const plugin = usePlugin(source.plugin);
+  const settings = usePluginSettings(source.plugin);
+  const store = useMemo(() => kv(`plugin:${source.plugin}`), [source.plugin]);
+  const contribution = plugin?.contributes?.widgets?.[source.widget];
+  if (!plugin || !contribution) return <WidgetNotice icon="puzzle" text={`找不到组件 ${source.plugin}/${source.widget}，插件可能已卸载`} />;
+  if (!settings.enabled || registry.unavailable(plugin.id)) return <WidgetNotice icon="puzzle" text={`「${plugin.name}」已关闭或在此设备不可用`} />;
+  const Widget = contribution.component;
+  return (
+    <ErrorBoundary fallback={(e) => <WidgetNotice icon="warning" text={`组件出错：${e.message}`} />}>
+      <Widget
+        host={hostUI}
+        services={services}
+        kv={store}
+        invoke={(tool, input) => invokeTool(tool, input ?? {}, { actor: 'user' })}
+        size={size}
+        config={source.config ?? {}}
+      />
+    </ErrorBoundary>
+  );
 }
 
 const components = {
@@ -88,6 +130,7 @@ const components = {
   Ring: ProgressRing,
   GenUI,
   SortableList,
+  PluginWidget,
 } as unknown as HostComponents;
 
 function useHostTheme(): HostTheme {
@@ -139,4 +182,9 @@ export const hostUI: HostUI = {
     router.navigate('/');
     sendMessage(text);
   },
+  useToolData: useToolData as HostUI['useToolData'],
+  useWidgetData,
+  useBindings,
+  refreshAll,
+  formatAgo,
 };
