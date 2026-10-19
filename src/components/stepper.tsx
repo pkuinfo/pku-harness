@@ -1,6 +1,5 @@
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
-import { radius, spacing, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { IconButton } from './button';
@@ -22,16 +21,15 @@ export function Stepper({
   suffix?: string;
   label: string;
 }) {
-  const c = useTheme();
   const set = (n: number) => {
     const v = Math.max(min, Math.min(max, n));
     if (v !== value) haptics.select();
     onChange(v);
   };
   return (
-    <View style={[styles.wrap, { backgroundColor: c.surface2 }]} accessibilityLabel={`${label}：${value}${suffix ?? ''}`}>
+    <View className="flex-row items-center self-start rounded-md border-[0.5px] border-edge bg-surface-2 px-0.5" style={{ borderCurve: 'continuous' }} accessibilityLabel={`${label}：${value}${suffix ?? ''}`}>
       <IconButton icon="minus" label={`减少${label}`} variant="ghost" size={36} disabled={value <= min} onPress={() => set(value - 1)} />
-      <Text variant="bodyStrong" style={styles.value}>
+      <Text variant="bodyStrong" className="min-w-14 text-center" style={{ fontVariant: ['tabular-nums'] }}>
         {value}
         {suffix ? (
           <Text variant="callout" tone="muted">
@@ -43,8 +41,3 @@ export function Stepper({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'center', borderRadius: radius.md, borderCurve: 'continuous', alignSelf: 'flex-start', paddingHorizontal: spacing.xxs },
-  value: { minWidth: 56, textAlign: 'center', fontVariant: ['tabular-nums'] },
-});

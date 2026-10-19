@@ -1,6 +1,7 @@
-import { ActivityIndicator, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { radius, spacing, useTheme, type ThemeColors } from '@/theme';
+import { useTheme, type ThemeColors } from '@/theme';
+import { cx } from '@/utils/cx';
 
 import { Icon, type IconName } from './icon';
 import { PressableScale } from './pressable-scale';
@@ -9,19 +10,21 @@ import { Text, type TextTone } from './text';
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
-const variantStyle = (c: ThemeColors): Record<Variant, { bg: string; tone: TextTone; fg: string; edge?: string }> => ({
-  // Primary is solid 北大红 with a lit top edge; secondary is glass with a hairline edge.
-  primary: { bg: c.brand, tone: 'onAccent', fg: c.onBrand, edge: 'inset 0 1px 0 rgba(255, 255, 255, 0.2)' },
-  secondary: { bg: c.surface2, tone: 'default', fg: c.text },
-  ghost: { bg: 'transparent', tone: 'default', fg: c.text },
-  danger: { bg: c.downMuted, tone: 'down', fg: c.down },
-});
-
-const sizeStyle: Record<Size, ViewStyle & { icon: number }> = {
-  sm: { minHeight: 32, paddingHorizontal: spacing.md, gap: spacing.xs, icon: 16 },
-  md: { minHeight: 44, paddingHorizontal: spacing.lg, gap: spacing.sm, icon: 18 },
-  lg: { minHeight: 52, paddingHorizontal: spacing.xl, gap: spacing.sm, icon: 20 },
+// Primary is solid 北大红 with a lit top edge; secondary is glass with a hairline edge.
+const SURFACE: Record<Variant, string> = {
+  primary: 'bg-brand shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]',
+  secondary: 'bg-surface-2 border-[0.5px] border-edge',
+  ghost: 'bg-transparent',
+  danger: 'bg-down-muted',
 };
+const TONE: Record<Variant, TextTone> = { primary: 'onAccent', secondary: 'default', ghost: 'default', danger: 'down' };
+const FG: Record<Variant, keyof ThemeColors> = { primary: 'onBrand', secondary: 'text', ghost: 'text', danger: 'down' };
+const SIZE: Record<Size, { box: string; row: string; icon: number }> = {
+  sm: { box: 'min-h-8 px-3', row: 'gap-1', icon: 16 },
+  md: { box: 'min-h-11 px-4', row: 'gap-2', icon: 18 },
+  lg: { box: 'min-h-13 px-6', row: 'gap-2', icon: 20 },
+};
+const CURVE = { borderCurve: 'continuous' } as const;
 
 export function Button({
   title,
@@ -32,6 +35,7 @@ export function Button({
   loading,
   disabled,
   style,
+  className,
 }: {
   title: string;
   onPress?: () => void;
@@ -41,10 +45,10 @@ export function Button({
   loading?: boolean;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  className?: string;
 }) {
-  const colors = useTheme();
-  const v = variantStyle(colors)[variant];
-  const { icon: iconSize, ...s } = sizeStyle[size];
+  const fg = useTheme()[FG[variant]];
+  const s = SIZE[size];
   return (
     <PressableScale
       accessibilityRole="button"
@@ -52,13 +56,14 @@ export function Button({
       accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       disabled={disabled || loading}
       onPress={onPress}
-      style={[styles.base, s, { backgroundColor: v.bg, boxShadow: v.edge, opacity: disabled ? 0.4 : 1 }, variant === 'secondary' && { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }, style]}>
+      className={cx('items-center justify-center rounded-md', SURFACE[variant], s.box, disabled && 'opacity-40', className)}
+      style={[CURVE, style]}>
       {loading ? (
-        <ActivityIndicator color={v.fg} />
+        <ActivityIndicator color={fg} />
       ) : (
-        <View style={[styles.row, { gap: s.gap }]}>
-          {icon ? <Icon name={icon} size={iconSize} color={v.fg} /> : null}
-          <Text variant={size === 'sm' ? 'callout' : 'bodyStrong'} tone={v.tone}>
+        <View className={cx('flex-row items-center', s.row)}>
+          {icon ? <Icon name={icon} size={s.icon} color={fg} /> : null}
+          <Text variant={size === 'sm' ? 'callout' : 'bodyStrong'} tone={TONE[variant]}>
             {title}
           </Text>
         </View>
@@ -75,6 +80,7 @@ export function IconButton({
   size = 40,
   disabled,
   style,
+  className,
 }: {
   icon: IconName;
   label: string;
@@ -83,9 +89,9 @@ export function IconButton({
   size?: number;
   disabled?: boolean;
   style?: StyleProp<ViewStyle>;
+  className?: string;
 }) {
-  const colors = useTheme();
-  const v = variantStyle(colors)[variant];
+  const fg = useTheme()[FG[variant]];
   return (
     <PressableScale
       accessibilityRole="button"
@@ -94,24 +100,9 @@ export function IconButton({
       disabled={disabled}
       onPress={onPress}
       scaleTo={0.92}
-      style={[
-        styles.iconBtn,
-        { width: size, height: size, backgroundColor: v.bg, boxShadow: v.edge, opacity: disabled ? 0.4 : 1 },
-        variant === 'secondary' && { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
-        style,
-      ]}>
-      <Icon name={icon} size={Math.round(size * 0.48)} color={v.fg} />
+      className={cx('items-center justify-center rounded-md', SURFACE[variant], disabled && 'opacity-40', className)}
+      style={[CURVE, { width: size, height: size }, style]}>
+      <Icon name={icon} size={Math.round(size * 0.48)} color={fg} />
     </PressableScale>
   );
 }
-
-const styles = StyleSheet.create({
-  base: {
-    borderRadius: radius.md,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  iconBtn: { borderRadius: radius.md, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
-});

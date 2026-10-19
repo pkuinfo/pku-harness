@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, View } from 'react-native';
+import { TextInput, View } from 'react-native';
 
 import { IconButton } from '@/components/button';
-import { glassMaterial, radius, spacing, typography, useTheme, useThemeName } from '@/theme';
+import { typography, useTheme } from '@/theme';
+import { cx } from '@/utils/cx';
 
 export function Composer({
   busy,
@@ -17,16 +18,13 @@ export function Composer({
   glass?: boolean;
 }) {
   const c = useTheme();
-  const g = glassMaterial[useThemeName()];
   const [text, setText] = useState('');
   const canSend = text.trim().length > 0 && !busy;
   return (
-    <View style={styles.wrap}>
+    <View className="px-3 py-2">
       <View
-        style={[
-          styles.box,
-          { backgroundColor: glass ? g.fillStrong : c.surface2, borderColor: glass ? g.edge : c.border },
-        ]}>
+        className={cx('flex-row items-end gap-2 rounded-lg border-[0.5px] border-edge py-1.5 pl-4 pr-1.5', glass ? 'bg-surface' : 'bg-surface-2')}
+        style={{ borderCurve: 'continuous' }}>
         <TextInput
           value={text}
           onChangeText={setText}
@@ -34,7 +32,8 @@ export function Composer({
           placeholderTextColor={c.textFaint}
           selectionColor={c.accent}
           multiline
-          style={[typography.body, styles.input, { color: c.text }]}
+          className="max-h-36 flex-1 py-2 text-fg"
+          style={typography.body}
           accessibilityLabel="消息输入框"
         />
         {busy ? (
@@ -56,19 +55,3 @@ export function Composer({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { paddingHorizontal: spacing.md, paddingTop: spacing.sm, paddingBottom: spacing.sm },
-  box: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    gap: spacing.sm,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
-    paddingLeft: spacing.lg,
-    paddingRight: spacing.xs + 2,
-    paddingVertical: spacing.xs + 2,
-  },
-  input: { flex: 1, maxHeight: 140, paddingVertical: spacing.sm },
-});

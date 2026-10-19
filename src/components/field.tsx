@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { StyleSheet, TextInput, View, type TextInputProps } from 'react-native';
+import { TextInput, View, type TextInputProps } from 'react-native';
 
-import { radius, spacing, typography, useTheme } from '@/theme';
+import { typography, useTheme } from '@/theme';
+import { cx } from '@/utils/cx';
 
 import { Text } from './text';
 
@@ -15,9 +16,9 @@ export function Field({
 }: TextInputProps & { label?: string; hint?: string; error?: string }) {
   const c = useTheme();
   const [focused, setFocused] = useState(false);
-  const ring = error ? c.down : focused ? c.accent : c.border;
+  const ring = error ? 'border-down' : focused ? 'border-accent' : 'border-edge';
   return (
-    <View style={styles.wrap}>
+    <View className="gap-1">
       {label ? (
         <Text variant="callout" tone="muted">
           {label}
@@ -35,12 +36,8 @@ export function Field({
           setFocused(false);
           input.onBlur?.(e);
         }}
-        style={[
-          typography.body,
-          styles.input,
-          { color: c.text, backgroundColor: c.surface2, borderColor: ring },
-          style,
-        ]}
+        className={cx('min-h-12 rounded-md border bg-surface-2 px-4 text-fg', ring)}
+        style={[typography.body, { borderCurve: 'continuous' }, style]}
       />
       {error || hint ? (
         <Text variant="caption" tone={error ? 'down' : 'faint'}>
@@ -50,14 +47,3 @@ export function Field({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { gap: spacing.xs },
-  input: {
-    minHeight: 48,
-    paddingHorizontal: spacing.lg,
-    borderRadius: radius.md,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-  },
-});

@@ -1,5 +1,5 @@
 import type { Spec } from '@json-render/core';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { withSpring, withTiming, type EntryAnimationsValues } from 'react-native-reanimated';
 
 import { FadeIn } from '@/components/fade-in';
@@ -8,7 +8,7 @@ import { Text } from '@/components/text';
 import type { ChatMessage } from '@/core/agent/chat-store';
 import { GenUIView } from '@/genui/view';
 import { checkSpec } from '@/genui/check';
-import { radius, springs, spacing, useTheme } from '@/theme';
+import { springs } from '@/theme';
 
 import { ToolChip } from './tool-chip';
 
@@ -31,19 +31,21 @@ export function MessageView({
   message: ChatMessage;
   onSubmitForm: (callId: string, form: Record<string, unknown>, label?: string) => void;
 }) {
-  const c = useTheme();
   if (message.role === 'user') {
     const text = message.parts.map((p) => (p.type === 'text' ? p.text : '')).join('');
     return (
-      <View style={styles.userRow}>
-        <Animated.View entering={bubbleIn} style={[styles.userBubble, { backgroundColor: c.accentMuted, borderColor: c.border }]}>
+      <View className="items-end">
+        <Animated.View
+          entering={bubbleIn}
+          className="max-w-[85%] rounded-lg rounded-br-sm border-[0.5px] border-edge bg-accent-muted px-4 py-3"
+          style={{ borderCurve: 'continuous', transformOrigin: 'right bottom' }}>
           <Text variant="body">{text}</Text>
         </Animated.View>
       </View>
     );
   }
   return (
-    <View style={styles.assistant}>
+    <View className="gap-3">
       {message.parts.map((part, i) => {
         switch (part.type) {
           case 'text':
@@ -63,7 +65,7 @@ export function MessageView({
             if (!r.ok) return null;
             return (
               <FadeIn key={i}>
-                <Surface level={1} style={{ borderWidth: StyleSheet.hairlineWidth, borderColor: c.border }}>
+                <Surface level={1}>
                   <View pointerEvents={part.submitted ? 'none' : 'auto'} style={{ opacity: part.submitted ? 0.55 : 1 }}>
                     <GenUIView
                       spec={r.spec as Spec}
@@ -79,18 +81,3 @@ export function MessageView({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  userRow: { alignItems: 'flex-end' },
-  userBubble: {
-    maxWidth: '85%',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    borderBottomRightRadius: radius.sm,
-    borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
-    transformOrigin: 'right bottom',
-  },
-  assistant: { gap: spacing.md },
-});
