@@ -262,16 +262,34 @@ const BB_HEADERS = {
 };
 let bbReady = false;
 
+/**
+ * Follow redirects ourselves: Blackboard's SSO hops can point at plain http://course.pku.edu.cn,
+ * which the server (or the campus network) answers with an empty reply ("connection closed").
+ * Upgrade those hops to HTTPS; dev builds log each hop's path (no query, so no tokens).
+ */
+const resolveUrl = (location: string, base: string) => {
+  if (/^https?:\/\//i.test(location)) return location;
+  const origin = /^https?:\/\/[^/]+/i.exec(base)?.[0] ?? '';
+  return location.startsWith('/') ? origin + location : base.replace(/[^/]*([?#].*)?$/, '') + location;
+};
+
+async function bbFetch(req: RequestOptions): Promise<CampusResponse> {
+  let url = req.url;
+  let res = await campusFetch('blackboard', { ...req, url, followRedirects: false, headers: { ...BB_HEADERS, ...req.headers } });
+  for (let hop = 0; hop < 10 && res.status >= 300 && res.status < 400 && res.location; hop++) {
+    url = resolveUrl(res.location, url).replace(/^http:\/\/course\.pku\.edu\.cn/i, BB_BASE);
+    if (__DEV__) console.log('[blackboard] →', res.status, url.split('?')[0]);
+    res = await campusFetch('blackboard', { url, followRedirects: false, headers: BB_HEADERS });
+  }
+  return res;
+}
+
 async function bbLogin() {
   const { username, password } = await credentials();
   await resetSession('iaaa');
   const token = await iaaaLogin(BB_APP, username, password);
   await resetSession('blackboard');
-  const sso = await campusFetch('blackboard', {
-    url: `${BB_BASE}/webapps/bb-sso-BBLEARN/execute/authValidate/campusLogin?_rand=${Math.random()}&token=${encodeURIComponent(token)}`,
-    followRedirects: true,
-    headers: BB_HEADERS,
-  });
+  const sso = await bbFetch({ url: `${BB_BASE}/webapps/bb-sso-BBLEARN/execute/authValidate/campusLogin?_rand=${Math.random()}&token=${encodeURIComponent(token)}` });
   if (sso.status >= 400) throw new Error(`教学网登录失败（HTTP ${sso.status}）`);
   bbReady = true;
 }
@@ -283,12 +301,7 @@ function bbLoggedOut(res: CampusResponse) {
 
 async function bbRequest(req: RequestOptions, retried = false): Promise<CampusResponse> {
   if (!bbReady) await bbLogin();
-  const res = await campusFetch('blackboard', {
-    ...req,
-    url: req.url.startsWith('http') ? req.url : `${BB_BASE}${req.url}`,
-    followRedirects: true,
-    headers: { ...BB_HEADERS, ...req.headers },
-  });
+  const res = await bbFetch({ ...req, url: req.url.startsWith('http') ? req.url : `${BB_BASE}${req.url}` });
   if (!retried && (res.status === 401 || bbLoggedOut(res))) {
     bbReady = false;
     return bbRequest(req, true);

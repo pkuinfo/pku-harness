@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import Animated, { withSpring, withTiming, type EntryAnimationsValues } from 'react-native-reanimated';
 
 import { FadeIn } from '@/components/fade-in';
+import { Markdown } from '@/components/markdown';
 import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import type { ChatMessage } from '@/core/agent/chat-store';
@@ -27,8 +28,11 @@ function bubbleIn(_values: EntryAnimationsValues) {
 export function MessageView({
   message,
   onSubmitForm,
+  streaming = false,
 }: {
   message: ChatMessage;
+  /** The reply is still arriving (its last text part may hold unterminated Markdown). */
+  streaming?: boolean;
   onSubmitForm: (callId: string, form: Record<string, unknown>, label?: string) => void;
 }) {
   if (message.role === 'user') {
@@ -51,9 +55,7 @@ export function MessageView({
           case 'text':
             return part.text.trim() ? (
               <FadeIn key={i}>
-                <Text variant="body" selectable>
-                  {part.text.trim()}
-                </Text>
+                <Markdown text={part.text.trim()} streaming={streaming && i === message.parts.length - 1} />
               </FadeIn>
             ) : null;
           case 'reasoning':

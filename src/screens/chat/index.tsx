@@ -17,6 +17,7 @@ import { radius, spacing, useTheme } from '@/theme';
 import { useFocusEnter } from '@/hooks/use-focus-enter';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 
+import { AgentStatus } from './agent-status';
 import { Composer } from './composer';
 import { MessageView } from './message';
 
@@ -37,6 +38,8 @@ export function Chat() {
   const { hasKey, config } = useAIConfig();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const busy = chat.status === 'streaming';
+  // The reply started when the last user message was sent.
+  const startedAt = chat.messages.findLast((m) => m.role === 'user')?.createdAt ?? 0;
 
   useEffect(() => {
     const id = setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
@@ -107,8 +110,9 @@ export function Chat() {
             </Glass>
           </FadeIn>
         ) : (
-          chat.messages.map((m) => <MessageView key={m.id} message={m} onSubmitForm={submitForm} />)
+          chat.messages.map((m, i) => <MessageView key={m.id} message={m} onSubmitForm={submitForm} streaming={busy && i === chat.messages.length - 1} />)
         )}
+        {busy ? <AgentStatus reply={chat.messages.at(-1)} startedAt={startedAt} /> : null}
         {chat.error ? (
           <View style={[styles.error, { backgroundColor: c.downMuted }]}>
             <Text variant="callout" tone="down">
