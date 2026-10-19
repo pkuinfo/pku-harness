@@ -12,6 +12,7 @@ import {
 } from '@shopify/react-native-skia';
 import { useEffect, useMemo } from 'react';
 import {
+  cancelAnimation,
   Easing,
   useDerivedValue,
   useReducedMotion,
@@ -41,10 +42,22 @@ export function Logo({ size = 64, tile = true, intro = false, orbiting = false }
       draw.set(withTiming(1, { duration: 1100, easing: EASE_OUT }));
       dotIn.set(withDelay(700, withTiming(1, { duration: 600, easing: EASE_OUT })));
     }
-    if (orbiting && !reduced) {
-      angle.set(withDelay(intro ? 1200 : 0, withRepeat(withTiming(brand.agent.deg + 360, { duration: 9000, easing: Easing.linear }), -1, false)));
-    }
-  }, [intro, orbiting, reduced, draw, angle, dotIn]);
+  }, [intro, reduced, draw, dotIn]);
+
+  // The bead orbits only while asked to; when work stops it glides home and the canvas goes
+  // still (a forgotten loop kept the header redrawing every frame after the first reply).
+  useEffect(() => {
+    if (!orbiting || reduced) return;
+    const from = angle.get();
+    angle.set(withDelay(intro ? 1200 : 0, withRepeat(withTiming(from + 360, { duration: 9000, easing: Easing.linear }), -1, false)));
+    return () => {
+      cancelAnimation(angle);
+      const at = angle.get();
+      // Home is brand.agent.deg; keep travelling forwards to it, never back.
+      const rest = (((brand.agent.deg - at) % 360) + 360) % 360;
+      angle.set(withTiming(at + rest, { duration: 300 + rest * 4, easing: EASE_OUT }));
+    };
+  }, [orbiting, reduced, intro, angle]);
 
   const orbit = useMemo(() => Skia.Path.MakeFromSVGString(orbitPath())!, []);
   const scale = size / 120;

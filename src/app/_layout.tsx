@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { ApprovalPrompt } from '@/components/approval-prompt';
+import { wakeAurora } from '@/components/aurora';
 import { VerificationPrompt } from '@/components/verification-prompt';
 import { boot } from '@/core/boot';
 import { useNotificationRouting } from '@/core/notify/use-routing';
@@ -49,7 +50,8 @@ export default function RootLayout() {
   };
 
   return (
-    <GestureHandlerRootView style={{ flex: 1, backgroundColor: c.bg }}>
+    // Any touch wakes the backdrop's drift; it rests again once the app sits idle.
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: c.bg }} onTouchStartCapture={wakeAurora}>
       <KeyboardProvider>
       <ThemeProvider value={navTheme}>
         <StatusBar style={name === 'dark' ? 'light' : 'dark'} />
