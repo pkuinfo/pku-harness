@@ -42,7 +42,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [~] T4.2 IAAA login in TS (RSA PKCS#1 with tests, OTP optional), credentials in SecureStore, Settings → 校园账号 screen; wrong-credential path verified on device with a fake account (2026-10-18). Successful sign-in awaits the user's own login
 - [~] T4.3 Plugin `campus-card` (plugins repo): balance + transactions via the portal SSO → synjones-auth JWT chain (harness adapter, 401 refresh); payment code todo. Needs a signed-in account to verify
 - [~] T4.4 Plugin `netfee` (plugins repo): balance / usage from its.pku.edu.cn via harness-held ITS session; parser tested. Needs a signed-in account to verify
-- [ ] T4.5 Plugin `timetable`: course table + class times (treehole API), academic calendar
+- [~] T4.5 Plugin `course-sync` (plugins repo): treehole session in the harness (IAAA PKU Helper → JWT), course table + class times → timetable (source campus), SMS/OTP verification steps as tool results + screen; parser tested, signed-out UI verified (2026-10-18). Needs a signed-in account to verify; location parsing waits for a real sample; academic calendar todo
 - [ ] T4.6 Plugin `courses`: Blackboard announcements + assignments (read-only)
 
 ## M5 Dashboard

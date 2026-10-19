@@ -1,10 +1,11 @@
+import * as Crypto from 'expo-crypto';
 import { useSyncExternalStore } from 'react';
 
 import { kv } from '@/core/store/kv';
 import { secrets } from '@/core/store/secrets';
 
-import { APP_HEADERS, campusFetch, FORM, form, resetSession, type CampusResponse, type RequestOptions } from './http';
-import { iaaaLogin, PORTAL_APP } from './iaaa';
+import { APP_HEADERS, campusFetch, cookieValue, FORM, form, resetSession, type CampusResponse, type RequestOptions } from './http';
+import { iaaaLogin, PORTAL_APP, type IaaaApp } from './iaaa';
 
 /**
  * The campus account (docs/ARCHITECTURE.md §9). Credentials live only in SecureStore; the
@@ -12,7 +13,7 @@ import { iaaaLogin, PORTAL_APP } from './iaaa';
  * `services.campus.request`, never the password.
  */
 
-export type CampusService = 'card' | 'its';
+export type CampusService = 'card' | 'its' | 'treehole';
 
 type State = { signedIn: boolean; username: string | null; signedInAt: number | null };
 
@@ -69,9 +70,11 @@ export async function signOut() {
     secrets.delete('campus.username'),
     secrets.delete('campus.password'),
     secrets.delete('campus.card.jwt'),
+    secrets.delete('campus.treehole'),
     resetSession('iaaa'),
     resetSession('card'),
     resetSession('its'),
+    resetSession('treehole'),
   ]);
   itsReady = false;
   await setState({ signedIn: false, username: null, signedInAt: null });
@@ -170,7 +173,83 @@ async function itsRequest(req: RequestOptions, retried = false): Promise<CampusR
   return res;
 }
 
+// ── Treehole (treehole.pku.edu.cn) ────────────────────────────────────────────────────────────
+// pkucli crates/treehole/src/login.rs: IAAA as "PKU Helper" → GET chapi/cas_iaaa_login with the
+// token → 302 to iaaa_success?token=<JWT>&expires_in=<unix s>&uid=… (or pku_token cookies).
+// api.rs: every call sends `authorization: Bearer <JWT>` and `uuid: Web_PKUHOLE_2.0.0_WEB_UUID_…`.
+
+export const TREEHOLE_BASE = 'https://treehole.pku.edu.cn';
+type TreeholeSession = { jwt: string; exp: number; uuid: string; device: string };
+
+const treeholeApp = (device: string): IaaaApp => ({
+  appId: 'PKU Helper',
+  redirectUrl: `${TREEHOLE_BASE}/chapi/cas_iaaa_login?version=3&uuid=${device}&plat=web`,
+});
+
+const queryParam = (url: string, name: string) => {
+  const v = new RegExp(`[?&]${name}=([^&#]*)`).exec(url)?.[1];
+  return v == null ? null : decodeURIComponent(v);
+};
+
+async function treeholeLogin(): Promise<TreeholeSession> {
+  const { username, password } = await credentials();
+  const saved = await secrets.get('campus.treehole');
+  // The short device id is kept across logins (login.rs get_device_uuid: last 12 hex chars).
+  const device = saved ? (JSON.parse(saved) as TreeholeSession).device : Crypto.randomUUID().replace(/-/g, '').slice(20);
+  await resetSession('iaaa');
+  const token = await iaaaLogin(treeholeApp(device), username, password);
+  await resetSession('treehole');
+  const cb = await campusFetch('treehole', {
+    url: `${treeholeApp(device).redirectUrl}&_rand=${Math.random()}&token=${encodeURIComponent(token)}`,
+    headers: { accept: 'application/json, text/plain, */*' },
+  });
+  const jwt = cb.location ? queryParam(cb.location, 'token') : cookieValue('treehole', TREEHOLE_BASE, 'pku_token');
+  const expires = Number((cb.location ? queryParam(cb.location, 'expires_in') : cookieValue('treehole', TREEHOLE_BASE, 'pku_expires_in')) ?? 0);
+  if (!jwt) throw new Error(`树洞登录失败：未拿到凭证（HTTP ${cb.status}）`);
+  const session: TreeholeSession = {
+    jwt,
+    // expires_in is a unix timestamp in seconds (login.rs format_timestamp); keep a margin.
+    exp: expires > 0 ? expires * 1000 - 600_000 : Date.now() + 24 * 3600_000,
+    uuid: `Web_PKUHOLE_2.0.0_WEB_UUID_${Crypto.randomUUID().slice(0, 23)}-${device}`,
+    device,
+  };
+  await secrets.set('campus.treehole', JSON.stringify(session));
+  // login.rs touches /chapi/version once to refresh cookies before the first API call.
+  await campusFetch('treehole', { url: `${TREEHOLE_BASE}/chapi/version?t=${Date.now()}`, headers: treeholeHeaders(session) }).catch(() => {});
+  return session;
+}
+
+const treeholeHeaders = (s: TreeholeSession) => ({ authorization: `Bearer ${s.jwt}`, uuid: s.uuid, accept: 'application/json, text/plain, */*' });
+
+async function treeholeSession(force = false): Promise<TreeholeSession> {
+  if (!force) {
+    const saved = await secrets.get('campus.treehole');
+    if (saved) {
+      const s = JSON.parse(saved) as TreeholeSession;
+      if (s.exp > Date.now()) return s;
+    }
+  }
+  return treeholeLogin();
+}
+
+async function treeholeRequest(req: RequestOptions, retried = false): Promise<CampusResponse> {
+  const s = await treeholeSession();
+  const res = await campusFetch('treehole', {
+    ...req,
+    url: req.url.startsWith('http') ? req.url : `${TREEHOLE_BASE}${req.url}`,
+    headers: { ...treeholeHeaders(s), ...req.headers },
+  });
+  // api.rs parse_response: HTTP 401 = the JWT is no longer valid; sign in again once.
+  if (res.status === 401 && !retried) {
+    await treeholeSession(true);
+    return treeholeRequest(req, true);
+  }
+  return res;
+}
+
 /** Authenticated request to a campus service on behalf of a plugin. */
 export function campusRequest(service: CampusService, req: RequestOptions): Promise<CampusResponse> {
-  return service === 'card' ? cardRequest(req) : itsRequest(req);
+  if (service === 'card') return cardRequest(req);
+  if (service === 'treehole') return treeholeRequest(req);
+  return itsRequest(req);
 }

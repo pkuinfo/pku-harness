@@ -251,9 +251,13 @@ One engine serves dashboard alerts, schedule reminders and to-dos.
   need. Every plugin talks to campus hosts through this module via `ctx.campus`.
 - **Plugins never get credentials.** The harness (`src/core/campus`) signs in per service
   (`card`: IAAA → portal ssoLogin → redirectToCard → berserker-auth JWT, refreshed on 401;
-  `its`: ITS web login) and plugins call `services.campus.request(service, req)` to receive
+  `its`: ITS web login; `treehole`: IAAA "PKU Helper" → cas_iaaa_login JWT + device uuid,
+  re-login on 401) and plugins call `services.campus.request(service, req)` to receive
   responses. Cookies are persisted in SecureStore per session. The `campus-session`
-  capability is available where the native module exists (Android).
+  capability is available where the native module exists (Android). Service-level second
+  factors (treehole's SMS check 40002 and course token 40077) stay visible to plugins, which
+  surface them as a tool result (`verification_required`) so the user or the agent supplies
+  the code; the harness never reads SMS.
 - **Reference**: `../pkucli` is the protocol reference for every service. Port behaviour
   from it rather than rediscovering it; credit the source file in comments.
 
