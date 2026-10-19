@@ -82,5 +82,8 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 ## M9 End-to-end
 - [x] T9.0 Agent E2E on emulator against a scripted OpenAI-compatible mock model: streaming, tool calls (scheduler / dashboard / ui.render form submit / remote MCP write with approval) (2026-10-18)
 - [x] T9.1 E2E on device with the real DeepSeek model and the user's account: ask balance → check job created and run → real notification "校园卡余额不足 ¥600（当前 ¥513.35）"; memory, todo, generative form → reminder (2026-10-18)
-- [~] T9.2 E2E: "every 3 days, 16 times" verified end to end (agent + form → 10 exact alarms in the 14-day window); class reminders verified with manual courses (odd-week cadence); campus timetable sync (course-sync) waits for a signed-in account
+- [x] T9.2 E2E: "every 3 days, 16 times" verified end to end (agent + form → 10 exact alarms in the 14-day window); class reminders verified with manual courses (odd-week cadence); course-sync on the real account (11 courses with rooms) (2026-10-18)
+- [x] T9.3 Read-tool matrix on the real account (37 tools via the dev deep link + logcat runner): all pass except treehole (needs the user's SMS code) and elective supplements/search (empty outside the add/drop window). Fixed on the way: dean course-catalog dropdown markup, calendar Vite bundle, bdkj 2026 site, write → cached-read invalidation (2026-10-18)
+- [x] T9.4 UI sweep on device, both themes: tab bar layout regression, plugins-screen icon crash, collapsed-header bleed-through, folded tool-call log, nested genui cards, zh-CN dates (Hermes ignores the locale), authenticator consent text, widget number/label consistency (2026-10-18)
+- [ ] T9.5 Still open: treehole SMS verification and the pay-code screen need the user; exact-alarm permission is a system setting the user grants
 - [~] T9.3 README for contributors done (2026-10-18); every screen checked on the emulator in dark and light; full impeccable review pass todo
