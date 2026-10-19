@@ -7,6 +7,7 @@ import Animated, {
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
+  withRepeat,
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
@@ -18,6 +19,9 @@ const AnimatedPath = Animated.createAnimatedComponent(Path);
 const AnimatedLine = Animated.createAnimatedComponent(Line);
 
 const FLIP_MS = 360;
+/** One grain spacing (viewBox units) and how long a grain takes to fall it. */
+const GRAIN = 3;
+const GRAIN_MS = 220;
 
 /**
  * An hourglass whose sand drains over a fixed period aligned to Unix time (e.g. a 30 s TOTP
@@ -31,6 +35,15 @@ export function Hourglass({ period = 30, size = 56, tone = 'accent' }: { period?
   const sand = tone === 'up' ? c.up : tone === 'down' ? c.down : tone === 'warn' ? c.warn : c.accent;
   const p = useSharedValue(0); // 0 = top full, 1 = bottom full
   const turn = useSharedValue(0); // degrees, 0 → 180 during a flip
+  // Falling grains: the stream is dashed and its offset loops, so the glass visibly runs even
+  // though the sand level only moves 1/30 of the way per second.
+  const fall = useSharedValue(0);
+
+  useEffect(() => {
+    if (reduced) return;
+    fall.set(withRepeat(withTiming(-GRAIN, { duration: GRAIN_MS, easing: Easing.linear }), -1, false));
+    return () => cancelAnimation(fall);
+  }, [reduced, fall]);
 
   useEffect(() => {
     const periodMs = period * 1000;
@@ -99,7 +112,7 @@ export function Hourglass({ period = 30, size = 56, tone = 'accent' }: { period?
   const stream = useAnimatedProps(() => {
     const v = p.get();
     const y = MID + H * Math.sqrt(Math.max(0, 1 - v));
-    return { y2: y, strokeOpacity: v > 0.002 && v < 0.998 ? 1 : 0 };
+    return { y2: y, strokeDashoffset: fall.get(), strokeOpacity: v > 0.002 && v < 0.998 ? 1 : 0 };
   });
   const flipStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.get()}deg` }] }));
 
@@ -109,7 +122,7 @@ export function Hourglass({ period = 30, size = 56, tone = 'accent' }: { period?
         <Svg width="100%" height="100%" viewBox="0 0 40 56">
           <AnimatedPath animatedProps={topSand} fill={sand} />
           <AnimatedPath animatedProps={bottomSand} fill={sand} />
-          <AnimatedLine animatedProps={stream} x1={20} y1={MID} x2={20} stroke={sand} strokeWidth={1.2} strokeLinecap="round" />
+          <AnimatedLine animatedProps={stream} x1={20} y1={MID} x2={20} stroke={sand} strokeWidth={1.4} strokeLinecap="round" strokeDasharray={reduced ? undefined : [0.01, GRAIN]} />
           {/* Glass: two bulbs and the end caps. */}
           <Path d={`M${L} ${TOP} L${R} ${TOP} L20.8 ${MID} L${R} ${BOT} L${L} ${BOT} L19.2 ${MID} Z`} fill="none" stroke={c.textFaint} strokeWidth={1.4} strokeLinejoin="round" />
           <Line x1={4} y1={TOP} x2={36} y2={TOP} stroke={c.textMuted} strokeWidth={2.4} strokeLinecap="round" />
