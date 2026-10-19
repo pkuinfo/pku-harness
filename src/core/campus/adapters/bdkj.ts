@@ -3,20 +3,21 @@ import { campusFetch, resetSession, type CampusResponse, type RequestOptions } f
 import { iaaaSignIn, type IaaaApp } from '../iaaa';
 
 // ── 北大空间 (bdkj.pku.edu.cn, 学术研讨教室预约) ─────────────────────────────────────────────
-// pkucli crates/bdkj/src/login.rs: IAAA as "bdkj" → GET /login/oauth?token=… plants the
-// JWTUser / SESSION / rememberMe cookies → GET /personal/user checks the session.
-// client.rs: desktop browser UA, referer https://bdkj.pku.edu.cn/.
+// pkucli crates/bdkj/src/login.rs: IAAA as "bdkj" → GET /login/oauth?token=… plants the SESSION
+// cookie. Site redesign (2026-10, captured from a browser session): the IAAA redirect is now
+// https://bdkj.pku.edu.cn/login/oauth, the callback 302s to /home, and /personal/user (pkucli's
+// session check) is a 404 for everyone, so success = the callback chain ends on a bdkj page
+// rather than /oauth (the login entry), /login… or IAAA. client.rs: desktop UA, bdkj referer.
 
 const SESSION = 'bdkj';
 export const BDKJ_BASE = 'https://bdkj.pku.edu.cn';
-const BDKJ_APP: IaaaApp = { appId: 'bdkj', redirectUrl: 'http://bdkj.pku.edu.cn/login/oauth' };
+const BDKJ_APP: IaaaApp = { appId: 'bdkj', redirectUrl: `${BDKJ_BASE}/login/oauth` };
 const BDKJ_HEADERS = {
   'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/147.0.0.0 Safari/537.36',
   accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'accept-language': 'zh,zh-CN;q=0.9',
   referer: `${BDKJ_BASE}/`,
 };
-const XHR = { 'x-requested-with': 'XMLHttpRequest', accept: 'application/json, text/javascript, */*; q=0.01' };
 
 const resolveUrl = (location: string, base: string) => {
   if (/^https?:\/\//i.test(location)) return location;
@@ -47,11 +48,11 @@ async function login() {
   await resetSession('iaaa');
   const token = await iaaaSignIn(BDKJ_APP, username, password, '北大空间');
   await resetSession(SESSION);
-  const cb = await bdkjFetch({ url: `${BDKJ_BASE}/login/oauth?token=${encodeURIComponent(token)}` });
+  // Same shape as IAAA's own redirect: /login/oauth?_rand=…&token=… → 302 → /home.
+  const cb = await bdkjFetch({ url: `${BDKJ_BASE}/login/oauth?_rand=${Math.random()}&token=${encodeURIComponent(token)}` });
   if (cb.status >= 400) throw new Error(`北大空间登录失败（HTTP ${cb.status}）`);
-  if (cb.body.includes('iaaa.pku.edu.cn') && cb.body.includes('oauth.jsp')) throw new Error('北大空间拒绝了统一认证登录，请稍后再试');
-  const user = await bdkjFetch({ url: `${BDKJ_BASE}/personal/user`, headers: XHR });
-  if (user.status >= 400 || loggedOut(user)) throw new Error(`北大空间会话校验失败（HTTP ${user.status}）`);
+  if (loggedOut(cb)) throw new Error('北大空间拒绝了统一认证登录，请稍后再试');
+  if (__DEV__) console.log('[bdkj] signed in →', cb.url.split('?')[0]);
 }
 
 /** One sign-in at a time; concurrent requests wait for it. */
@@ -62,12 +63,17 @@ function signIn() {
   return signingIn;
 }
 
-/** A lost session ends on IAAA, on bdkj's /login pages, or on the IAAA redirect page. */
+/**
+ * A lost session ends on IAAA, on bdkj's /oauth login entry, on its /login pages (except the
+ * /login/oauth callback itself), or on the IAAA redirect page.
+ */
 function loggedOut(res: CampusResponse) {
   const path = /^https?:\/\/[^/]+([^?#]*)/.exec(res.url)?.[1] ?? '';
   return (
     res.status === 401 ||
     res.url.includes('iaaa.pku.edu.cn') ||
+    path === '/oauth' ||
+    path.startsWith('/oauth/') ||
     (path.startsWith('/login') && !path.startsWith('/login/oauth')) ||
     (res.body.includes('iaaa.pku.edu.cn') && res.body.includes('oauth.jsp'))
   );
