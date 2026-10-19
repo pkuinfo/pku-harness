@@ -15,7 +15,7 @@ import { iaaaLogin, PORTAL_APP, type IaaaApp } from './iaaa';
 
 export type CampusService = 'card' | 'its' | 'treehole' | 'blackboard';
 
-type State = { signedIn: boolean; username: string | null; signedInAt: number | null };
+type State = { signedIn: boolean; username: string | null; signedInAt: number | null; name?: string | null };
 
 const store = kv('campus');
 let state: State = { signedIn: false, username: null, signedInAt: null };
@@ -26,6 +26,8 @@ export const campusAccount = {
   async load() {
     state = (await store.get<State>('state')) ?? state;
     emit();
+    // Logins from before names were stored: fill it in once, in the background.
+    if (state.signedIn && !state.name) void refreshProfile();
   },
   get: () => state,
   subscribe(l: () => void) {
@@ -60,9 +62,21 @@ export async function signIn(username: string, password: string, otp?: string) {
   const token = await iaaaLogin(PORTAL_APP, id, password, otp?.trim() || undefined);
   await secrets.set('campus.username', id);
   await secrets.set('campus.password', password);
-  await setState({ signedIn: true, username: id, signedInAt: Date.now() });
+  await setState({ signedIn: true, username: id, signedInAt: Date.now(), name: null });
   // Warm the card session with this token so the first card request needs no second login.
   await cardFromIaaaToken(token).catch(() => {});
+  void refreshProfile();
+}
+
+/** The holder's name, from the campus card (the one service that returns it). */
+export async function refreshProfile() {
+  try {
+    const res = await cardRequest({ url: '/berserker-app/ykt/tsm/queryCard?synAccessSource=h5' });
+    const name = (JSON.parse(res.body) as { data?: { card?: { name?: string }[] } }).data?.card?.[0]?.name?.trim();
+    if (name && campusAccount.get().signedIn) await setState({ ...campusAccount.get(), name });
+  } catch {
+    // Optional: the UI falls back to the student id.
+  }
 }
 
 export async function signOut() {

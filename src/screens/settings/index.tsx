@@ -41,7 +41,7 @@ export function Settings() {
           <ListRow
             icon="person"
             title="校园账号"
-            subtitle={campus.signedIn ? `${campus.username} · 已登录` : '未登录 · IAAA 统一身份认证'}
+            subtitle={campus.signedIn ? `${campus.name ? `${campus.name} · ` : ''}${campus.username} · 已登录` : '未登录 · IAAA 统一身份认证'}
             onPress={() => router.push('/campus')}
           />
           <ListRow

@@ -97,7 +97,7 @@ const host: HostServices = {
   campus: {
     status: () => {
       const s = campusAccount.get();
-      return { signedIn: s.signedIn, username: s.username };
+      return { signedIn: s.signedIn, username: s.username, name: s.name ?? null };
     },
     request: async (service, req) => {
       if (!campusAccount.get().signedIn) throw new Error('还没有登录校园账号（设置 → 校园账号）');

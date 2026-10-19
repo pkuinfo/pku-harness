@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { View } from 'react-native';
 
 import { Chip } from '@/components/chip';
-import { Field } from '@/components/field';
+import { Field, SecretField } from '@/components/field';
 import { ListGroup, ListRow } from '@/components/list-group';
 import { NativeSwitch } from '@/components/native-switch';
 import { dismiss, SheetScreen } from '@/components/sheet-screen';
@@ -66,7 +66,7 @@ export function CampusAccountScreen() {
         setMessage(null);
       }}>
         <ListGroup>
-          <ListRow icon="person" title={account.username ?? '已登录'} subtitle={account.signedInAt ? `登录于 ${new Date(account.signedInAt).toLocaleString('zh-CN', { hour12: false })}` : undefined} accessory={<Chip label="已登录" tone="up" icon="check" />} />
+          <ListRow icon="person" title={account.name ?? account.username ?? '已登录'} subtitle={[account.name ? account.username : null, account.signedInAt ? `登录于 ${new Date(account.signedInAt).toLocaleString('zh-CN', { hour12: false })}` : null].filter(Boolean).join(' · ')} accessory={<Chip label="已登录" tone="up" icon="check" />} />
         </ListGroup>
         <Text variant="callout" tone="muted">
           插件通过本机代为登录各个校园服务，拿不到你的密码。退出登录会删除本机保存的密码和所有会话。
@@ -82,7 +82,7 @@ export function CampusAccountScreen() {
         使用 IAAA 统一身份认证（与门户相同的学号和密码）。密码只保存在本机安全存储中，只会发送给学校的登录服务。
       </Text>
       <Field label="学号 / 职工号" value={username} onChangeText={setUsername} autoCapitalize="none" keyboardType="number-pad" autoFocus />
-      <Field label="密码" value={password} onChangeText={setPassword} secureTextEntry autoCapitalize="none" />
+      <SecretField label="密码" value={password} onChangeText={setPassword} textContentType="password" autoComplete="password" />
       <ListGroup>
         <ListRow icon="key" title="使用手机令牌" subtitle="账号开启了 OTP 时需要" accessory={<NativeSwitch label="使用手机令牌" value={useOtp} onValueChange={setUseOtp} />} />
       </ListGroup>

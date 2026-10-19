@@ -1,11 +1,11 @@
 import { fetch as expoFetch } from 'expo/fetch';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
-import { Field } from '@/components/field';
+import { Field, SecretField } from '@/components/field';
 import { Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { dismiss, SheetScreen } from '@/components/sheet-screen';
@@ -61,7 +61,21 @@ export function AISettings() {
 
   const [baseURL, setBaseURL] = useState(initial.baseURL);
   const [model, setModel] = useState(initial.model);
+  // The saved key is loaded into the field (masked; the eye reveals it). Saving writes it only
+  // when it changed, so an untouched field never clears or rewrites the stored key.
   const [credential, setCredential] = useState('');
+  const [savedCredential, setSavedCredential] = useState('');
+  useEffect(() => {
+    let live = true;
+    void aiConfig.credential(entry.id).then((k) => {
+      if (!live) return;
+      setSavedCredential(k ?? '');
+      setCredential(k ?? '');
+    });
+    return () => {
+      live = false;
+    };
+  }, [entry.id]);
   const [listed, setListed] = useState<ProviderModel[] | null>(null);
   const [status, setStatus] = useState<{ tone: 'up' | 'down'; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -73,7 +87,6 @@ export function AISettings() {
     setSelectedId(id);
     setBaseURL(s.baseURL);
     setModel(s.model);
-    setCredential('');
     setListed(null);
     setStatus(null);
   };
@@ -81,8 +94,9 @@ export function AISettings() {
   const models = mergeModels(entry.def.models, listed);
 
   const save = async () => {
-    await aiConfig.save(entry.id, { baseURL: baseURL.trim(), model: model.trim() }, { credential: credential ? credential.trim() : undefined, activate: true });
-    setCredential('');
+    const next = credential.trim();
+    await aiConfig.save(entry.id, { baseURL: baseURL.trim(), model: model.trim() }, { credential: next === savedCredential ? undefined : next, activate: true });
+    setSavedCredential(next);
   };
 
   const test = async () => {
@@ -175,17 +189,8 @@ export function AISettings() {
 
         {entry.def.auth === 'apiKey' ? (
           <View style={{ gap: spacing.sm }}>
-            <Field
-              label="API Key"
-              value={credential}
-              onChangeText={setCredential}
-              placeholder={hasKey ? '已保存（留空则不修改）' : 'sk-…'}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              hint={entry.def.credentialHint}
-            />
-            {hasKey ? <Chip label="已保存 API Key" tone="up" icon="lock" /> : null}
+            <SecretField label="API Key" value={credential} onChangeText={setCredential} placeholder="sk-…" hint={entry.def.credentialHint} />
+            {hasKey ? <Chip label={credential.trim() === savedCredential ? '已保存在本机安全存储' : '有改动，保存后生效'} tone={credential.trim() === savedCredential ? 'up' : 'warn'} icon="lock" /> : null}
           </View>
         ) : null}
 
