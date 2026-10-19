@@ -18,6 +18,14 @@ type AskHandler = (entry: ToolEntry, input: unknown) => Promise<boolean>;
 let askHandler: AskHandler | null = null;
 export const services = {} as HostServices;
 
+const writeListeners = new Set<(pluginId: string, toolId: string) => void>();
+
+/** Called after a tool that changes state (effect other than 'read') succeeds; cached reads use it. */
+export function onToolWrite(listener: (pluginId: string, toolId: string) => void) {
+  writeListeners.add(listener);
+  return () => void writeListeners.delete(listener);
+}
+
 /** The UI registers a handler that shows a prompt for tools whose effect is set to 'ask'. */
 export function setAskHandler(handler: AskHandler | null) {
   askHandler = handler;
@@ -52,13 +60,15 @@ export async function invokeTool(
   }
 
   try {
-    return await entry.def.execute(parsed.data, {
+    const out = await entry.def.execute(parsed.data, {
       pluginId: entry.pluginId,
       actor: opts.actor,
       kv: kv(`plugin:${entry.pluginId}`),
       services,
       signal: opts.signal,
     });
+    if (entry.def.effect !== 'read') writeListeners.forEach((l) => l(entry.pluginId, id));
+    return out;
   } catch (e) {
     if (e instanceof ToolError) throw e;
     throw new ToolError(e instanceof Error ? e.message : String(e), 'failed');

@@ -6,11 +6,20 @@ export async function invalidate(prefix: string) {
   await db.runAsync('DELETE FROM cache WHERE key LIKE ?', `${prefix}%`);
 }
 
-/** The stored entry, fresh or not (for stale-while-revalidate). */
-export async function readCache<T>(key: string): Promise<{ value: T; fetchedAt: number } | null> {
+/** Keep the values but flag them stale (expires_at 0), so the next read revalidates. */
+export async function markStale(prefix: string) {
   const db = await getDb();
-  const row = await db.getFirstAsync<{ value: string; fetched_at: number }>('SELECT value, fetched_at FROM cache WHERE key = ?', key);
-  return row ? { value: JSON.parse(row.value) as T, fetchedAt: row.fetched_at } : null;
+  await db.runAsync('UPDATE cache SET expires_at = 0 WHERE key LIKE ?', `${prefix}%`);
+}
+
+/** The stored entry, fresh or not (for stale-while-revalidate). */
+export async function readCache<T>(key: string): Promise<{ value: T; fetchedAt: number; stale: boolean } | null> {
+  const db = await getDb();
+  const row = await db.getFirstAsync<{ value: string; fetched_at: number; expires_at: number }>(
+    'SELECT value, fetched_at, expires_at FROM cache WHERE key = ?',
+    key,
+  );
+  return row ? { value: JSON.parse(row.value) as T, fetchedAt: row.fetched_at, stale: row.expires_at === 0 } : null;
 }
 
 export async function writeCache(key: string, value: unknown, fetchedAt: number, ttlMs: number) {

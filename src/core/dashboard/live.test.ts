@@ -3,7 +3,7 @@ import { describe, expect, test } from 'bun:test';
 
 import { createLiveStore, queryKey } from './live';
 
-function setup(persisted: Record<string, { value: unknown; fetchedAt: number }> = {}) {
+function setup(persisted: Record<string, { value: unknown; fetchedAt: number; stale?: boolean }> = {}) {
   let now = 1_000_000;
   let calls = 0;
   let fail = false;
@@ -17,6 +17,9 @@ function setup(persisted: Record<string, { value: unknown; fetchedAt: number }> 
     read: async (key) => persisted[key] ?? null,
     write: async (key, value) => {
       written[key] = value;
+    },
+    markStale: async (prefix) => {
+      for (const k of Object.keys(persisted)) if (k.startsWith(prefix)) persisted[k] = { ...persisted[k], stale: true };
     },
     now: () => now,
   });
@@ -93,5 +96,18 @@ describe('live store', () => {
     t.store.prime(q, { balance: 88 });
     expect(await t.store.fetch(q)).toEqual({ balance: 88 });
     expect(t.calls()).toBe(0);
+  });
+
+  test('invalidate marks matching entries stale and refetches active ones', async () => {
+    const t = setup();
+    const other = { tool: 'netfee.status', ttlMinutes: 60 };
+    await t.store.fetch({ ...q, ttlMinutes: 60 });
+    await t.store.fetch(other);
+    const release = t.store.activate([{ ...q, ttlMinutes: 60 }]);
+    await t.store.invalidate('card.');
+    expect(t.calls()).toBe(3); // only the active card query refetched
+    expect(t.store.get(queryKey(q))?.stale).toBe(false);
+    expect(t.store.get(queryKey(other))?.stale).not.toBe(true);
+    release();
   });
 });

@@ -8,6 +8,8 @@ import type { Binding } from './types';
  * - A value is stale after its TTL; stale *active* queries (mounted on a focused screen) are
  *   refetched on focus, on app foreground, and on a timer. `force` ignores the TTL.
  * - Concurrent requests for the same key share one promise; an error keeps the last value.
+ * - `invalidate` marks matching entries stale (a write changed their source) and refetches the
+ *   active ones right away.
  */
 
 export const DEFAULT_TTL_MIN = 5;
@@ -19,12 +21,16 @@ export type Entry = {
   fetching: boolean;
   /** Persisted value read (or found missing). */
   hydrated: boolean;
+  /** Invalidated by a write: refetch regardless of TTL. */
+  stale?: boolean;
 };
 
 export type LiveDeps = {
   load(tool: string, args: Record<string, unknown>): Promise<unknown>;
-  read(key: string): Promise<{ value: unknown; fetchedAt: number } | null>;
+  read(key: string): Promise<{ value: unknown; fetchedAt: number; stale?: boolean } | null>;
   write(key: string, value: unknown, fetchedAt: number, ttlMs: number): Promise<void>;
+  /** Make persisted entries under a key prefix stale. */
+  markStale(prefix: string): Promise<void>;
   now(): number;
 };
 
@@ -34,7 +40,7 @@ export const queryKey = (q: Query) => `tool:${q.tool}:${JSON.stringify(q.args ??
 export const ttlMs = (q: Query) => (q.ttlMinutes ?? DEFAULT_TTL_MIN) * 60_000;
 
 export function isStale(e: Entry | undefined, ttl: number, now: number) {
-  return !e || e.fetchedAt == null || now - e.fetchedAt >= ttl;
+  return !e || e.stale === true || e.fetchedAt == null || now - e.fetchedAt >= ttl;
 }
 
 export function createLiveStore(deps: LiveDeps) {
@@ -65,7 +71,7 @@ export function createLiveStore(deps: LiveDeps) {
         .then((row) => {
           const cur = entries.get(key);
           // A fetch may have landed first; never overwrite a newer value.
-          if (row && (cur?.fetchedAt == null || cur.fetchedAt < row.fetchedAt)) patch(key, { value: row.value, fetchedAt: row.fetchedAt, hydrated: true });
+          if (row && (cur?.fetchedAt == null || cur.fetchedAt < row.fetchedAt)) patch(key, { value: row.value, fetchedAt: row.fetchedAt, hydrated: true, stale: row.stale });
           else patch(key, { hydrated: true });
         })
         .finally(() => hydrating.delete(key));
@@ -88,7 +94,7 @@ export function createLiveStore(deps: LiveDeps) {
       .load(q.tool, q.args ?? {})
       .then(async (value) => {
         const at = deps.now();
-        patch(key, { value, fetchedAt: at, error: undefined, fetching: false });
+        patch(key, { value, fetchedAt: at, error: undefined, fetching: false, stale: false });
         await deps.write(key, value, at, ttl).catch(() => {});
         return value;
       })
@@ -105,7 +111,7 @@ export function createLiveStore(deps: LiveDeps) {
   function prime(q: Query, value: unknown) {
     const key = queryKey(q);
     const at = deps.now();
-    patch(key, { value, fetchedAt: at, error: undefined, hydrated: true });
+    patch(key, { value, fetchedAt: at, error: undefined, hydrated: true, stale: false });
     void deps.write(key, value, at, ttlMs(q)).catch(() => {});
   }
 
@@ -137,9 +143,22 @@ export function createLiveStore(deps: LiveDeps) {
     await Promise.all(jobs);
   }
 
+  /**
+   * Mark every entry of tools starting with `toolPrefix` (e.g. "calendar.") stale, in memory and
+   * on disk, then refetch the ones on screen.
+   */
+  async function invalidate(toolPrefix: string) {
+    const prefix = `tool:${toolPrefix}`;
+    for (const [key, e] of entries) if (key.startsWith(prefix)) entries.set(key, { ...e, stale: true });
+    emit();
+    await deps.markStale(prefix).catch(() => {});
+    await revalidateActive();
+  }
+
   return {
     fetch,
     prime,
+    invalidate,
     hydrate,
     activate,
     revalidateActive,

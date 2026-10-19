@@ -1,5 +1,5 @@
-import { invokeTool } from '@/core/runtime/invoke';
-import { readCache, writeCache } from '@/core/store/cache';
+import { invokeTool, onToolWrite } from '@/core/runtime/invoke';
+import { markStale, readCache, writeCache } from '@/core/store/cache';
 
 import { createLiveStore } from './live';
 
@@ -8,5 +8,9 @@ export const live = createLiveStore({
   load: (tool, args) => invokeTool(tool, args, { actor: 'user' }),
   read: readCache,
   write: writeCache,
+  markStale,
   now: Date.now,
 });
+
+// A write through any plugin (e.g. calendar.syncSemester) makes that plugin's cached reads stale.
+onToolWrite((pluginId) => void live.invalidate(`${pluginId}.`));
