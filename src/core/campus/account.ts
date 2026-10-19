@@ -5,7 +5,7 @@ import { kv } from '@/core/store/kv';
 import { secrets } from '@/core/store/secrets';
 
 import { APP_HEADERS, campusFetch, cookieValue, FORM, form, resetSession, type CampusResponse, type RequestOptions } from './http';
-import { iaaaLogin, PORTAL_APP, type IaaaApp } from './iaaa';
+import { iaaaSignIn, PORTAL_APP, type IaaaApp } from './iaaa';
 
 /**
  * The campus account (docs/ARCHITECTURE.md §9). Credentials live only in SecureStore; the
@@ -53,13 +53,13 @@ async function credentials() {
 }
 
 /**
- * Sign in: verify with IAAA (the portal app), then store the credentials. `otp` is the 手机令牌
- * code when IAAA asks for it; it is used once and not stored.
+ * Sign in: verify with IAAA (the portal app), then store the credentials. When IAAA wants a
+ * second factor (SMS / email / 手机令牌), the verification prompt asks for it; codes are never stored.
  */
-export async function signIn(username: string, password: string, otp?: string) {
+export async function signIn(username: string, password: string) {
   const id = username.trim();
   await resetSession('iaaa');
-  const token = await iaaaLogin(PORTAL_APP, id, password, otp?.trim() || undefined);
+  const token = await iaaaSignIn(PORTAL_APP, id, password, '校园账号');
   await secrets.set('campus.username', id);
   await secrets.set('campus.password', password);
   await setState({ signedIn: true, username: id, signedInAt: Date.now(), name: null });
@@ -128,7 +128,7 @@ async function cardJwt(force = false): Promise<string> {
   }
   const { username, password } = await credentials();
   await resetSession('iaaa');
-  return cardFromIaaaToken(await iaaaLogin(PORTAL_APP, username, password));
+  return cardFromIaaaToken(await iaaaSignIn(PORTAL_APP, username, password, '校园卡'));
 }
 
 async function cardRequest(req: RequestOptions, retried = false): Promise<CampusResponse> {
@@ -213,7 +213,7 @@ async function treeholeLogin(): Promise<TreeholeSession> {
   // The short device id is kept across logins (login.rs get_device_uuid: last 12 hex chars).
   const device = saved ? (JSON.parse(saved) as TreeholeSession).device : Crypto.randomUUID().replace(/-/g, '').slice(20);
   await resetSession('iaaa');
-  const token = await iaaaLogin(treeholeApp(device), username, password);
+  const token = await iaaaSignIn(treeholeApp(device), username, password, '树洞');
   await resetSession('treehole');
   const cb = await campusFetch('treehole', {
     url: `${treeholeApp(device).redirectUrl}&_rand=${Math.random()}&token=${encodeURIComponent(token)}`,
@@ -301,7 +301,7 @@ async function bbFetch(req: RequestOptions): Promise<CampusResponse> {
 async function bbLogin() {
   const { username, password } = await credentials();
   await resetSession('iaaa');
-  const token = await iaaaLogin(BB_APP, username, password);
+  const token = await iaaaSignIn(BB_APP, username, password, '教学网');
   await resetSession('blackboard');
   const sso = await bbFetch({ url: `${BB_BASE}/webapps/bb-sso-BBLEARN/execute/authValidate/campusLogin?_rand=${Math.random()}&token=${encodeURIComponent(token)}` });
   if (sso.status >= 400) throw new Error(`教学网登录失败（HTTP ${sso.status}）`);

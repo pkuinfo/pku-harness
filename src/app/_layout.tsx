@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { ApprovalPrompt } from '@/components/approval-prompt';
+import { VerificationPrompt } from '@/components/verification-prompt';
 import { boot } from '@/core/boot';
 import { useNotificationRouting } from '@/core/notify/use-routing';
 import { useTheme, useThemeName } from '@/theme';
@@ -61,6 +62,7 @@ export default function RootLayout() {
           <Stack.Screen name="plugins/add" options={{ presentation: 'modal' }} />
         </Stack>
         <ApprovalPrompt />
+        <VerificationPrompt />
       </ThemeProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>

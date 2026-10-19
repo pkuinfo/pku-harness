@@ -4,7 +4,6 @@ import { View } from 'react-native';
 import { Chip } from '@/components/chip';
 import { Field, SecretField } from '@/components/field';
 import { ListGroup, ListRow } from '@/components/list-group';
-import { NativeSwitch } from '@/components/native-switch';
 import { dismiss, SheetScreen } from '@/components/sheet-screen';
 import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
@@ -21,8 +20,6 @@ export function CampusAccountScreen() {
   const account = useCampusAccount();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [useOtp, setUseOtp] = useState(false);
-  const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ tone: 'up' | 'down'; text: string; network?: boolean } | null>(null);
 
@@ -30,9 +27,8 @@ export function CampusAccountScreen() {
     setBusy(true);
     setMessage(null);
     try {
-      await signIn(username, password, useOtp ? otp : undefined);
+      await signIn(username, password);
       setPassword('');
-      setOtp('');
       haptics.success();
       setMessage({ tone: 'up', text: '登录成功' });
     } catch (e) {
@@ -77,16 +73,15 @@ export function CampusAccountScreen() {
   }
 
   return (
-    <SheetScreen title="登录校园账号" primary="登录" onPrimary={login} loading={busy} primaryDisabled={!username.trim() || !password || (useOtp && !/^\d{6}$/.test(otp))} secondary="取消" onSecondary={() => dismiss('/settings')}>
+    <SheetScreen title="登录校园账号" primary="登录" onPrimary={login} loading={busy} primaryDisabled={!username.trim() || !password} secondary="取消" onSecondary={() => dismiss('/settings')}>
       <Text variant="callout" tone="muted">
         使用 IAAA 统一身份认证（与门户相同的学号和密码）。密码只保存在本机安全存储中，只会发送给学校的登录服务。
       </Text>
       <Field label="学号 / 职工号" value={username} onChangeText={setUsername} autoCapitalize="none" keyboardType="number-pad" autoFocus />
       <SecretField label="密码" value={password} onChangeText={setPassword} textContentType="password" autoComplete="password" />
-      <ListGroup>
-        <ListRow icon="key" title="使用手机令牌" subtitle="账号开启了 OTP 时需要" accessory={<NativeSwitch label="使用手机令牌" value={useOtp} onValueChange={setUseOtp} />} />
-      </ListGroup>
-      {useOtp ? <Field label="令牌验证码" value={otp} onChangeText={setOtp} keyboardType="number-pad" placeholder="6 位数字" /> : null}
+      <Text variant="caption" tone="faint">
+        如果账号开启了短信验证或手机令牌，登录时会提示你输入验证码。
+      </Text>
       {message ? <Status message={message} /> : null}
     </SheetScreen>
   );
