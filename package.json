@@ -50,6 +50,8 @@
     "react-native-svg": "15.16.0",
     "react-native-web": "~0.21.4",
     "react-native-worklets": "0.13.0",
+    "tailwindcss": "^4.3.3",
+    "uniwind": "^1.12.2",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -72,5 +74,8 @@
     "check": "tsc --noEmit && expo lint",
     "test": "bun test"
   },
-  "private": true
+  "private": true,
+  "patchedDependencies": {
+    "uniwind@1.12.2": "patches/uniwind@1.12.2.patch"
+  }
 }

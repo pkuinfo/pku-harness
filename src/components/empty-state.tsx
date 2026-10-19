@@ -1,26 +1,16 @@
 import type { ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 
-import { radius, spacing, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 
 import { Icon, type IconName } from './icon';
 import { Text } from './text';
 
-export function EmptyState({
-  icon,
-  title,
-  message,
-  action,
-}: {
-  icon: IconName;
-  title: string;
-  message?: string;
-  action?: ReactNode;
-}) {
+export function EmptyState({ icon, title, message, action }: { icon: IconName; title: string; message?: string; action?: ReactNode }) {
   const c = useTheme();
   return (
-    <View style={styles.wrap}>
-      <View style={[styles.badge, { backgroundColor: c.surface2 }]}>
+    <View className="items-center gap-3 p-8">
+      <View className="h-14 w-14 items-center justify-center rounded-lg border border-edge bg-surface-2" style={{ borderCurve: 'continuous' }}>
         <Icon name={icon} size={26} color={c.textMuted} />
       </View>
       <Text variant="headline" align="center">
@@ -35,15 +25,3 @@ export function EmptyState({
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: { alignItems: 'center', gap: spacing.md, padding: spacing.xxl },
-  badge: {
-    width: 56,
-    height: 56,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});

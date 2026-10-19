@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { useColorScheme } from 'react-native';
+import { Uniwind } from 'uniwind';
 
 import { courseColors, themes, type ThemeColors, type ThemeName } from './colors';
 
@@ -11,6 +12,8 @@ const listeners = new Set<() => void>();
 /** Set the user's theme preference. Persisted by the settings store (src/core/store). */
 export function setThemePreference(next: ThemePreference) {
   preference = next;
+  // Keep Uniwind's theme (classNames' dark:/light: variables) in step with ours.
+  Uniwind.setTheme(next);
   listeners.forEach((l) => l());
 }
 

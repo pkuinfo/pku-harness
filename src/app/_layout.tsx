@@ -1,4 +1,5 @@
 import '@/polyfills';
+import '../global.css';
 
 import {
   Inter_400Regular,

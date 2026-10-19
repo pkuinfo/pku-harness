@@ -56,6 +56,11 @@ heroes. It should feel like an instrument, not a brochure.
 
 ## 2. Tokens
 
+Styling is atomic: Uniwind (Tailwind v4) classNames, with the tokens below defined as Tailwind
+theme values and light/dark CSS variables in `src/global.css`. The TS tokens in `src/theme`
+stay for Reanimated, Skia and native props that can't take a className.
+
+
 | Class | File | Notes |
 |---|---|---|
 | Colours | `src/theme/colors.ts` | `palette` (raw) → `light`/`dark` semantic maps. Hook `useTheme()` returns the active map. |

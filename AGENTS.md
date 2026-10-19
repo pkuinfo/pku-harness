@@ -52,7 +52,16 @@ emulator AVD `Medium_Phone_API_37.0` (`emulator-5554`).
 - Routes only in `src/app/`; screen bodies in `src/screens/`; tokens in `src/theme/`;
   primitives in `src/components/`; runtime and host services in `src/core/`; plugins in the
   `plugins/` submodule (commit + push there first, then bump the submodule here).
-- No hex colours, font sizes or spacing literals outside `src/theme/`.
+- **Styling: Uniwind classNames first** (Tailwind v4 for React Native, `src/global.css`;
+  https://docs.uniwind.dev, recommended by https://docs.expo.dev/guides/tailwind). Semantic
+  colours are theme variables (`bg-surface`, `text-fg-muted`, `border-edge`, `bg-brand`…),
+  radii are the concentric scale (`rounded-sm/md/lg/xl`). Use `style` only for animated values
+  (Reanimated), measured sizes and `borderCurve`. Join classes with `cx()` (`src/utils/cx.ts`).
+  `src/global.css` mirrors `src/theme`; change both together.
+- Uniwind 1.12.2 is patched (`patches/uniwind@1.12.2.patch`) to forward RN 0.88 exports it
+  misses (e.g. `AssetRegistry`, which broke font/asset loading). Drop the patch once upstream
+  re-exports them.
+- No hex colours, font sizes or spacing literals outside `src/theme/` and `src/global.css`.
 - Text only through `@/components/text`. Native controls from `@expo/ui` first.
 - Validate all agent/tool/plugin I/O with zod. Tool ids are `<plugin>.<tool>`.
 - `android/` and `ios/` are generated (CNG): configure through `app.json` and config plugins,

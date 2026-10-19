@@ -1,0 +1,246 @@
+diff --git a/node_modules/uniwind/.bun-tag-9f6361e61612ca6a b/.bun-tag-9f6361e61612ca6a
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+diff --git a/dist/common/components/index.js b/dist/common/components/index.js
+index 8f8d041b08b9fbcce561cfb23fd11b78e148acd4..2e26d281ad474100723c81f7db9c6313735a2619 100644
+--- a/dist/common/components/index.js
++++ b/dist/common/components/index.js
+@@ -307,5 +307,65 @@ module.exports = {
+   },
+   get XamlHost() {
+     return require("react-native").XamlHost;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get AssetRegistry() {
++    return require("react-native").AssetRegistry;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get EventEmitter() {
++    return require("react-native").EventEmitter;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get PushNotificationIOS() {
++    return require("react-native").PushNotificationIOS;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_createVirtualCollectionView() {
++    return require("react-native").unstable_createVirtualCollectionView;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_DEFAULT_INITIAL_NUM_TO_RENDER() {
++    return require("react-native").unstable_DEFAULT_INITIAL_NUM_TO_RENDER;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_getScrollParent() {
++    return require("react-native").unstable_getScrollParent;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_NativeText() {
++    return require("react-native").unstable_NativeText;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_NativeView() {
++    return require("react-native").unstable_NativeView;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_VirtualArray() {
++    return require("react-native").unstable_VirtualArray;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_VirtualColumn() {
++    return require("react-native").unstable_VirtualColumn;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_VirtualColumnGenerator() {
++    return require("react-native").unstable_VirtualColumnGenerator;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_VirtualRow() {
++    return require("react-native").unstable_VirtualRow;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get useAnimatedColor() {
++    return require("react-native").useAnimatedColor;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get useAnimatedValueXY() {
++    return require("react-native").useAnimatedValueXY;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get usePressability() {
++    return require("react-native").usePressability;
+   }
+ };
+\ No newline at end of file
+diff --git a/dist/module/components/index.js b/dist/module/components/index.js
+index b94a7ddd1344a972dee900af2baab9f9fc268300..c15f35267213242adbc7b7a0849905dc4cbf9d4f 100644
+--- a/dist/module/components/index.js
++++ b/dist/module/components/index.js
+@@ -305,5 +305,65 @@ module.exports = {
+   },
+   get XamlHost() {
+     return require("react-native").XamlHost;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get AssetRegistry() {
++    return require("react-native").AssetRegistry;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get EventEmitter() {
++    return require("react-native").EventEmitter;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get PushNotificationIOS() {
++    return require("react-native").PushNotificationIOS;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_createVirtualCollectionView() {
++    return require("react-native").unstable_createVirtualCollectionView;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_DEFAULT_INITIAL_NUM_TO_RENDER() {
++    return require("react-native").unstable_DEFAULT_INITIAL_NUM_TO_RENDER;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_getScrollParent() {
++    return require("react-native").unstable_getScrollParent;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_NativeText() {
++    return require("react-native").unstable_NativeText;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_NativeView() {
++    return require("react-native").unstable_NativeView;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_VirtualArray() {
++    return require("react-native").unstable_VirtualArray;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_VirtualColumn() {
++    return require("react-native").unstable_VirtualColumn;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_VirtualColumnGenerator() {
++    return require("react-native").unstable_VirtualColumnGenerator;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get unstable_VirtualRow() {
++    return require("react-native").unstable_VirtualRow;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get useAnimatedColor() {
++    return require("react-native").useAnimatedColor;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get useAnimatedValueXY() {
++    return require("react-native").useAnimatedValueXY;
++  },
++  // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++  get usePressability() {
++    return require("react-native").usePressability;
+   }
+ };
+diff --git a/src/components/index.ts b/src/components/index.ts
+index 6fcad21b91dae2d029671aca1a6588a031831236..2774958d26eef79427d29df5c5e04677f6134219 100644
+--- a/src/components/index.ts
++++ b/src/components/index.ts
+@@ -307,4 +307,64 @@ module.exports = {
+     get XamlHost() {
+         return require('react-native').XamlHost
+     },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get AssetRegistry() {
++        return require('react-native').AssetRegistry
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get EventEmitter() {
++        return require('react-native').EventEmitter
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get PushNotificationIOS() {
++        return require('react-native').PushNotificationIOS
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get unstable_createVirtualCollectionView() {
++        return require('react-native').unstable_createVirtualCollectionView
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get unstable_DEFAULT_INITIAL_NUM_TO_RENDER() {
++        return require('react-native').unstable_DEFAULT_INITIAL_NUM_TO_RENDER
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get unstable_getScrollParent() {
++        return require('react-native').unstable_getScrollParent
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get unstable_NativeText() {
++        return require('react-native').unstable_NativeText
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get unstable_NativeView() {
++        return require('react-native').unstable_NativeView
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get unstable_VirtualArray() {
++        return require('react-native').unstable_VirtualArray
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get unstable_VirtualColumn() {
++        return require('react-native').unstable_VirtualColumn
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get unstable_VirtualColumnGenerator() {
++        return require('react-native').unstable_VirtualColumnGenerator
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get unstable_VirtualRow() {
++        return require('react-native').unstable_VirtualRow
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get useAnimatedColor() {
++        return require('react-native').useAnimatedColor
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get useAnimatedValueXY() {
++        return require('react-native').useAnimatedValueXY
++    },
++    // RN 0.88 export missing from uniwind 1.12.2 (forwarded unchanged)
++    get usePressability() {
++        return require('react-native').usePressability
++    },
+ }
+diff --git a/uniwind.css b/uniwind.css
+index 13d20cb943641b51cb94ccb9764b53b11e49ae06..d673d1706f23ac351e0d227476d942d8dcd2ac09 100644
+--- a/uniwind.css
++++ b/uniwind.css
+@@ -595,6 +595,25 @@
+ 
+ 
+ @theme {
+-    --color-background: unset;
+-    --app-foreground: unset;
++    --color-bg: unset;
++    --color-surface: unset;
++    --color-surface-2: unset;
++    --color-surface-3: unset;
++    --color-elevated: unset;
++    --color-edge: unset;
++    --color-fg: unset;
++    --color-fg-muted: unset;
++    --color-fg-faint: unset;
++    --color-accent: unset;
++    --color-accent-muted: unset;
++    --color-brand: unset;
++    --color-on-brand: unset;
++    --color-up: unset;
++    --color-up-muted: unset;
++    --color-down: unset;
++    --color-down-muted: unset;
++    --color-warn: unset;
++    --color-warn-muted: unset;
++    --color-info: unset;
++    --color-info-muted: unset;
+ }
+\ No newline at end of file

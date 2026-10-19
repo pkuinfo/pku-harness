@@ -1,0 +1,86 @@
+/*
+ * Uniwind (Tailwind v4 for React Native, docs.uniwind.dev; recommended by docs.expo.dev/guides/tailwind).
+ * Design tokens for the Glass + Light system (docs/DESIGN.md). Mirrors src/theme so classNames
+ * and the JS tokens (Reanimated, Skia) agree; change both together.
+ */
+@import 'tailwindcss';
+@import 'uniwind';
+
+/* Plugins (the ./plugins submodule) use classNames too. */
+@source '../plugins/plugins';
+
+@theme {
+  /* Concentric corners (src/theme/radius.ts). */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+
+  /* Inter per weight (custom fonts need one family per weight on Android). */
+  --font-sans: 'Inter_400Regular';
+  --font-regular: 'Inter_400Regular';
+  --font-medium: 'Inter_500Medium';
+  --font-semibold: 'Inter_600SemiBold';
+  --font-bold: 'Inter_700Bold';
+
+  /* PKU official colours (src/theme/colors.ts pkuBrand). */
+  --color-pku-red: #8b0012;
+  --color-pku-gold: #895e43;
+  --color-pku-sand: #ba9570;
+  --color-pku-stone: #86837a;
+  --color-pku-pine: #44472c;
+  --color-pku-navy: #0e3463;
+  --color-pku-slate: #475c87;
+  --color-pku-amber: #efaa3c;
+}
+
+@layer theme {
+  :root {
+    @variant dark {
+      --color-bg: #09090b;
+      --color-surface: rgba(255, 255, 255, 0.035);
+      --color-surface-2: rgba(255, 255, 255, 0.06);
+      --color-surface-3: rgba(255, 255, 255, 0.09);
+      --color-elevated: #141316;
+      --color-edge: rgba(255, 255, 255, 0.08);
+      --color-fg: #f5f6f8;
+      --color-fg-muted: #8d95a1;
+      --color-fg-faint: #5e6672;
+      --color-accent: #f0606b;
+      --color-accent-muted: rgba(240, 96, 107, 0.14);
+      --color-brand: #a3101f;
+      --color-on-brand: #ffffff;
+      --color-up: #2ebd85;
+      --color-up-muted: rgba(46, 189, 133, 0.14);
+      --color-down: #f6465d;
+      --color-down-muted: rgba(246, 70, 93, 0.14);
+      --color-warn: #f0b90b;
+      --color-warn-muted: rgba(240, 185, 11, 0.14);
+      --color-info: #3d8bff;
+      --color-info-muted: rgba(61, 139, 255, 0.14);
+    }
+    @variant light {
+      --color-bg: #f6f5f3;
+      --color-surface: rgba(255, 255, 255, 0.5);
+      --color-surface-2: rgba(17, 12, 10, 0.04);
+      --color-surface-3: rgba(17, 12, 10, 0.07);
+      --color-elevated: #fbfaf9;
+      --color-edge: rgba(17, 12, 10, 0.08);
+      --color-fg: #0b0d10;
+      --color-fg-muted: #59616c;
+      --color-fg-faint: #8d95a1;
+      --color-accent: #8b0012;
+      --color-accent-muted: rgba(139, 0, 18, 0.08);
+      --color-brand: #8b0012;
+      --color-on-brand: #ffffff;
+      --color-up: #0e9f6e;
+      --color-up-muted: rgba(14, 159, 110, 0.12);
+      --color-down: #d9304a;
+      --color-down-muted: rgba(217, 48, 74, 0.1);
+      --color-warn: #b7860b;
+      --color-warn-muted: rgba(183, 134, 11, 0.12);
+      --color-info: #1f6feb;
+      --color-info-muted: rgba(31, 111, 235, 0.1);
+    }
+  }
+}

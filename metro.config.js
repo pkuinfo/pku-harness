@@ -1,5 +1,6 @@
 // https://docs.expo.dev/guides/customizing-metro/
 const { getDefaultConfig } = require('expo/metro-config');
+const { withUniwindConfig } = require('uniwind/metro');
 const path = require('path');
 
 const config = getDefaultConfig(__dirname);
@@ -12,4 +13,8 @@ config.resolver.blockList = [
   new RegExp(`^${pluginModules.replace(/[/\\]/g, '[/\\\\]')}[/\\\\].*`),
 ];
 
-module.exports = config;
+// Uniwind must be the outermost wrapper (docs.uniwind.dev/quickstart).
+module.exports = withUniwindConfig(config, {
+  cssEntryFile: './src/global.css',
+  dtsFile: './src/uniwind-types.d.ts',
+});

@@ -1,7 +1,7 @@
 import { Children, Fragment, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { radius, spacing, useTheme } from '@/theme';
+import { radius, useTheme } from '@/theme';
 
 import { GlassEdges } from './glass';
 import { Icon, type IconName } from './icon';
@@ -20,26 +20,26 @@ export function ListGroup({
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
 }) {
-  const c = useTheme();
   const items = Children.toArray(children);
   return (
-    <View style={[{ gap: spacing.sm }, style]}>
+    <View className="gap-2" style={style}>
       {title ? (
-        <Text variant="micro" tone="faint" style={styles.title}>
+        <Text variant="micro" tone="faint" className="px-4">
           {title.toUpperCase()}
         </Text>
       ) : null}
-      <View style={[styles.group, { backgroundColor: c.surface }]}>
+      <View className="overflow-hidden rounded-lg bg-surface" style={{ borderCurve: 'continuous' }}>
         <GlassEdges radius={radius.lg} />
         {items.map((child, i) => (
           <Fragment key={i}>
-            {i > 0 ? <View style={[styles.hairline, { backgroundColor: c.border }]} /> : null}
+            {/* Inset under the text, past the 32 px icon well. */}
+            {i > 0 ? <View className="ml-[60px] bg-edge" style={{ height: StyleSheet.hairlineWidth }} /> : null}
             {child}
           </Fragment>
         ))}
       </View>
       {footer ? (
-        <Text variant="caption" tone="faint" style={styles.title}>
+        <Text variant="caption" tone="faint" className="px-4">
           {footer}
         </Text>
       ) : null}
@@ -71,13 +71,13 @@ export function ListRow({
 }) {
   const c = useTheme();
   const content = (
-    <View style={styles.row}>
+    <View className="min-h-14 flex-row items-center gap-3 px-4 py-3">
       {icon ? (
-        <View style={[styles.iconWrap, { backgroundColor: c.surface3 }]}>
+        <View className="h-8 w-8 items-center justify-center rounded-md bg-surface-3" style={{ borderCurve: 'continuous' }}>
           <Icon name={icon} size={18} color={iconTint ?? c.text} />
         </View>
       ) : null}
-      <View style={styles.texts}>
+      <View className="flex-1 gap-0.5">
         <Text variant="body" numberOfLines={titleLines}>
           {title}
         </Text>
@@ -92,7 +92,7 @@ export function ListRow({
           {value}
         </Text>
       ) : null}
-      {accessory ? <View style={styles.accessory}>{accessory}</View> : null}
+      {accessory ? <View className="self-center">{accessory}</View> : null}
       {chevron ?? !!onPress ? <Icon name="chevronRight" size={16} color={c.textFaint} /> : null}
     </View>
   );
@@ -103,27 +103,3 @@ export function ListRow({
     </PressableScale>
   );
 }
-
-const styles = StyleSheet.create({
-  title: { paddingHorizontal: spacing.lg },
-  group: { borderRadius: radius.lg, borderCurve: 'continuous', overflow: 'hidden' },
-  hairline: { height: StyleSheet.hairlineWidth, marginLeft: spacing.lg + 32 + spacing.md },
-  row: {
-    minHeight: 56,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-  },
-  iconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: radius.sm,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  texts: { flex: 1, gap: spacing.xxs },
-  accessory: { alignSelf: 'center' },
-});
