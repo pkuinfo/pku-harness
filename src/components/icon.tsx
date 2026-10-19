@@ -52,6 +52,7 @@ export const icons = {
   send2: { ios: 'paperplane', android: 'send' },
   drag: { ios: 'line.3.horizontal', android: 'drag_handle' },
   calendarClock: { ios: 'calendar.badge.clock', android: 'event_upcoming' },
+  calendar: { ios: 'calendar', android: 'calendar_today' },
   server: { ios: 'server.rack', android: 'dns' },
   search: { ios: 'magnifyingglass', android: 'search' },
   store: { ios: 'bag', android: 'storefront' },
@@ -71,7 +72,8 @@ export function Icon({
   style?: StyleProp<ViewStyle>;
 }) {
   const colors = useTheme();
-  const def = icons[name];
+  // Plugins name icons by string; an unknown name falls back instead of crashing the screen.
+  const def = icons[name] ?? icons.puzzle;
   return (
     <SymbolView
       name={{ ios: def.ios as never, android: def.android as never, web: def.android as never }}
