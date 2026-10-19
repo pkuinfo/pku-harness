@@ -11,7 +11,7 @@ import { GenUIView } from '@/genui/view';
 import { checkSpec } from '@/genui/check';
 import { springs } from '@/theme';
 
-import { ToolChip } from './tool-chip';
+import { ToolGroup } from './tool-chip';
 
 /** A sent message grows out of the composer: from its bottom-right corner, with a spring. */
 function bubbleIn(_values: EntryAnimationsValues) {
@@ -48,6 +48,17 @@ export function MessageView({
       </View>
     );
   }
+  // Consecutive tool calls render as one folded group, anchored at the first of them.
+  type ToolPart = Extract<ChatMessage['parts'][number], { type: 'tool' }>;
+  const groups = new Map<number, ToolPart[]>();
+  let start = -1;
+  message.parts.forEach((p, i) => {
+    // Blank text and hidden reasoning between steps don't break a group.
+    if (p.type === 'reasoning' || (p.type === 'text' && !p.text.trim())) return;
+    if (p.type !== 'tool') return void (start = -1);
+    if (start < 0) start = i;
+    groups.set(start, [...(groups.get(start) ?? []), p]);
+  });
   return (
     <View className="gap-3">
       {message.parts.map((part, i) => {
@@ -60,8 +71,10 @@ export function MessageView({
             ) : null;
           case 'reasoning':
             return null;
-          case 'tool':
-            return <ToolChip key={i} part={part} />;
+          case 'tool': {
+            const group = groups.get(i);
+            return group ? <ToolGroup key={i} parts={group} /> : null;
+          }
           case 'ui': {
             const r = checkSpec(part.spec);
             if (!r.ok) return null;
