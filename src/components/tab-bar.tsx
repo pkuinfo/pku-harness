@@ -22,7 +22,9 @@ export const TAB_BAR_PAD = { top: spacing.xs, side: spacing.sm, well: spacing.sm
  * One tab. Selecting it pops the icon with a small overshoot and brightens the label; the
  * highlight behind the icon is the shared sliding `TabIndicator`.
  */
-export function TabButton({ icon, label, isFocused, onPress, ref: _ref, ...props }: TabButtonProps) {
+// `style` is dropped on purpose: TabTrigger's slot injects `flexDirection: 'row'`, which as an
+// inline style would beat the className layout.
+export function TabButton({ icon, label, isFocused, onPress, ref: _ref, style: _style, ...props }: TabButtonProps) {
   const c = useTheme();
   const focus = useSharedValue(isFocused ? 1 : 0);
   const pop = useSharedValue(1);
