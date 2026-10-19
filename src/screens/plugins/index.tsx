@@ -30,7 +30,14 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
         why
           ? why
           : settings.enabled
-          ? [toolCount || !plugin.providers ? `${toolCount} 个能力` : `${Object.keys(plugin.providers).length} 个模型服务`, ...notes].join(' · ')
+          ? [
+              toolCount
+                ? `${toolCount} 个能力`
+                : plugin.providers
+                  ? `${Object.keys(plugin.providers).length} 个模型服务`
+                  : '提供界面',
+              ...notes,
+            ].join(' · ')
           : '已关闭，AI 无法使用'
       }
       onPress={() => router.push({ pathname: '/plugins/[id]', params: { id: plugin.id } })}
