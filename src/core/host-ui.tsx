@@ -18,6 +18,7 @@ import { NativeSwitch } from '@/components/native-switch';
 import { PressableScale } from '@/components/pressable-scale';
 import { ProgressRing } from '@/components/progress-ring';
 import { Screen } from '@/components/screen';
+import { QRCode } from '@/components/qr-code';
 import { Segmented } from '@/components/segmented';
 import { dismiss, SheetScreen } from '@/components/sheet-screen';
 import { Skeleton } from '@/components/skeleton';
@@ -43,6 +44,7 @@ import { todoStore } from '@/core/todo/store';
 import { GenUIView } from '@/genui/view';
 import { useLayout } from '@/hooks/use-layout';
 import { useNow } from '@/hooks/use-now';
+import { useSecureDisplay } from '@/hooks/use-secure-display';
 import { courseColors, glassTokens, radius, spacing, typography, useTheme, useThemeName } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
@@ -131,6 +133,7 @@ const components = {
   GenUI,
   SortableList,
   PluginWidget,
+  QRCode,
 } as unknown as HostComponents;
 
 function useHostTheme(): HostTheme {
@@ -187,4 +190,5 @@ export const hostUI: HostUI = {
   useBindings,
   refreshAll,
   formatAgo,
+  useSecureDisplay,
 };

@@ -62,7 +62,12 @@ export function Settings() {
                 icon={(row.icon as IconName | undefined) ?? (plugin.icon as IconName | undefined) ?? 'puzzle'}
                 title={row.title}
                 subtitle={row.subtitle}
-                onPress={() => router.push({ pathname: '/p/[plugin]/[screen]', params: { plugin: plugin.id, screen: row.screen } })}
+                onPress={() =>
+                  router.push({
+                    pathname: plugin.contributes?.screens?.[row.screen]?.presentation === 'modal' ? '/m/[plugin]/[screen]' : '/p/[plugin]/[screen]',
+                    params: { plugin: plugin.id, screen: row.screen },
+                  })
+                }
               />
             ))}
           </ListGroup>
