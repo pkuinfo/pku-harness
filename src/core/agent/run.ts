@@ -112,3 +112,27 @@ export async function sendMessage(text: string) {
 export function stopGeneration() {
   controller?.abort();
 }
+
+/** The last turn was cut off (app reload, crash, lost network) before any reply arrived. */
+export function interruptedTurn(state = chatStore.get()): string | null {
+  if (state.status === 'streaming') return null;
+  const msgs = state.messages;
+  const last = msgs.at(-1);
+  const user = last?.role === 'assistant' && last.parts.length === 0 ? msgs.at(-2) : last;
+  if (user?.role !== 'user' || (last?.role === 'assistant' && last.parts.length > 0)) return null;
+  return user.parts.map((p) => (p.type === 'text' ? p.text : '')).join('');
+}
+
+/** Drop the cut-off turn (UI and model history) and send the same message again. */
+export async function retryLast() {
+  const text = interruptedTurn();
+  if (!text) return;
+  const s = chatStore.get();
+  const msgs = [...s.messages];
+  if (msgs.at(-1)?.role === 'assistant') msgs.pop();
+  msgs.pop();
+  const history = [...s.history];
+  if (history.at(-1)?.role === 'user') history.pop();
+  chatStore.set({ messages: msgs, history, error: undefined });
+  await sendMessage(text);
+}

@@ -12,7 +12,7 @@ import { Logo } from '@/components/logo';
 import { Text } from '@/components/text';
 import { chatStore, useChat } from '@/core/agent/chat-store';
 import { useAIConfig } from '@/core/agent/provider';
-import { sendMessage, stopGeneration } from '@/core/agent/run';
+import { interruptedTurn, retryLast, sendMessage, stopGeneration } from '@/core/agent/run';
 import { radius, spacing, useTheme } from '@/theme';
 import { useFocusEnter } from '@/hooks/use-focus-enter';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
@@ -113,6 +113,14 @@ export function Chat() {
           chat.messages.map((m, i) => <MessageView key={m.id} message={m} onSubmitForm={submitForm} streaming={busy && i === chat.messages.length - 1} />)
         )}
         {busy ? <AgentStatus reply={chat.messages.at(-1)} startedAt={startedAt} /> : null}
+        {interruptedTurn(chat) ? (
+          <View className="flex-row items-center gap-3">
+            <Text variant="callout" tone="muted" className="flex-1">
+              回复中断了
+            </Text>
+            <Button title="重试" size="sm" variant="secondary" icon="refresh" onPress={() => void retryLast()} />
+          </View>
+        ) : null}
         {chat.error ? (
           <View style={[styles.error, { backgroundColor: c.downMuted }]}>
             <Text variant="callout" tone="down">
