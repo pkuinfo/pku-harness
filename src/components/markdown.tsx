@@ -1,19 +1,20 @@
-import { Lexer, type Token, type Tokens } from 'marked';
-import { memo, useMemo, type ReactNode } from 'react';
+import type { Token, Tokens } from 'marked';
+import { memo, useMemo, useState, type ReactNode } from 'react';
 import { Linking, ScrollView, View } from 'react-native';
-import remend from 'remend';
 
 import { useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
+import { lexMarkdown, streamLexer } from '@/utils/markdown-lex';
 
 import { Icon } from './icon';
 import { Text, type TextTone } from './text';
 
 /**
  * Markdown for agent replies, drawn with the design system (no WebView): GFM via `marked`'s
- * lexer, rendered as native Text/View. While streaming, `remend` closes unterminated syntax
- * (`**bold`, an open code fence) so half-written Markdown never flashes raw markers, and each
- * finished block is memoized by its source, so only the growing tail re-renders.
+ * lexer, rendered as native Text/View. While streaming, only the unfinished tail is lexed again
+ * (`streamLexer`), `remend` closes its unterminated syntax (`**bold`, an open code fence) so
+ * half-written Markdown never flashes raw markers, and each finished block is memoized by its
+ * source, so only the growing tail re-renders.
  */
 
 const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'", '&nbsp;': ' ' };
@@ -208,7 +209,8 @@ const Block = memo(
 );
 
 export function Markdown({ text, streaming = false }: { text: string; streaming?: boolean }) {
-  const tokens = useMemo(() => Lexer.lex(streaming ? remend(text) : text, { gfm: true, breaks: true }), [text, streaming]);
+  const [lexStream] = useState(streamLexer);
+  const tokens = useMemo(() => (streaming ? lexStream(text) : lexMarkdown(text)), [text, streaming, lexStream]);
   return (
     <View className="gap-3">
       {tokens.map((t, i) => (

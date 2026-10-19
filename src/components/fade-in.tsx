@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeIn as FadeInAnim, FadeInDown, useReducedMotion } from 'react-native-reanimated';
 
@@ -16,9 +16,11 @@ export function FadeIn({
 }) {
   const reduced = useReducedMotion();
   const delay = Math.min(index, stagger.maxItems) * stagger.step;
-  const entering = reduced
-    ? FadeInAnim.delay(delay)
-    : FadeInDown.delay(delay).springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness);
+  // Stable across renders: a streaming reply re-renders its FadeIn many times a second.
+  const entering = useMemo(
+    () => (reduced ? FadeInAnim.delay(delay) : FadeInDown.delay(delay).springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)),
+    [reduced, delay],
+  );
   return (
     <Animated.View entering={entering} style={style}>
       {children}

@@ -61,13 +61,26 @@ function notify() {
   else notifyTimer = setTimeout(run, wait);
 }
 
+/** Persist once the chat has been quiet for SAVE_MS (never mid-stream: it serialises everything). */
+const SAVE_MS = 400;
+let lastChange = 0;
+
+function save() {
+  // One timer per quiet period, not a clear + set per token (each is a native timer call).
+  const wait = SAVE_MS - (Date.now() - lastChange);
+  if (wait > 0) {
+    saveTimer = setTimeout(save, wait);
+    return;
+  }
+  saveTimer = null;
+  const { messages, history } = state;
+  store.set('current', { messages, history }).catch(() => {});
+}
+
 function emit() {
   notify();
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    const { messages, history } = state;
-    store.set('current', { messages, history }).catch(() => {});
-  }, 400);
+  lastChange = Date.now();
+  saveTimer ??= setTimeout(save, SAVE_MS);
 }
 
 export const newId = () => Crypto.randomUUID();
@@ -100,4 +113,12 @@ export const chatStore = {
 
 export function useChat() {
   return useSyncExternalStore(chatStore.subscribe, chatStore.get);
+}
+
+/**
+ * One value derived from the chat (a primitive or a stable reference): the component re-renders
+ * only when it changes, not on every streamed token.
+ */
+export function useChatSelector<T>(select: (s: ChatState) => T): T {
+  return useSyncExternalStore(chatStore.subscribe, () => select(state));
 }

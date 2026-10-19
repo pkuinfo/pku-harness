@@ -5,12 +5,13 @@ import { KeyboardChatScrollView, useKeyboardState, useReanimatedKeyboardAnimatio
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useAuroraAwake } from '@/components/aurora';
 import { Button, IconButton } from '@/components/button';
 import { FadeIn } from '@/components/fade-in';
 import { Glass } from '@/components/glass';
 import { Logo } from '@/components/logo';
 import { Text } from '@/components/text';
-import { chatStore, useChat } from '@/core/agent/chat-store';
+import { chatStore, useChat, useChatSelector } from '@/core/agent/chat-store';
 import { useAIConfig } from '@/core/agent/provider';
 import { interruptedTurn, retryLast, sendMessage, stopGeneration } from '@/core/agent/run';
 import { radius, spacing } from '@/theme';
@@ -38,12 +39,13 @@ export function Chat() {
   // report a zero-height keyboard).
   const keyboard = useReanimatedKeyboardAnimation();
   const lift = useAnimatedStyle(() => ({ transform: [{ translateY: Math.min(0, keyboard.height.get() + bar) }] }));
-  const chat = useChat();
+  // Only what the frame needs; the streaming conversation itself re-renders inside <Messages>.
+  const busy = useChatSelector((s) => s.status === 'streaming');
+  const empty = useChatSelector((s) => s.messages.length === 0);
+  // The backdrop keeps drifting while the agent works, even if nobody touches the screen.
+  useAuroraAwake(busy);
   const { hasKey, config } = useAIConfig();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
-  const busy = chat.status === 'streaming';
-  // The reply started when the last user message was sent.
-  const startedAt = chat.messages.findLast((m) => m.role === 'user')?.createdAt ?? 0;
 
   // Follow the end only while the reader is there (Claude / ChatGPT behaviour). Dragging away
   // unpins; reaching the end again, sending, or tapping the pill re-pins. Following is driven by
@@ -86,7 +88,7 @@ export function Chat() {
   }, []);
 
   // A message the user just sent always brings the view back to the end, even when unpinned.
-  const lastUserId = chat.messages.findLast((m) => m.role === 'user')?.id;
+  const lastUserId = useChatSelector((s) => s.messages.findLast((m) => m.role === 'user')?.id);
   const seenUserId = useRef(lastUserId);
 
   const onContentSizeChange = useCallback((_w: number, h: number) => {
@@ -102,19 +104,6 @@ export function Chat() {
     }
   }, [busy, lastUserId, toEnd, scrollEnd]);
 
-  const submitForm = (callId: string, form: Record<string, unknown>, label?: string) => {
-    for (const m of chatStore.get().messages) {
-      if (m.parts.some((p) => p.type === 'ui' && p.callId === callId)) {
-        chatStore.updateMessage(m.id, (msg) => ({
-          ...msg,
-          parts: msg.parts.map((p) => (p.type === 'ui' && p.callId === callId ? { ...p, submitted: true } : p)),
-        }));
-      }
-    }
-    sendMessage(`${label ?? '提交'}：${JSON.stringify(form)}`);
-  };
-
-  const empty = chat.messages.length === 0;
 
   // The jump pill floats just above the composer, in the tabs' overlay (outside the blur target,
   // so it frosts the messages like the tab bar does). Hidden while typing and off this tab.
@@ -194,24 +183,8 @@ export function Chat() {
             </Glass>
           </FadeIn>
         ) : (
-          chat.messages.map((m, i) => <MessageView key={m.id} message={m} onSubmitForm={submitForm} streaming={busy && i === chat.messages.length - 1} />)
+          <Messages />
         )}
-        {busy ? <AgentStatus reply={chat.messages.at(-1)} startedAt={startedAt} /> : null}
-        {interruptedTurn(chat) ? (
-          <View className="flex-row items-center gap-3">
-            <Text variant="callout" tone="muted" className="flex-1">
-              回复中断了
-            </Text>
-            <Button title="重试" size="sm" variant="secondary" icon="refresh" onPress={() => void retryLast()} />
-          </View>
-        ) : null}
-        {chat.error ? (
-          <View className="rounded-md bg-down-muted p-3">
-            <Text variant="callout" tone="down">
-              {chat.error}
-            </Text>
-          </View>
-        ) : null}
       </KeyboardChatScrollView>
       </Animated.View>
 
@@ -220,6 +193,49 @@ export function Chat() {
       </Animated.View>
       <View style={{ height: bar }} />
     </View>
+  );
+}
+
+function submitForm(callId: string, form: Record<string, unknown>, label?: string) {
+  for (const m of chatStore.get().messages) {
+    if (m.parts.some((p) => p.type === 'ui' && p.callId === callId)) {
+      chatStore.updateMessage(m.id, (msg) => ({
+        ...msg,
+        parts: msg.parts.map((p) => (p.type === 'ui' && p.callId === callId ? { ...p, submitted: true } : p)),
+      }));
+    }
+  }
+  sendMessage(`${label ?? '提交'}：${JSON.stringify(form)}`);
+}
+
+/** The conversation: the only part of the screen that re-renders while a reply streams in. */
+function Messages() {
+  const chat = useChat();
+  const busy = chat.status === 'streaming';
+  // The reply started when the last user message was sent.
+  const startedAt = chat.messages.findLast((m) => m.role === 'user')?.createdAt ?? 0;
+  return (
+    <>
+      {chat.messages.map((m, i) => (
+        <MessageView key={m.id} message={m} onSubmitForm={submitForm} streaming={busy && i === chat.messages.length - 1} />
+      ))}
+      {busy ? <AgentStatus reply={chat.messages.at(-1)} startedAt={startedAt} /> : null}
+      {interruptedTurn(chat) ? (
+        <View className="flex-row items-center gap-3">
+          <Text variant="callout" tone="muted" className="flex-1">
+            回复中断了
+          </Text>
+          <Button title="重试" size="sm" variant="secondary" icon="refresh" onPress={() => void retryLast()} />
+        </View>
+      ) : null}
+      {chat.error ? (
+        <View className="rounded-md bg-down-muted p-3">
+          <Text variant="callout" tone="down">
+            {chat.error}
+          </Text>
+        </View>
+      ) : null}
+    </>
   );
 }
 
