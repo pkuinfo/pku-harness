@@ -93,11 +93,12 @@ export const catalog = defineCatalog(schema, {
     Choice: {
       props: z.object({
         label: z.string().nullable(),
-        options: z.array(z.object({ label: z.string(), value: z.string(), hint: z.string().nullable() })),
+        // Models often send bare strings; accept them (the renderer normalizes).
+        options: z.array(z.union([z.string(), z.object({ label: z.string(), value: z.string().nullable(), hint: z.string().nullable() })])),
         value: z.string().nullable(),
       }),
       slots: [],
-      description: 'Pick one option from a short list (≤ 8). Bind with value: { "$bindState": "/form/<field>" }.',
+      description: 'Pick one option from a short list (≤ 12). options: [{ label, value, hint }] (or plain strings). Short labels (times, numbers) show as a chip grid. Bind with value: { "$bindState": "/form/<field>" }.',
     },
     Sparkline: {
       props: z.object({ values: z.array(z.number()), tone: z.enum(['accent', 'up', 'down', 'info']).nullable() }),

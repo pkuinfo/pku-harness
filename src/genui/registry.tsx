@@ -57,19 +57,74 @@ function TextFieldBound({
   );
 }
 
+type RawOption = string | { label?: string | null; value?: string | null; text?: string; title?: string; hint?: string | null };
+
+/** Model-written options in any common shape → { label, value, hint }. */
+function normalizeOptions(raw: RawOption[] | undefined) {
+  return (raw ?? [])
+    .map((o) => {
+      if (typeof o === 'string' || typeof o === 'number') return { label: String(o), value: String(o), hint: null };
+      const label = o.label ?? o.text ?? o.title ?? o.value ?? '';
+      return { label: String(label), value: String(o.value ?? label), hint: o.hint ?? null };
+    })
+    .filter((o, i, all) => o.label && all.findIndex((x) => x.value === o.value) === i);
+}
+
 function ChoiceBound({
   label,
-  options,
+  options: rawOptions,
   value,
   binding,
 }: {
   label: string | null;
-  options: { label: string; value: string; hint: string | null }[];
+  options: RawOption[];
   value: string | null;
   binding?: string;
 }) {
   const c = useTheme();
   const [v, setV] = useBoundProp<string>(value ?? '', binding);
+  const options = normalizeOptions(rawOptions);
+  // Short labels without hints (times, numbers) read better as a chip grid than a tall list.
+  const compact = options.length > 3 && options.every((o) => !o.hint && o.label.length <= 8);
+  if (compact) {
+    return (
+      <View style={{ gap: spacing.sm }}>
+        {label ? (
+          <Text variant="callout" tone="muted">
+            {label}
+          </Text>
+        ) : null}
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm }}>
+          {options.map((o) => {
+            const selected = v === o.value;
+            return (
+              <PressableScale
+                key={o.value}
+                accessibilityRole="radio"
+                accessibilityState={{ selected }}
+                accessibilityLabel={o.label}
+                onPress={() => setV(o.value)}
+                style={{
+                  minWidth: 76,
+                  alignItems: 'center',
+                  paddingHorizontal: spacing.md,
+                  paddingVertical: spacing.sm,
+                  borderRadius: radius.md,
+                  borderCurve: 'continuous',
+                  borderWidth: 1,
+                  borderColor: selected ? c.accent : c.border,
+                  backgroundColor: selected ? c.accentMuted : c.surface2,
+                }}>
+                <Text variant="callout" tone={selected ? 'accent' : 'default'} style={{ fontVariant: ['tabular-nums'] }}>
+                  {o.label}
+                </Text>
+              </PressableScale>
+            );
+          })}
+        </View>
+      </View>
+    );
+  }
   return (
     <View style={{ gap: spacing.sm }}>
       {label ? (
