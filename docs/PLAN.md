@@ -43,7 +43,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [~] T4.3 Plugin `campus-card` (plugins repo): balance + transactions via the portal SSO → synjones-auth JWT chain (harness adapter, 401 refresh); payment code screen (数字卡 switch with explicit confirm, 30 s refresh, screenshots blocked, brightness up; never a tool result, so it never reaches the model) + `setDigitalCard` tool; balance widget with 付款码 button (2026-10-18). Signed-out paths verified; needs a signed-in account to verify the code itself
 - [~] T4.4 Plugin `netfee` (plugins repo): balance / usage from its.pku.edu.cn via harness-held ITS session; parser tested. Needs a signed-in account to verify
 - [~] T4.5 Plugin `course-sync` (plugins repo): treehole session in the harness (IAAA PKU Helper → JWT), course table + class times → timetable (source campus), SMS/OTP verification steps as tool results + screen; parser tested, signed-out UI verified (2026-10-18). Needs a signed-in account to verify; location parsing waits for a real sample; academic calendar todo
-- [ ] T4.6 Plugin `courses`: Blackboard announcements + assignments (read-only)
+- [~] T4.6 Plugin `courses` (plugins repo): Blackboard session in the harness (IAAA blackboard → campusLogin, desktop UA, re-login when bounced to login); courses / announcements / assignments (bounded crawl, deadlines, submitted state) + 作业截止 dashboard widget; parsers tested against pkucli's documented DOM (2026-10-18). Needs a signed-in account to verify
 
 ## M5 Dashboard
 - [x] T5.1 Widget model + persistence; widget renderer with data bindings (`$state` pointers) + TTL cache; loading/error/ready states (2026-10-18)

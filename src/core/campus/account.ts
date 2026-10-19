@@ -13,7 +13,7 @@ import { iaaaLogin, PORTAL_APP, type IaaaApp } from './iaaa';
  * `services.campus.request`, never the password.
  */
 
-export type CampusService = 'card' | 'its' | 'treehole';
+export type CampusService = 'card' | 'its' | 'treehole' | 'blackboard';
 
 type State = { signedIn: boolean; username: string | null; signedInAt: number | null };
 
@@ -75,8 +75,10 @@ export async function signOut() {
     resetSession('card'),
     resetSession('its'),
     resetSession('treehole'),
+    resetSession('blackboard'),
   ]);
   itsReady = false;
+  bbReady = false;
   await setState({ signedIn: false, username: null, signedInAt: null });
 }
 
@@ -247,9 +249,57 @@ async function treeholeRequest(req: RequestOptions, retried = false): Promise<Ca
   return res;
 }
 
+// ── Blackboard (course.pku.edu.cn, 教学网) ───────────────────────────────────────────────────
+// pkucli crates/course/src/login.rs: IAAA as "blackboard" → GET campusLogin?token=… builds the
+// cookie session; client.rs uses a desktop browser UA. api.rs get_homepage: a lost session ends
+// on a login page or IAAA.
+
+export const BB_BASE = 'https://course.pku.edu.cn';
+const BB_APP: IaaaApp = { appId: 'blackboard', redirectUrl: 'http://course.pku.edu.cn/webapps/bb-sso-BBLEARN/execute/authValidate/campusLogin' };
+const BB_HEADERS = {
+  'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36',
+  accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+};
+let bbReady = false;
+
+async function bbLogin() {
+  const { username, password } = await credentials();
+  await resetSession('iaaa');
+  const token = await iaaaLogin(BB_APP, username, password);
+  await resetSession('blackboard');
+  const sso = await campusFetch('blackboard', {
+    url: `${BB_BASE}/webapps/bb-sso-BBLEARN/execute/authValidate/campusLogin?_rand=${Math.random()}&token=${encodeURIComponent(token)}`,
+    followRedirects: true,
+    headers: BB_HEADERS,
+  });
+  if (sso.status >= 400) throw new Error(`教学网登录失败（HTTP ${sso.status}）`);
+  bbReady = true;
+}
+
+function bbLoggedOut(res: CampusResponse) {
+  const path = /^https?:\/\/[^/]+([^?#]*)/.exec(res.url)?.[1] ?? '';
+  return path.includes('login') || res.url.includes('iaaa.pku.edu.cn') || (res.body.includes('IAAA') && res.body.includes('login'));
+}
+
+async function bbRequest(req: RequestOptions, retried = false): Promise<CampusResponse> {
+  if (!bbReady) await bbLogin();
+  const res = await campusFetch('blackboard', {
+    ...req,
+    url: req.url.startsWith('http') ? req.url : `${BB_BASE}${req.url}`,
+    followRedirects: true,
+    headers: { ...BB_HEADERS, ...req.headers },
+  });
+  if (!retried && (res.status === 401 || bbLoggedOut(res))) {
+    bbReady = false;
+    return bbRequest(req, true);
+  }
+  return res;
+}
+
 /** Authenticated request to a campus service on behalf of a plugin. */
 export function campusRequest(service: CampusService, req: RequestOptions): Promise<CampusResponse> {
   if (service === 'card') return cardRequest(req);
   if (service === 'treehole') return treeholeRequest(req);
+  if (service === 'blackboard') return bbRequest(req);
   return itsRequest(req);
 }
