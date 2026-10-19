@@ -19,7 +19,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T1.5 4-tab shell (Chat, Dashboard, Schedule, Settings) with placeholder screens, verified on emulator (2026-10-18)
 - [x] T1.7 Brand system: SVG/Skia logo + generated icons, SkSL shader backdrop, glass tokens, motion curves (2026-10-18)
 - [x] T1.6 First-run welcome experience with expressive, signature motion (Skia/Reanimated hero, staged reveal of the four tabs, consent → AI setup) (2026-10-18)
-- [~] T1.8 Motion pass: chat empty state on the shader backdrop with glass suggestions (2026-10-18); glass chrome and shared transitions todo
+- [~] T1.8 Motion pass: chat empty state on the shader backdrop with glass suggestions; glass tab bar (expo-blur BlurTargetView, content scrolls under it, TabBarInset) and glass composer over the hero (2026-10-18); shared transitions todo; chat hero redesign requested (shader reads as "scary")
 
 ## M2 Core runtime
 - [x] T2.1 Store: expo-sqlite DB with migrations + KV; SecureStore wrapper (2026-10-18)
@@ -77,6 +77,6 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 
 ## M9 End-to-end
 - [x] T9.0 Agent E2E on emulator against a scripted OpenAI-compatible mock model: streaming, tool calls (scheduler / dashboard / ui.render form submit / remote MCP write with approval) (2026-10-18)
-- [ ] T9.1 E2E on emulator: login → ask balance → build dashboard widget → low-balance check job → notification fires — blocked on M4 (campus-http parked); the widget → check job → exact notification half is verified with calendar data (T6.3/T6.5)
-- [~] T9.2 E2E: "every 3 days, 16 times" verified end to end (agent + form → 10 exact alarms in the 14-day window); class reminders verified with manual courses (odd-week cadence); campus timetable sync blocked on M4
+- [ ] T9.1 E2E on emulator: login → ask balance → build dashboard widget → low-balance check job → notification fires — campus half waits for the user's own sign-in on the device; the widget → check job → exact notification half is verified with calendar data (T6.3/T6.5)
+- [~] T9.2 E2E: "every 3 days, 16 times" verified end to end (agent + form → 10 exact alarms in the 14-day window); class reminders verified with manual courses (odd-week cadence); campus timetable sync (course-sync) waits for a signed-in account
 - [~] T9.3 README for contributors done (2026-10-18); every screen checked on the emulator in dark and light; full impeccable review pass todo

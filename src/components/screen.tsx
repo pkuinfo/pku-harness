@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, View, type ScrollViewProps } from 'react-native
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MAX_CONTENT_WIDTH } from '@/hooks/use-layout';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { spacing, useTheme } from '@/theme';
 
 import { IconButton } from './button';
@@ -30,6 +31,7 @@ export function Screen({
 }) {
   const c = useTheme();
   const insets = useSafeAreaInsets();
+  const bar = useTabBarInset();
   const header = (
     <View style={styles.header}>
       {back ? (
@@ -48,7 +50,7 @@ export function Screen({
   );
   if (!scroll) {
     return (
-      <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top }}>
+      <View style={{ flex: 1, backgroundColor: c.bg, paddingTop: insets.top, paddingBottom: bar }}>
         {header}
         {children}
       </View>
@@ -57,7 +59,8 @@ export function Screen({
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: c.bg }}
-      contentContainerStyle={[{ paddingTop: insets.top, paddingBottom: spacing.xxxl }, contentContainerStyle]}
+      contentContainerStyle={[{ paddingTop: insets.top, paddingBottom: spacing.xxxl + bar }, contentContainerStyle]}
+      scrollIndicatorInsets={{ bottom: bar }}
       {...scrollProps}>
       {header}
       <View style={styles.body}>{children}</View>

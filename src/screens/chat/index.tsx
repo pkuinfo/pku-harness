@@ -13,6 +13,8 @@ import { chatStore, useChat } from '@/core/agent/chat-store';
 import { useAIConfig } from '@/core/agent/provider';
 import { sendMessage, stopGeneration } from '@/core/agent/run';
 import { glassTokens, radius, spacing, useTheme, useThemeName } from '@/theme';
+import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
+import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 
 import { Composer } from './composer';
 import { MessageView } from './message';
@@ -23,6 +25,8 @@ const SUGGESTIONS = ['校园卡还剩多少钱？', '帮我把余额和网费放
 export function Chat() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
+  const bar = useTabBarInset();
+  const keyboardVisible = useKeyboardVisible();
   const chat = useChat();
   const { hasKey, config } = useAIConfig();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -116,7 +120,9 @@ export function Chat() {
         ) : null}
       </ScrollView>
 
-      <Composer busy={busy} onSend={sendMessage} onStop={stopGeneration} />
+      <Composer busy={busy} onSend={sendMessage} onStop={stopGeneration} glass={empty} />
+      {/* Clear the floating tab bar; with the keyboard up the bar is hidden behind it. */}
+      <View style={{ height: keyboardVisible ? 0 : bar }} />
     </KeyboardAvoidingView>
   );
 }

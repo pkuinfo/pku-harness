@@ -2,23 +2,33 @@ import { useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { IconButton } from '@/components/button';
-import { radius, spacing, typography, useTheme } from '@/theme';
+import { glassTokens, radius, spacing, typography, useTheme, useThemeName } from '@/theme';
 
 export function Composer({
   busy,
   onSend,
   onStop,
+  glass = false,
 }: {
   busy: boolean;
   onSend: (text: string) => void;
   onStop: () => void;
+  /** Over the hero backdrop: a glass box instead of a solid one. */
+  glass?: boolean;
 }) {
   const c = useTheme();
+  const g = glassTokens[useThemeName()];
   const [text, setText] = useState('');
   const canSend = text.trim().length > 0 && !busy;
   return (
-    <View style={[styles.wrap, { backgroundColor: c.bg }]}>
-      <View style={[styles.box, { backgroundColor: c.surface2, borderColor: c.border }]}>
+    <View style={styles.wrap}>
+      <View
+        style={[
+          styles.box,
+          glass
+            ? { backgroundColor: g.surface, borderColor: g.rim[0], backgroundImage: `linear-gradient(180deg, ${g.sheen[0]}, ${g.sheen[1]})` }
+            : { backgroundColor: c.surface2, borderColor: c.border },
+        ]}>
         <TextInput
           value={text}
           onChangeText={setText}
