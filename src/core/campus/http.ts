@@ -39,9 +39,27 @@ async function persist(id: CampusSessionId) {
 /** One request in a session; Set-Cookie updates the session's jar (persisted afterwards). */
 export async function campusFetch(id: CampusSessionId, req: RequestOptions): Promise<CampusResponse> {
   await ensure(id);
-  const res = await CampusHttp.request(id, req);
+  let res: CampusResponse;
+  try {
+    res = await CampusHttp.request(id, req);
+  } catch (e) {
+    throw networkError(req.url, e);
+  }
   persist(id).catch(() => {});
   return res;
+}
+
+/**
+ * The native rejection reads "Call to function 'CampusHttp.request' has been rejected. → Caused
+ * by: connection closed", which means nothing to a user or the model. Keep the cause, name the
+ * host, and say what usually causes it (site down for maintenance, closed outside its window, or
+ * campus network only).
+ */
+function networkError(url: string, e: unknown) {
+  const raw = e instanceof Error ? e.message : String(e);
+  const cause = /Caused by:\s*(.+)$/s.exec(raw)?.[1]?.trim() || raw;
+  const host = /^https?:\/\/([^/:?#]+)/i.exec(url)?.[1] ?? url;
+  return new Error(`无法连接 ${host}（${cause}）：网站可能在维护或暂未开放，部分服务也只能在校园网内访问`);
 }
 
 export const form = (fields: Record<string, string>) =>
