@@ -1,7 +1,8 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, type ComponentRef } from 'react';
-import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
-import Animated from 'react-native-reanimated';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { KeyboardChatScrollView, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
+import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, IconButton } from '@/components/button';
@@ -14,7 +15,6 @@ import { useAIConfig } from '@/core/agent/provider';
 import { sendMessage, stopGeneration } from '@/core/agent/run';
 import { radius, spacing, useTheme } from '@/theme';
 import { useFocusEnter } from '@/hooks/use-focus-enter';
-import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 
 import { Composer } from './composer';
@@ -27,8 +27,12 @@ export function Chat() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
   const bar = useTabBarInset();
-  const keyboardVisible = useKeyboardVisible();
   const enter = useFocusEnter();
+  // The composer rides on the keyboard. Closed, it sits above the floating tab bar, which the
+  // keyboard then covers, so it lifts only by the excess (never down: hardware/floating IMEs
+  // report a zero-height keyboard).
+  const keyboard = useReanimatedKeyboardAnimation();
+  const lift = useAnimatedStyle(() => ({ transform: [{ translateY: Math.min(0, keyboard.height.get() + bar) }] }));
   const chat = useChat();
   const { hasKey, config } = useAIConfig();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -54,7 +58,7 @@ export function Chat() {
   const empty = chat.messages.length === 0;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
+    <View style={{ flex: 1 }}>
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Logo size={32} orbiting={busy} />
         <View style={{ flex: 1 }}>
@@ -66,9 +70,13 @@ export function Chat() {
         {!empty ? <IconButton icon="plus" label="新对话" variant="ghost" onPress={() => chatStore.clear()} /> : null}
       </View>
 
-      <Animated.ScrollView
+      <Animated.View style={[{ flex: 1 }, enter]}>
+      {/* Keyboard-aware chat list: lifts with the keyboard (minus the tab bar it covers). */}
+      <KeyboardChatScrollView
         ref={scroll}
-        style={[{ flex: 1 }, enter]}
+        offset={bar}
+        keyboardLiftBehavior="whenAtEnd"
+        style={{ flex: 1 }}
         contentContainerStyle={[styles.list, empty && { flexGrow: 1, justifyContent: 'center' }]}
         keyboardShouldPersistTaps="handled">
         {empty ? (
@@ -108,12 +116,14 @@ export function Chat() {
             </Text>
           </View>
         ) : null}
-      </Animated.ScrollView>
+      </KeyboardChatScrollView>
+      </Animated.View>
 
-      <Composer busy={busy} onSend={sendMessage} onStop={stopGeneration} glass={empty} />
-      {/* Clear the floating tab bar; with the keyboard up the bar is hidden behind it. */}
-      <View style={{ height: keyboardVisible ? 0 : bar }} />
-    </KeyboardAvoidingView>
+      <Animated.View style={lift}>
+        <Composer busy={busy} onSend={sendMessage} onStop={stopGeneration} glass={empty} />
+      </Animated.View>
+      <View style={{ height: bar }} />
+    </View>
   );
 }
 

@@ -13,6 +13,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { ApprovalPrompt } from '@/components/approval-prompt';
 import { boot } from '@/core/boot';
@@ -48,6 +49,7 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: c.bg }}>
+      <KeyboardProvider>
       <ThemeProvider value={navTheme}>
         <StatusBar style={name === 'dark' ? 'light' : 'dark'} />
         <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
@@ -60,6 +62,7 @@ export default function RootLayout() {
         </Stack>
         <ApprovalPrompt />
       </ThemeProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
