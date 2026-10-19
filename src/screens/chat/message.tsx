@@ -25,6 +25,17 @@ function bubbleIn(_values: EntryAnimationsValues) {
   };
 }
 
+/** The spec's top (through single-child wrappers) is a Card: it brings its own surface, don't nest two. */
+function hasOwnCard(spec: Spec) {
+  let el = spec.elements[spec.root];
+  for (let depth = 0; el && depth < 4; depth++) {
+    if (el.type === 'Card') return true;
+    if (el.children?.length !== 1) return false;
+    el = spec.elements[el.children[0]];
+  }
+  return false;
+}
+
 export function MessageView({
   message,
   onSubmitForm,
@@ -78,18 +89,13 @@ export function MessageView({
           case 'ui': {
             const r = checkSpec(part.spec);
             if (!r.ok) return null;
-            return (
-              <FadeIn key={i}>
-                <Surface level={1}>
-                  <View pointerEvents={part.submitted ? 'none' : 'auto'} style={{ opacity: part.submitted ? 0.55 : 1 }}>
-                    <GenUIView
-                      spec={r.spec as Spec}
-                      onSubmit={(form, label) => onSubmitForm(part.callId, form, label)}
-                    />
-                  </View>
-                </Surface>
-              </FadeIn>
+            const spec = r.spec as Spec;
+            const view = (
+              <View pointerEvents={part.submitted ? 'none' : 'auto'} style={{ opacity: part.submitted ? 0.55 : 1 }}>
+                <GenUIView spec={spec} onSubmit={(form, label) => onSubmitForm(part.callId, form, label)} />
+              </View>
             );
+            return <FadeIn key={i}>{hasOwnCard(spec) ? view : <Surface level={1}>{view}</Surface>}</FadeIn>;
           }
         }
       })}
