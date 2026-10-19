@@ -154,3 +154,80 @@ export const glassTokens = {
     surface: 'rgba(255,255,255,0.72)',
   },
 } as const;
+
+/**
+ * Peking University's official colours (《北京大学视觉形象识别系统》 A7 标准色 / A9 辅助色,
+ * pku.edu.cn, 2019). 北大红 is RGB 139/0/18; the auxiliary colours are given in CMYK and were
+ * sampled from the manual's swatches. Brand moments use these; UI states keep the semantic map.
+ */
+export const pkuBrand = {
+  /** 北大红 PMS DS 821C, C0M100Y100K45. */
+  red: '#8B0012',
+  /** 专色金 Pantone 875C. */
+  gold: '#895E43',
+  /** C0M20Y35K30. */
+  sand: '#BA9570',
+  /** C0M0Y8K55. */
+  stone: '#86837A',
+  /** C60M50Y100K45, the pines of Yanyuan. */
+  pine: '#44472C',
+  /** C100M60Y0K50. */
+  navy: '#0E3463',
+  /** C60M35Y0K40. */
+  slate: '#475C87',
+  /** C0M35Y75K5. */
+  amber: '#EFAA3C',
+  /** 专色银 Pantone 877C. */
+  silver: '#A7A5A6',
+} as const;
+
+/**
+ * Aurora backdrop: a base and slow light blobs (centre as a fraction of the screen, radius as a
+ * fraction of its width, colour). Restrained: a dim glow behind content, never a pattern.
+ */
+export const auroraPalettes = {
+  dark: {
+    base: '#09090B',
+    blobs: [
+      { x: 0.1, y: 0.05, r: 0.9, color: 'rgba(139, 0, 18, 0.32)' },
+      { x: 0.95, y: 0.4, r: 0.7, color: 'rgba(137, 94, 67, 0.14)' },
+      { x: 0.2, y: 0.95, r: 0.8, color: 'rgba(71, 92, 135, 0.12)' },
+    ],
+  },
+  light: {
+    base: '#F6F5F3',
+    blobs: [
+      { x: 0.1, y: 0.05, r: 0.9, color: 'rgba(139, 0, 18, 0.10)' },
+      { x: 0.95, y: 0.4, r: 0.75, color: 'rgba(186, 149, 112, 0.18)' },
+      { x: 0.2, y: 0.95, r: 0.85, color: 'rgba(71, 92, 135, 0.08)' },
+    ],
+  },
+} as const;
+
+/**
+ * Glass material (Android / older iOS; iOS 26 uses the system glass). Restraint: a barely-there
+ * fill, one hairline edge, and a thin light line along the top edge as the only highlight.
+ */
+export const glassMaterial = {
+  dark: {
+    fill: 'rgba(255, 255, 255, 0.025)',
+    fillStrong: 'rgba(255, 255, 255, 0.045)',
+    edge: 'rgba(255, 255, 255, 0.07)',
+    /** Top-edge light: horizontal gradient for a 1px line. */
+    topLight: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0) 100%)',
+    pressed: 'rgba(255, 255, 255, 0.04)',
+    shadow: undefined as string | undefined,
+    brand: '#A3101F',
+    brandEdge: 'rgba(255, 255, 255, 0.16)',
+  },
+  light: {
+    fill: 'rgba(255, 255, 255, 0.22)',
+    fillStrong: 'rgba(255, 255, 255, 0.4)',
+    edge: 'rgba(255, 255, 255, 0.75)',
+    topLight: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 50%, rgba(255,255,255,0) 100%)',
+    pressed: 'rgba(17, 12, 10, 0.035)',
+    shadow: '0 8px 24px rgba(17, 12, 10, 0.035)' as string | undefined,
+    brand: '#8B0012',
+    brandEdge: 'rgba(255, 255, 255, 0.22)',
+  },
+};
