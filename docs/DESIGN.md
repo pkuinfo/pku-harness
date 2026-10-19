@@ -19,10 +19,9 @@ heroes. It should feel like an instrument, not a brochure.
 - **Signal colours** borrowed from trading UIs: up/positive = green, down/alert = red-orange,
   neutral = graphite. Always paired with an icon or sign, never colour alone.
 - **Motion is the personality.** Springs, not linear tweens. Everything enters, nothing
-  pops. Lists stagger. The agent "breathes" (a soft animated orb) while thinking.
+  pops. Lists stagger. While the agent works, the bead orbits the logo.
 - **Restraint where it counts.** No card-for-everything, no emoji icons, nothing decorative
-  behind dense data. Expressive effects (shader backdrop, glass, orbiting mark) concentrate
-  in hero moments: welcome, the agent's presence, setup and payment-code screens.
+  behind dense data. Glass stays nearly transparent; light is the only decoration.
 
 ## 1b. Brand system (2026-10-18)
 
@@ -31,13 +30,26 @@ heroes. It should feel like an instrument, not a brochure.
   it in-app and can perform (draw-on intro, orbiting bead); `bun scripts/render-icons.ts`
   renders the app icon, adaptive icon (fg/bg/monochrome), splash and favicon from the same
   geometry. Never redraw the mark by hand.
-- **Shader backdrop** (`<ShaderBackdrop>`): SkSL domain-warped colour fields on the GPU,
-  palettes in `backdropPalettes`. Rendered at 1/4 resolution and updated at ~24 fps (the field
-  is soft and slow, so this is invisible but keeps the UI thread free and saves battery).
-  Hero moments only: welcome, chat empty state, AI setup.
-- **Liquid glass**: iOS 26 uses the system glass (expo-glass-effect) where available; Android
-  and older iOS use the glass tokens (`glassTokens`: translucent surface, top sheen gradient,
-  specular rim) via CSS `backgroundImage` gradients or Skia panels over the backdrop.
+- **Glass + Light** (2026-10-18, the design language): panels are nearly transparent glass
+  over a dim, slowly drifting light. Restraint first: no milky fills, no outlines, no glare.
+  - **Colour** comes from PKU's official identity (`pkuBrand`, from 《北京大学视觉形象识别系统》
+    A7/A9): 北大红 #8B0012 for brand fills (`theme.brand`: primary buttons, selection, the
+    user's bubble tint), the auxiliary bronze / sand / slate / navy only as light in the
+    aurora or accents. `theme.accent` is the legible red for text and icons.
+  - **Aurora** (`<Aurora>`): three dim radial lights (Skia), Lissajous drift over 36 s on the UI
+    thread; paused when its screen is not focused, still with reduced motion. The tabs layout
+    paints one for all tabs (`BackdropProvided`); standalone screens and sheets paint their own.
+  - **Glass** (`<Glass>`, `GlassEdges`, `glassMaterial`): iOS 26 → system `GlassView`
+    (expo-glass-effect is iOS-only); elsewhere a fill of 2.5–5 % white (dark) / 22–50 % white
+    (light), one hairline edge, and a 1 px light line along the top edge. Semantic
+    `surface*` tokens are these fills, so every card is glass; overlays use `elevated`.
+  - **Corners are concentric**: outer panels follow the phone's corner (cards 16, hero panels
+    and sheets 20); controls inside get small radii (buttons/inputs 10, chips 6). Capsules only
+    for dots, progress bars and avatars.
+- **Motion** for UX, all on the UI thread: screens settle in on every focus
+  (`useFocusEnter`), large titles hand over to a compact glass bar on scroll, the tab
+  indicator slides and stretches between tabs and the selected icon pops, sent messages grow
+  out of the composer's corner, assistant parts rise in, panels lift and settle on press.
 - **Motion curves** (`curves` in `src/theme/motion.ts`): strong ease-out for entering and
   responding, ease-in-out for on-screen movement, the iOS sheet curve for sheets. Never
   ease-in on UI. Off-screen art is unmounted; long-running loops only on the visible page.
@@ -49,7 +61,7 @@ heroes. It should feel like an instrument, not a brochure.
 | Colours | `src/theme/colors.ts` | `palette` (raw) → `light`/`dark` semantic maps. Hook `useTheme()` returns the active map. |
 | Spacing | `src/theme/spacing.ts` | 4-pt grid: `xxs 2 · xs 4 · sm 8 · md 12 · lg 16 · xl 24 · xxl 32 · xxxl 48`. Screen padding = `lg`. |
 | Typography | `src/theme/typography.ts` | Named styles: `display`, `title`, `headline`, `body`, `callout`, `caption`, `micro`, plus `number` variants with tabular figures. |
-| Radius | `src/theme/radius.ts` | `sm 8 · md 12 · lg 16 · xl 24 · full`. Always with `borderCurve: 'continuous'`. |
+| Radius | `src/theme/radius.ts` | Concentric: `sm 6` chips · `md 10` controls · `lg 16` cards · `xl 20` hero/sheets · `full` dots only. Always with `borderCurve: 'continuous'`. |
 | Elevation | `src/theme/shadows.ts` | Dark UIs separate layers by surface tone, not shadow. Shadows only for floating elements (`float`, `overlay`). Use `boxShadow` strings. |
 | Motion | `src/theme/motion.ts` | Durations `fast 140 · base 240 · slow 420`; springs `snappy`, `smooth`, `bouncy`; stagger `40ms`. |
 
@@ -86,7 +98,9 @@ loading), `style` merged last, accessibility role/state/label.
 | `Text` | Only way to render text. `variant` maps to typography tokens; `tone` maps to text colours. |
 | `Button` | `primary` (accent), `secondary` (surface), `ghost`, `danger`; sizes `sm/md/lg`; press = scale 0.97 spring + haptic. |
 | `IconButton` | Icon-only; requires `label`. |
-| `Surface` | Layer container (`level` 1–3), token padding + radius. Not every group needs one. |
+| `Surface` | Glass panel (`level` 1–3 fills; level 1 adds edge + top light). Not every group needs one. |
+| `Glass` | The panel material, pressable with lift + spring; `tone` regular / strong / brand. |
+| `Aurora` | The drifting-light backdrop. |
 | `ListGroup` / `ListRow` | Grouped rows with hairlines (settings, plugin lists). Prefer `@expo/ui` list rows where they fit. |
 | `Stat` | Label + big animated number + delta chip. Building block of dashboard widgets. |
 | `AnimatedNumber` | Rolling-digit number transition (Reanimated). |
@@ -94,7 +108,7 @@ loading), `style` merged last, accessibility role/state/label.
 | `Sheet` | Use `@expo/ui` BottomSheet; wrapper only adds theme. |
 | `Field` (text, secure, number) | Inputs with label, hint, error; focus ring in accent. |
 | `EmptyState` / `Skeleton` | Every data view has loading, empty, error, content states. Skeletons shimmer; no full-screen spinners. |
-| `AgentOrb` | Animated presence indicator for the agent (idle / thinking / speaking). Hero effect #1. |
+| `Logo` | The brand mark (Skia); `orbiting` while the agent works, `intro` draws it on. |
 | `TabBar` | Custom bottom bar over Expo Router tabs: blurred surface, animated active pill, haptics. |
 
 Native-first rule: pickers, switches, sliders, menus, date/time pickers and bottom sheets

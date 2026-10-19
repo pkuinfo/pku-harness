@@ -19,7 +19,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T1.5 4-tab shell (Chat, Dashboard, Schedule, Settings) with placeholder screens, verified on emulator (2026-10-18)
 - [x] T1.7 Brand system: SVG/Skia logo + generated icons, SkSL shader backdrop, glass tokens, motion curves (2026-10-18)
 - [x] T1.6 First-run welcome experience with expressive, signature motion (Skia/Reanimated hero, staged reveal of the four tabs, consent → AI setup) (2026-10-18)
-- [~] T1.8 Motion pass: chat empty state on the shader backdrop with glass suggestions; glass tab bar (expo-blur BlurTargetView, content scrolls under it, TabBarInset) and glass composer over the hero (2026-10-18); shared transitions todo; chat hero redesign requested (shader reads as "scary")
+- [x] T1.8 Glass + Light design language applied app-wide: PKU VI palette, Aurora backdrop, glass surfaces (semantic tokens), concentric radii, logo replaces the orb, glass tab bar with sliding indicator, collapsing headers, focus-enter, message motion (2026-10-18)
 
 ## M2 Core runtime
 - [x] T2.1 Store: expo-sqlite DB with migrations + KV; SecureStore wrapper (2026-10-18)

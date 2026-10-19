@@ -19,7 +19,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button } from '@/components/button';
 import { NativeCheckbox } from '@/components/native-checkbox';
-import { ShaderBackdrop } from '@/components/shader-backdrop';
+import { Aurora } from '@/components/aurora';
 import { Text } from '@/components/text';
 import { markOnboarded } from '@/core/boot';
 import { kv } from '@/core/store/kv';
@@ -132,7 +132,7 @@ export function Welcome() {
 
   return (
     <View style={[styles.root, { backgroundColor: c.bg }]}>
-      <ShaderBackdrop progress={pageProgress} energy={1.2} />
+      <Aurora shift={pageProgress} />
       <Animated.ScrollView
         ref={pager}
         horizontal

@@ -31,9 +31,9 @@ export function Segmented<T extends string>({
     <View
       accessibilityRole="tablist"
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
-      style={[styles.track, { backgroundColor: c.surface2 }]}>
+      style={[styles.track, { backgroundColor: c.surface2, borderWidth: StyleSheet.hairlineWidth, borderColor: c.border }]}>
       {width > 0 ? <Animated.View
-          style={[styles.thumb, dark ? { backgroundColor: c.surface3 } : { backgroundColor: c.surface, boxShadow: shadows.raised }, thumb]}
+          style={[styles.thumb, dark ? { backgroundColor: c.surface3, boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.1)' } : { backgroundColor: c.elevated, boxShadow: shadows.raised }, thumb]}
         /> : null}
       {options.map((o) => (
         <PressableScale
@@ -57,7 +57,7 @@ export function Segmented<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  track: { flexDirection: 'row', borderRadius: radius.full, padding: 2, minHeight: 40 },
-  thumb: { position: 'absolute', top: 2, bottom: 2, borderRadius: radius.full },
+  track: { flexDirection: 'row', borderRadius: radius.md, borderCurve: 'continuous', padding: 2, minHeight: 40 },
+  thumb: { position: 'absolute', top: 2, bottom: 2, borderRadius: radius.md - 2, borderCurve: 'continuous' },
   item: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: spacing.sm },
 });

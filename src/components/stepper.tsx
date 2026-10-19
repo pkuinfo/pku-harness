@@ -45,6 +45,6 @@ export function Stepper({
 }
 
 const styles = StyleSheet.create({
-  wrap: { flexDirection: 'row', alignItems: 'center', borderRadius: radius.full, alignSelf: 'flex-start', paddingHorizontal: spacing.xxs },
+  wrap: { flexDirection: 'row', alignItems: 'center', borderRadius: radius.md, borderCurve: 'continuous', alignSelf: 'flex-start', paddingHorizontal: spacing.xxs },
   value: { minWidth: 56, textAlign: 'center', fontVariant: ['tabular-nums'] },
 });

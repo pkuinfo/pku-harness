@@ -4,7 +4,8 @@
  * open orbit, with the agent as a bright dot travelling on it.
  */
 export const brand = {
-  tile: { radius: 28, stops: ['#FF5A63', '#E0182F', '#7A0610'] as const },
+  // 北大红 (#8B0012) at the centre of the tile gradient, lifted at the top-left, deepened below.
+  tile: { radius: 28, stops: ['#C42236', '#8B0012', '#52000A'] as const },
   highlight: { cx: 26, cy: 14, r: 78, color: '#FFFFFF', opacity: 0.24 },
   stem: { x: 33, y: 23.5, width: 15, height: 72, rx: 4.5 },
   orbit: { cx: 62, cy: 53, r: 23, stroke: 13, startDeg: -156, endDeg: 156 },

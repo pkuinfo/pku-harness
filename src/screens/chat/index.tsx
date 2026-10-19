@@ -1,18 +1,19 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, type ComponentRef } from 'react';
 import { KeyboardAvoidingView, ScrollView, StyleSheet, View } from 'react-native';
+import Animated from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AgentOrb } from '@/components/agent-orb';
 import { Button, IconButton } from '@/components/button';
 import { FadeIn } from '@/components/fade-in';
-import { PressableScale } from '@/components/pressable-scale';
-import { ShaderBackdrop } from '@/components/shader-backdrop';
+import { Glass } from '@/components/glass';
+import { Logo } from '@/components/logo';
 import { Text } from '@/components/text';
 import { chatStore, useChat } from '@/core/agent/chat-store';
 import { useAIConfig } from '@/core/agent/provider';
 import { sendMessage, stopGeneration } from '@/core/agent/run';
-import { glassTokens, radius, spacing, useTheme, useThemeName } from '@/theme';
+import { radius, spacing, useTheme } from '@/theme';
+import { useFocusEnter } from '@/hooks/use-focus-enter';
 import { useKeyboardVisible } from '@/hooks/use-keyboard-visible';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 
@@ -27,11 +28,11 @@ export function Chat() {
   const insets = useSafeAreaInsets();
   const bar = useTabBarInset();
   const keyboardVisible = useKeyboardVisible();
+  const enter = useFocusEnter();
   const chat = useChat();
   const { hasKey, config } = useAIConfig();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const busy = chat.status === 'streaming';
-  const glass = glassTokens[useThemeName()];
 
   useEffect(() => {
     const id = setTimeout(() => scroll.current?.scrollToEnd({ animated: true }), 50);
@@ -53,11 +54,9 @@ export function Chat() {
   const empty = chat.messages.length === 0;
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior="padding">
-      {/* Hero moment: the living backdrop only while the conversation is empty. */}
-      {empty ? <ShaderBackdrop energy={0.8} /> : null}
+    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
-        <AgentOrb size={36} state={busy ? 'thinking' : 'idle'} />
+        <Logo size={32} orbiting={busy} />
         <View style={{ flex: 1 }}>
           <Text variant="headline">PKU Harness</Text>
           <Text variant="caption" tone="faint">
@@ -67,47 +66,38 @@ export function Chat() {
         {!empty ? <IconButton icon="plus" label="新对话" variant="ghost" onPress={() => chatStore.clear()} /> : null}
       </View>
 
-      <ScrollView
+      <Animated.ScrollView
         ref={scroll}
-        style={{ flex: 1 }}
+        style={[{ flex: 1 }, enter]}
         contentContainerStyle={[styles.list, empty && { flexGrow: 1, justifyContent: 'center' }]}
         keyboardShouldPersistTaps="handled">
         {empty ? (
-          <View style={styles.hero}>
-            <FadeIn>
-              <AgentOrb size={160} />
-            </FadeIn>
-            <FadeIn index={1}>
+          <FadeIn style={styles.heroWrap}>
+            <Glass radius={radius.xl} style={styles.hero}>
+              <Logo size={84} intro orbiting />
               <Text variant="title" align="center">
                 今天想让我做什么？
               </Text>
-            </FadeIn>
-            {!hasKey ? (
-              <FadeIn index={2} style={{ alignItems: 'center', gap: spacing.md }}>
-                <Text variant="callout" tone="muted" align="center">
-                  先连接一个 AI 服务（默认 DeepSeek），我就能开始工作。
-                </Text>
-                <Button title="连接 AI 服务" icon="key" onPress={() => router.push('/ai-settings')} />
-              </FadeIn>
-            ) : (
-              <View style={styles.suggestions}>
-                {SUGGESTIONS.map((s, i) => (
-                  <FadeIn key={s} index={i + 2}>
-                    <PressableScale
-                      accessibilityRole="button"
-                      accessibilityLabel={s}
-                      onPress={() => sendMessage(s)}
-                      style={[
-                        styles.suggestion,
-                        { backgroundColor: glass.surface, borderColor: glass.rim[0], backgroundImage: `linear-gradient(180deg, ${glass.sheen[0]}, ${glass.sheen[1]})` },
-                      ]}>
-                      <Text variant="callout">{s}</Text>
-                    </PressableScale>
-                  </FadeIn>
-                ))}
-              </View>
-            )}
-          </View>
+              {!hasKey ? (
+                <FadeIn index={1} style={{ alignItems: 'center', gap: spacing.md }}>
+                  <Text variant="callout" tone="muted" align="center">
+                    先连接一个 AI 服务（默认 DeepSeek），我就能开始工作。
+                  </Text>
+                  <Button title="连接 AI 服务" icon="key" onPress={() => router.push('/ai-settings')} />
+                </FadeIn>
+              ) : (
+                <View style={styles.suggestions}>
+                  {SUGGESTIONS.map((s, i) => (
+                    <FadeIn key={s} index={i + 1}>
+                      <Glass radius={radius.md} onPress={() => sendMessage(s)} accessibilityLabel={s} style={styles.suggestion}>
+                        <Text variant="callout">{s}</Text>
+                      </Glass>
+                    </FadeIn>
+                  ))}
+                </View>
+              )}
+            </Glass>
+          </FadeIn>
         ) : (
           chat.messages.map((m) => <MessageView key={m.id} message={m} onSubmitForm={submitForm} />)
         )}
@@ -118,7 +108,7 @@ export function Chat() {
             </Text>
           </View>
         ) : null}
-      </ScrollView>
+      </Animated.ScrollView>
 
       <Composer busy={busy} onSend={sendMessage} onStop={stopGeneration} glass={empty} />
       {/* Clear the floating tab bar; with the keyboard up the bar is hidden behind it. */}
@@ -130,14 +120,9 @@ export function Chat() {
 const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingBottom: spacing.sm },
   list: { padding: spacing.lg, gap: spacing.xl },
-  hero: { alignItems: 'center', gap: spacing.xl },
-  suggestions: { alignSelf: 'stretch', gap: spacing.sm },
-  suggestion: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    borderWidth: StyleSheet.hairlineWidth,
-  },
+  heroWrap: { alignSelf: 'stretch' },
+  hero: { alignItems: 'center', gap: spacing.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.xl },
+  suggestions: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.sm },
+  suggestion: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   error: { padding: spacing.md, borderRadius: radius.md },
 });

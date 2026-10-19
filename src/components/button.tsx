@@ -9,9 +9,10 @@ import { Text, type TextTone } from './text';
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
-const variantStyle = (c: ThemeColors): Record<Variant, { bg: string; tone: TextTone; fg: string }> => ({
-  primary: { bg: c.accent, tone: 'onAccent', fg: c.onAccent },
-  secondary: { bg: c.surface3, tone: 'default', fg: c.text },
+const variantStyle = (c: ThemeColors): Record<Variant, { bg: string; tone: TextTone; fg: string; edge?: string }> => ({
+  // Primary is solid 北大红 with a lit top edge; secondary is glass with a hairline edge.
+  primary: { bg: c.brand, tone: 'onAccent', fg: c.onBrand, edge: 'inset 0 1px 0 rgba(255, 255, 255, 0.2)' },
+  secondary: { bg: c.surface2, tone: 'default', fg: c.text },
   ghost: { bg: 'transparent', tone: 'default', fg: c.text },
   danger: { bg: c.downMuted, tone: 'down', fg: c.down },
 });
@@ -51,7 +52,7 @@ export function Button({
       accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       disabled={disabled || loading}
       onPress={onPress}
-      style={[styles.base, s, { backgroundColor: v.bg, opacity: disabled ? 0.4 : 1 }, style]}>
+      style={[styles.base, s, { backgroundColor: v.bg, boxShadow: v.edge, opacity: disabled ? 0.4 : 1 }, variant === 'secondary' && { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border }, style]}>
       {loading ? (
         <ActivityIndicator color={v.fg} />
       ) : (
@@ -95,7 +96,8 @@ export function IconButton({
       scaleTo={0.92}
       style={[
         styles.iconBtn,
-        { width: size, height: size, backgroundColor: v.bg, opacity: disabled ? 0.4 : 1 },
+        { width: size, height: size, backgroundColor: v.bg, boxShadow: v.edge, opacity: disabled ? 0.4 : 1 },
+        variant === 'secondary' && { borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
         style,
       ]}>
       <Icon name={icon} size={Math.round(size * 0.48)} color={v.fg} />
@@ -105,10 +107,11 @@ export function IconButton({
 
 const styles = StyleSheet.create({
   base: {
-    borderRadius: radius.full,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
     alignItems: 'center',
     justifyContent: 'center',
   },
   row: { flexDirection: 'row', alignItems: 'center' },
-  iconBtn: { borderRadius: radius.full, alignItems: 'center', justifyContent: 'center' },
+  iconBtn: { borderRadius: radius.md, borderCurve: 'continuous', alignItems: 'center', justifyContent: 'center' },
 });

@@ -11,6 +11,7 @@ import { ErrorBoundary } from '@/components/error-boundary';
 import { Field } from '@/components/field';
 import { EmptyState } from '@/components/empty-state';
 import { FadeIn } from '@/components/fade-in';
+import { Glass, GlassEdges } from '@/components/glass';
 import { Icon } from '@/components/icon';
 import { ListGroup, ListRow } from '@/components/list-group';
 import { NativeCheckbox } from '@/components/native-checkbox';
@@ -45,7 +46,7 @@ import { GenUIView } from '@/genui/view';
 import { useLayout } from '@/hooks/use-layout';
 import { useNow } from '@/hooks/use-now';
 import { useSecureDisplay } from '@/hooks/use-secure-display';
-import { courseColors, glassTokens, radius, spacing, typography, useTheme, useThemeName } from '@/theme';
+import { courseColors, glassMaterial, radius, spacing, typography, useTheme, useThemeName } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 /**
@@ -134,13 +135,15 @@ const components = {
   SortableList,
   PluginWidget,
   QRCode,
+  Glass,
+  GlassEdges,
 } as unknown as HostComponents;
 
 function useHostTheme(): HostTheme {
   const colors = useTheme();
   const name = useThemeName();
   const { contentWidth } = useLayout();
-  const g = glassTokens[name];
+  const g = glassMaterial[name];
   return {
     name,
     colors,
@@ -151,7 +154,7 @@ function useHostTheme(): HostTheme {
       const list = courseColors[name];
       return list[((i % list.length) + list.length) % list.length];
     },
-    glass: { surface: g.surface, rim: g.rim[0], sheen: `linear-gradient(180deg, ${g.sheen[0]}, ${g.sheen[1]})` },
+    glass: { surface: g.fill, rim: g.edge, sheen: g.topLight },
     contentWidth,
   };
 }

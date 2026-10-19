@@ -3,7 +3,9 @@ import { View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { radius, spacing, useTheme } from '@/theme';
 
-/** A layered panel. Level 1–3 maps to surface tones; tone, not shadow, separates layers. */
+import { GlassEdges } from './glass';
+
+/** A glass panel. Level 1–3 maps to surface fills; the edge and top light make it glass. */
 export function Surface({
   level = 1,
   padded = true,
@@ -28,6 +30,7 @@ export function Surface({
         },
         style,
       ]}>
+      {level === 1 ? <GlassEdges radius={radius.lg} /> : null}
       {children}
     </View>
   );

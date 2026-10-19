@@ -32,7 +32,7 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs + 2,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     borderWidth: StyleSheet.hairlineWidth,
     maxWidth: '100%',
   },

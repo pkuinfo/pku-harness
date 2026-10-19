@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
     paddingHorizontal: spacing.md,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
     borderWidth: StyleSheet.hairlineWidth,
   },
   input: { flex: 1, fontFamily: fonts.regular, fontSize: typography.body.fontSize, paddingVertical: spacing.sm },

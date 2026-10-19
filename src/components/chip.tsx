@@ -47,6 +47,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.sm,
     paddingVertical: spacing.xxs + 1,
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
   },
 });

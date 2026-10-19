@@ -12,12 +12,11 @@ import Animated, {
   type SharedValue,
 } from 'react-native-reanimated';
 
-import { AgentOrb } from '@/components/agent-orb';
 import { AnimatedNumber } from '@/components/animated-number';
 import { Icon, type IconName } from '@/components/icon';
 import { Logo } from '@/components/logo';
 import { Text } from '@/components/text';
-import { curves, glassTokens, radius, spacing, useTheme, useThemeName } from '@/theme';
+import { curves, glassMaterial, radius, spacing, useTheme, useThemeName } from '@/theme';
 
 const EASE_OUT = Easing.bezier(...curves.out);
 
@@ -38,12 +37,12 @@ export function useParallax(scroll: SharedValue<number>, index: number, width: n
 /** A glass chip in RN (for content that must stay crisp text over the backdrop). */
 export function GlassChip({ icon, label, style }: { icon?: IconName; label: string; style?: object }) {
   const c = useTheme();
-  const g = glassTokens[useThemeName()];
+  const g = glassMaterial[useThemeName()];
   return (
     <View
       style={[
         styles.chip,
-        { backgroundColor: g.surface, borderColor: g.rim[0], backgroundImage: `linear-gradient(180deg, ${g.sheen[0]}, ${g.sheen[1]})` },
+        { backgroundColor: g.fillStrong, borderColor: g.edge },
         style,
       ]}>
       {icon ? <Icon name={icon} size={16} color={c.accent} /> : null}
@@ -62,7 +61,7 @@ export function AgentArt({ active }: { active: boolean }) {
   const lines = ['每天早上 8 点查校园卡余额', '低于 ¥100 就提醒我', '好的，已创建：每天 08:00 · 低于 ¥100 通知'];
   return (
     <View style={{ alignItems: 'center', gap: spacing.xl }}>
-      <AgentOrb size={120} state={active ? 'thinking' : 'idle'} />
+      <Logo size={112} orbiting={active} />
       <View style={{ gap: spacing.sm, width: '100%' }}>
         {lines.map((l, i) => (
           <Bubble key={l} text={l} mine={i < 2} delay={reduced ? 0 : 300 + i * 650} active={active} />
@@ -74,7 +73,7 @@ export function AgentArt({ active }: { active: boolean }) {
 
 function Bubble({ text, mine, delay, active }: { text: string; mine: boolean; delay: number; active: boolean }) {
   const c = useTheme();
-  const g = glassTokens[useThemeName()];
+  const g = glassMaterial[useThemeName()];
   const style = useAnimatedStyle(() => ({
     opacity: withDelay(active ? delay : 0, withTiming(active ? 1 : 0, { duration: 420, easing: EASE_OUT })),
     transform: [{ translateY: withDelay(active ? delay : 0, withTiming(active ? 0 : 12, { duration: 420, easing: EASE_OUT })) }],
@@ -84,8 +83,8 @@ function Bubble({ text, mine, delay, active }: { text: string; mine: boolean; de
       style={[
         styles.bubble,
         mine
-          ? { alignSelf: 'flex-end', backgroundColor: c.accent }
-          : { alignSelf: 'flex-start', backgroundColor: g.surface, borderColor: g.rim[0], borderWidth: StyleSheet.hairlineWidth },
+          ? { alignSelf: 'flex-end', backgroundColor: c.brand }
+          : { alignSelf: 'flex-start', backgroundColor: g.fillStrong, borderColor: g.edge, borderWidth: StyleSheet.hairlineWidth },
         style,
       ]}>
       <Text variant="callout" tone={mine ? 'onAccent' : 'default'}>
@@ -103,7 +102,7 @@ export function DashboardArt({ active }: { active: boolean }) {
     const t = setTimeout(() => setVals([128.4, 36, 6]), 250);
     return () => clearTimeout(t);
   }, [active]);
-  const g = glassTokens[useThemeName()];
+  const g = glassMaterial[useThemeName()];
   const tiles: { label: string; icon: IconName; value: number; fmt: (n: number) => string; wide?: boolean }[] = [
     { label: '校园卡余额（示例）', icon: 'card', value: vals[0], fmt: (n) => `¥${n.toFixed(2)}`, wide: true },
     { label: '网费', icon: 'wifi', value: vals[1], fmt: (n) => `¥${n.toFixed(0)}` },
@@ -112,7 +111,7 @@ export function DashboardArt({ active }: { active: boolean }) {
   return (
     <View style={styles.tiles}>
       {tiles.map((t) => (
-        <View key={t.label} style={[styles.tile, t.wide && { flexBasis: '100%' }, { backgroundColor: g.surface, borderColor: g.rim[0] }]}>
+        <View key={t.label} style={[styles.tile, t.wide && { flexBasis: '100%' }, { backgroundColor: g.fillStrong, borderColor: g.edge }]}>
           <View style={styles.tileHead}>
             <Icon name={t.icon} size={14} />
             <Text variant="caption" tone="muted">
@@ -144,7 +143,7 @@ export function ReminderArt({ active }: { active: boolean }) {
 
 function TimelineRow({ time, text, icon, index, active }: { time: string; text: string; icon: IconName; index: number; active: boolean }) {
   const c = useTheme();
-  const g = glassTokens[useThemeName()];
+  const g = glassMaterial[useThemeName()];
   const reduced = useReducedMotion();
   const enter = useAnimatedStyle(() => ({
     opacity: withDelay(active ? 200 + index * 220 : 0, withTiming(active ? 1 : 0, { duration: 380, easing: EASE_OUT })),
@@ -161,7 +160,7 @@ function TimelineRow({ time, text, icon, index, active }: { time: string; text: 
     ],
   }));
   return (
-    <Animated.View style={[styles.row, { backgroundColor: g.surface, borderColor: g.rim[0] }, enter]}>
+    <Animated.View style={[styles.row, { backgroundColor: g.fillStrong, borderColor: g.edge }, enter]}>
       <Animated.View style={[styles.dot, { backgroundColor: c.accent }, pulse]} />
       <Text variant="bodyStrong" style={{ width: 64, fontVariant: ['tabular-nums'] }}>
         {time}
@@ -219,7 +218,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
-    borderRadius: radius.full,
+    borderRadius: radius.md,
     borderWidth: StyleSheet.hairlineWidth,
   },
   bubble: { maxWidth: '82%', paddingHorizontal: spacing.lg, paddingVertical: spacing.md, borderRadius: radius.xl, borderCurve: 'continuous' },

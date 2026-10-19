@@ -31,7 +31,7 @@ export type GlassProps = {
  *
  * Pressable glass lifts its fill a touch and settles back with the shared spring.
  */
-export function Glass({ children, style, radius = radii.xl, tone = 'regular', onPress, onLongPress, accessibilityLabel, accessibilityRole, haptic = true }: GlassProps) {
+export function Glass({ children, style, radius = radii.lg, tone = 'regular', onPress, onLongPress, accessibilityLabel, accessibilityRole, haptic = true }: GlassProps) {
   const m = glassMaterial[useThemeName()];
   const scale = useSharedValue(1);
   const lift = useSharedValue(0);
@@ -99,3 +99,19 @@ export function Glass({ children, style, radius = radii.xl, tone = 'regular', on
 const styles = StyleSheet.create({
   topLight: { position: 'absolute', top: 0, height: 1 },
 });
+
+/**
+ * The glass details for a panel that paints its own fill (`theme.surface*`): one hairline edge
+ * and the top-edge light. Place as the first child of a positioned, rounded container.
+ */
+export function GlassEdges({ radius = radii.lg }: { radius?: number }) {
+  const m = glassMaterial[useThemeName()];
+  const inset = Math.min(radius, 24);
+  return (
+    <View
+      pointerEvents="none"
+      style={[StyleSheet.absoluteFill, { borderRadius: radius, borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, borderColor: m.edge, overflow: 'hidden' }]}>
+      <View style={[styles.topLight, { left: inset, right: inset, backgroundImage: m.topLight }]} />
+    </View>
+  );
+}

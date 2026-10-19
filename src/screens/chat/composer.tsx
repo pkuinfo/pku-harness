@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { StyleSheet, TextInput, View } from 'react-native';
 
 import { IconButton } from '@/components/button';
-import { glassTokens, radius, spacing, typography, useTheme, useThemeName } from '@/theme';
+import { glassMaterial, radius, spacing, typography, useTheme, useThemeName } from '@/theme';
 
 export function Composer({
   busy,
@@ -17,7 +17,7 @@ export function Composer({
   glass?: boolean;
 }) {
   const c = useTheme();
-  const g = glassTokens[useThemeName()];
+  const g = glassMaterial[useThemeName()];
   const [text, setText] = useState('');
   const canSend = text.trim().length > 0 && !busy;
   return (
@@ -25,9 +25,7 @@ export function Composer({
       <View
         style={[
           styles.box,
-          glass
-            ? { backgroundColor: g.surface, borderColor: g.rim[0], backgroundImage: `linear-gradient(180deg, ${g.sheen[0]}, ${g.sheen[1]})` }
-            : { backgroundColor: c.surface2, borderColor: c.border },
+          { backgroundColor: glass ? g.fillStrong : c.surface2, borderColor: glass ? g.edge : c.border },
         ]}>
         <TextInput
           value={text}
@@ -65,7 +63,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     gap: spacing.sm,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderCurve: 'continuous',
     borderWidth: StyleSheet.hairlineWidth,
     paddingLeft: spacing.lg,

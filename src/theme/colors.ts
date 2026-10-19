@@ -53,19 +53,26 @@ export type ThemeColors = {
   infoMuted: string;
   glow: string;
   scrim: string;
+  /** Opaque layer for overlays that float over content (sheets, prompts, popovers). */
+  elevated: string;
+  /** Filled primary actions: 北大红 (deepened slightly on dark for depth). */
+  brand: string;
+  onBrand: string;
 };
 
+// Surfaces are glass: nearly transparent over the aurora (docs/DESIGN.md §1). `bg` is the
+// aurora base, painted once at the root.
 const dark: ThemeColors = {
-  bg: palette.ink950,
-  surface: palette.ink900,
-  surface2: palette.ink850,
-  surface3: palette.ink800,
-  border: palette.ink750,
+  bg: '#09090B',
+  surface: 'rgba(255, 255, 255, 0.035)',
+  surface2: 'rgba(255, 255, 255, 0.06)',
+  surface3: 'rgba(255, 255, 255, 0.09)',
+  border: 'rgba(255, 255, 255, 0.08)',
   text: palette.ink50,
   textMuted: palette.ink300,
   textFaint: palette.ink400,
-  accent: palette.pkuRedBright,
-  accentMuted: 'rgba(240, 68, 79, 0.16)',
+  accent: '#F0606B',
+  accentMuted: 'rgba(240, 96, 107, 0.14)',
   onAccent: palette.white,
   up: palette.green,
   upMuted: 'rgba(46, 189, 133, 0.14)',
@@ -77,19 +84,22 @@ const dark: ThemeColors = {
   infoMuted: 'rgba(61, 139, 255, 0.14)',
   glow: 'rgba(240, 68, 79, 0.55)',
   scrim: 'rgba(0, 0, 0, 0.6)',
+  elevated: '#141316',
+  brand: '#A3101F',
+  onBrand: palette.white,
 };
 
 const light: ThemeColors = {
-  bg: palette.ink50,
-  surface: palette.white,
-  surface2: '#EFF1F4',
-  surface3: '#E5E8EC',
-  border: '#DDE1E6',
+  bg: '#F6F5F3',
+  surface: 'rgba(255, 255, 255, 0.5)',
+  surface2: 'rgba(17, 12, 10, 0.04)',
+  surface3: 'rgba(17, 12, 10, 0.07)',
+  border: 'rgba(17, 12, 10, 0.08)',
   text: '#0B0D10',
   textMuted: '#59616C',
   textFaint: '#8D95A1',
-  accent: palette.pkuRed,
-  accentMuted: 'rgba(200, 16, 46, 0.10)',
+  accent: '#8B0012',
+  accentMuted: 'rgba(139, 0, 18, 0.08)',
   onAccent: palette.white,
   up: palette.greenDeep,
   upMuted: 'rgba(14, 159, 110, 0.12)',
@@ -101,6 +111,9 @@ const light: ThemeColors = {
   infoMuted: 'rgba(31, 111, 235, 0.10)',
   glow: 'rgba(200, 16, 46, 0.35)',
   scrim: 'rgba(11, 13, 16, 0.4)',
+  elevated: '#FBFAF9',
+  brand: '#8B0012',
+  onBrand: palette.white,
 };
 
 export const themes = { dark, light } as const;
@@ -131,28 +144,6 @@ export const courseColors = {
     { fill: 'rgba(230, 92, 0, 0.12)', ink: '#B84A00' },
     { fill: 'rgba(219, 39, 119, 0.12)', ink: '#B81F63' },
   ],
-} as const;
-
-/** Shader backdrop fields (src/components/shader-backdrop.tsx): canvas + four colour fields. */
-export const backdropPalettes = {
-  dark: { bg: '#07080A', c1: '#8E0F1E', c2: '#E8283A', c3: '#3A1466', c4: '#F29A4A' },
-  light: { bg: '#F7F3F2', c1: '#F7C9CD', c2: '#F06A75', c3: '#D9CCF5', c4: '#FFD9B0' },
-} as const;
-
-/** Liquid-glass layers: base fill, top sheen and specular rim (3 stops each). */
-export const glassTokens = {
-  dark: {
-    fill: 'rgba(255,255,255,0.05)',
-    sheen: ['rgba(255,255,255,0.14)', 'rgba(255,255,255,0.02)', 'rgba(255,255,255,0.05)'],
-    rim: ['rgba(255,255,255,0.45)', 'rgba(255,255,255,0.06)', 'rgba(255,255,255,0.22)'],
-    surface: 'rgba(20,22,26,0.62)',
-  },
-  light: {
-    fill: 'rgba(255,255,255,0.35)',
-    sheen: ['rgba(255,255,255,0.55)', 'rgba(255,255,255,0.1)', 'rgba(255,255,255,0.25)'],
-    rim: ['rgba(255,255,255,0.95)', 'rgba(255,255,255,0.3)', 'rgba(255,255,255,0.7)'],
-    surface: 'rgba(255,255,255,0.72)',
-  },
 } as const;
 
 /**

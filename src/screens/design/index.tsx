@@ -1,10 +1,10 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { AgentOrb } from '@/components/agent-orb';
 import { Aurora } from '@/components/aurora';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icon';
+import { Logo } from '@/components/logo';
 import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { pkuBrand, radius, setThemePreference, spacing, useThemePreference, type ThemePreference } from '@/theme';
@@ -44,14 +44,14 @@ export function DesignBoard() {
           onChange={setThemePreference}
         />
 
-        <Glass style={{ padding: spacing.xl, alignItems: 'center', gap: spacing.lg }} radius={radius.xl + 8}>
-          <AgentOrb size={96} />
+        <Glass style={{ padding: spacing.xl, alignItems: 'center', gap: spacing.lg }} radius={radius.xl}>
+          <Logo size={84} intro orbiting />
           <Text variant="headline" align="center">
             今天想让我做什么？
           </Text>
           <View style={styles.wrap}>
             {['校园卡余额还剩多少', '明天几点有课', '每晚 10 点提醒我交作业'].map((s) => (
-              <Glass key={s} radius={radius.full} onPress={() => {}} accessibilityLabel={s} style={styles.chip}>
+              <Glass key={s} radius={radius.md} onPress={() => {}} accessibilityLabel={s} style={styles.chip}>
                 <Text variant="callout">{s}</Text>
               </Glass>
             ))}
@@ -103,22 +103,22 @@ export function DesignBoard() {
         </Glass>
 
         <View style={styles.row}>
-          <Glass tone="brand" radius={radius.full} onPress={() => {}} accessibilityLabel="连接 AI 服务" style={[styles.button, { flex: 1 }]}>
+          <Glass tone="brand" radius={radius.md} onPress={() => {}} accessibilityLabel="连接 AI 服务" style={[styles.button, { flex: 1 }]}>
             <Icon name="key" size={18} color="#FFFFFF" />
             <Text variant="bodyStrong" tone="onAccent">
               连接 AI 服务
             </Text>
           </Glass>
-          <Glass radius={radius.full} onPress={() => {}} accessibilityLabel="稍后" style={styles.button}>
+          <Glass radius={radius.md} onPress={() => {}} accessibilityLabel="稍后" style={styles.button}>
             <Text variant="bodyStrong">稍后</Text>
           </Glass>
         </View>
 
-        <Glass tone="strong" radius={radius.full} style={[styles.between, { paddingLeft: spacing.lg, paddingRight: spacing.xs, paddingVertical: spacing.xs }]}>
+        <Glass tone="strong" radius={radius.md} style={[styles.between, { paddingLeft: spacing.lg, paddingRight: spacing.xs, paddingVertical: spacing.xs }]}>
           <Text variant="body" tone="faint">
             问点什么，或让我帮你做点什么…
           </Text>
-          <Glass tone="brand" radius={radius.full} onPress={() => {}} accessibilityLabel="发送" style={styles.send}>
+          <Glass tone="brand" radius={radius.md} onPress={() => {}} accessibilityLabel="发送" style={styles.send}>
             <Icon name="send" size={18} color="#FFFFFF" />
           </Glass>
         </Glass>

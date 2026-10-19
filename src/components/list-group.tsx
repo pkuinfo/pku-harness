@@ -3,6 +3,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { radius, spacing, useTheme } from '@/theme';
 
+import { GlassEdges } from './glass';
 import { Icon, type IconName } from './icon';
 import { PressableScale } from './pressable-scale';
 import { Text } from './text';
@@ -29,6 +30,7 @@ export function ListGroup({
         </Text>
       ) : null}
       <View style={[styles.group, { backgroundColor: c.surface }]}>
+        <GlassEdges radius={radius.lg} />
         {items.map((child, i) => (
           <Fragment key={i}>
             {i > 0 ? <View style={[styles.hairline, { backgroundColor: c.border }]} /> : null}

@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MAX_CONTENT_WIDTH } from '@/hooks/use-layout';
 import { spacing, useTheme } from '@/theme';
 
+import { Aurora } from './aurora';
 import { Button, IconButton } from './button';
 import { Text } from './text';
 
@@ -43,6 +44,7 @@ export function SheetScreen({
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.bg }} behavior="padding">
+      <Aurora />
       <View style={[styles.header, { paddingTop: insets.top + spacing.sm }]}>
         <Text variant="headline" style={{ flex: 1 }}>
           {title}
@@ -52,7 +54,8 @@ export function SheetScreen({
       <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
-      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md), borderTopColor: c.border, backgroundColor: c.bg }]}>
+      <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, spacing.md), borderTopColor: c.border }]}>
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.bg, opacity: 0.8 }]} />
         {danger && onDanger ? <Button title={danger} variant="danger" onPress={onDanger} style={{ flex: 1 }} /> : null}
         {secondary && onSecondary ? <Button title={secondary} variant="secondary" onPress={onSecondary} style={{ flex: 1 }} /> : null}
         <Button title={primary} onPress={onPrimary} disabled={primaryDisabled} loading={loading} style={{ flex: 2 }} />

@@ -56,7 +56,7 @@ export function ApprovalPrompt() {
         entering={SlideInDown.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
         exiting={SlideOutDown}
         accessibilityViewIsModal
-        style={[styles.card, { backgroundColor: c.surface, paddingBottom: Math.max(insets.bottom, spacing.lg), boxShadow: shadows.overlay }]}>
+        style={[styles.card, { backgroundColor: c.elevated, paddingBottom: Math.max(insets.bottom, spacing.lg), boxShadow: shadows.overlay }]}>
         <View style={styles.head}>
           <View style={[styles.icon, { backgroundColor: c.accentMuted }]}>
             <Icon name="shield" size={20} color={c.accent} />

@@ -1,5 +1,6 @@
 import type { Spec } from '@json-render/core';
 import { StyleSheet, View } from 'react-native';
+import Animated, { withSpring, withTiming, type EntryAnimationsValues } from 'react-native-reanimated';
 
 import { FadeIn } from '@/components/fade-in';
 import { Surface } from '@/components/surface';
@@ -7,9 +8,21 @@ import { Text } from '@/components/text';
 import type { ChatMessage } from '@/core/agent/chat-store';
 import { GenUIView } from '@/genui/view';
 import { checkSpec } from '@/genui/check';
-import { radius, spacing, useTheme } from '@/theme';
+import { radius, springs, spacing, useTheme } from '@/theme';
 
 import { ToolChip } from './tool-chip';
+
+/** A sent message grows out of the composer: from its bottom-right corner, with a spring. */
+function bubbleIn(_values: EntryAnimationsValues) {
+  'worklet';
+  return {
+    initialValues: { opacity: 0, transform: [{ translateY: 16 }, { scale: 0.9 }] },
+    animations: {
+      opacity: withTiming(1, { duration: 160 }),
+      transform: [{ translateY: withSpring(0, springs.snappy) }, { scale: withSpring(1, springs.snappy) }],
+    },
+  };
+}
 
 export function MessageView({
   message,
@@ -22,11 +35,11 @@ export function MessageView({
   if (message.role === 'user') {
     const text = message.parts.map((p) => (p.type === 'text' ? p.text : '')).join('');
     return (
-      <FadeIn style={styles.userRow}>
-        <View style={[styles.userBubble, { backgroundColor: c.surface3 }]}>
+      <View style={styles.userRow}>
+        <Animated.View entering={bubbleIn} style={[styles.userBubble, { backgroundColor: c.accentMuted, borderColor: c.border }]}>
           <Text variant="body">{text}</Text>
-        </View>
-      </FadeIn>
+        </Animated.View>
+      </View>
     );
   }
   return (
@@ -35,9 +48,11 @@ export function MessageView({
         switch (part.type) {
           case 'text':
             return part.text.trim() ? (
-              <Text key={i} variant="body" selectable>
-                {part.text.trim()}
-              </Text>
+              <FadeIn key={i}>
+                <Text variant="body" selectable>
+                  {part.text.trim()}
+                </Text>
+              </FadeIn>
             ) : null;
           case 'reasoning':
             return null;
@@ -71,9 +86,11 @@ const styles = StyleSheet.create({
     maxWidth: '85%',
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    borderRadius: radius.xl,
+    borderRadius: radius.lg,
     borderBottomRightRadius: radius.sm,
     borderCurve: 'continuous',
+    borderWidth: StyleSheet.hairlineWidth,
+    transformOrigin: 'right bottom',
   },
   assistant: { gap: spacing.md },
 });
