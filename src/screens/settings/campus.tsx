@@ -9,6 +9,7 @@ import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { signIn, signOut, useCampusAccount } from '@/core/campus/account';
 import { invokeTool } from '@/core/runtime/invoke';
+import { formatDateTime } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 
 /**
@@ -55,13 +56,13 @@ export function CampusAccountScreen() {
 
   if (account.signedIn) {
     return (
-      <SheetScreen title="校园账号" primary="测试校园卡连接" onPrimary={test} loading={busy} danger="退出登录" onDanger={async () => {
+      <SheetScreen title="校园账号" primary="测试连接" onPrimary={test} loading={busy} danger="退出登录" onDanger={async () => {
         haptics.warning();
         await signOut();
         setMessage(null);
       }}>
         <ListGroup>
-          <ListRow icon="person" title={account.name ?? account.username ?? '已登录'} subtitle={[account.name ? account.username : null, account.signedInAt ? `登录于 ${new Date(account.signedInAt).toLocaleString('zh-CN', { hour12: false })}` : null].filter(Boolean).join(' · ')} accessory={<Chip label="已登录" tone="up" icon="check" />} />
+          <ListRow icon="person" title={account.name ?? account.username ?? '已登录'} subtitle={[account.name ? account.username : null, account.signedInAt ? `登录于 ${formatDateTime(new Date(account.signedInAt))}` : null].filter(Boolean).join(' · ')} accessory={<Chip label="已登录" tone="up" icon="check" />} />
         </ListGroup>
         <Text variant="callout" tone="muted">
           插件通过本机代为登录各个校园服务，拿不到你的密码。退出登录会删除本机保存的密码和所有会话。

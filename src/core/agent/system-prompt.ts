@@ -2,6 +2,7 @@ import { services } from '@/core/runtime/invoke';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import { resolveDynamic } from '@/core/runtime/types';
+import { formatFull } from '@/utils/date';
 
 /** Assemble the system prompt from a fixed core plus each plugin's instructions. */
 export function buildSystemPrompt(now = new Date()) {
@@ -12,7 +13,7 @@ export function buildSystemPrompt(now = new Date()) {
     .join('\n\n');
 
   return `你是 PKU Harness，北京大学学生的校园生活助手，运行在学生自己的手机上。
-当前时间：${now.toLocaleString('zh-CN', { hour12: false })}（北京时间）。
+当前时间：${formatFull(now)}（北京时间）。
 
 原则：
 - 用户的意图就是指令。能直接用工具完成的事就直接做，做完简洁地汇报结果。

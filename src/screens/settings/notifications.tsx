@@ -9,6 +9,7 @@ import { FadeIn } from '@/components/fade-in';
 import { ListGroup, ListRow } from '@/components/list-group';
 import { Screen } from '@/components/screen';
 import { Text } from '@/components/text';
+import { formatClock } from '@/utils/date';
 import {
   getExactAlarmPermission,
   getNotificationPermission,
@@ -64,7 +65,7 @@ export function NotificationSettings() {
       if (p !== 'granted') return refresh();
     }
     const at = new Date(Date.now() + 10_000);
-    await notifyAt(at, { title: '测试提醒', body: `计划于 ${at.toLocaleTimeString('zh-CN', { hour12: false })} 送达`, url: '/notifications' });
+    await notifyAt(at, { title: '测试提醒', body: `计划于 ${formatClock(at, true)} 送达`, url: '/notifications' });
     setTestAt(at.getTime());
     haptics.success();
     refresh();
