@@ -1,7 +1,9 @@
+import * as Crypto from 'expo-crypto';
+import * as WebBrowser from 'expo-web-browser';
 import { z } from 'zod';
 
 import '@/core/campus/adapters';
-import { campusAccount, campusRequest } from '@/core/campus/account';
+import { campusAccount, pluginCampusRequest } from '@/core/campus/account';
 import { bindFinish, bindStart, currentCodeAsync, otpStatus, unbindLocal } from '@/core/campus/otp';
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';
@@ -22,6 +24,19 @@ import { checkSpec } from '@/genui/check';
  * app's stores. Plugins (pkuinfo/pku-harness-plugins) see only this object via `ctx.services`.
  */
 const host: HostServices = {
+  browser: {
+    // Custom Tabs / SFSafariViewController: the page runs in the system browser, isolated from the
+    // app, and the browser itself hands weixin:// / alipays:// links to those apps.
+    open: async (url) => {
+      if (!/^https:\/\//i.test(url)) throw new Error('只能打开 https 网页');
+      // createTask: false keeps the tab in the app's task, so Back returns to the conversation.
+      await WebBrowser.openBrowserAsync(url, { showTitle: true, enableBarCollapsing: true, createTask: false });
+      return { opened: true };
+    },
+  },
+  crypto: {
+    sha256: (text) => Crypto.digestStringAsync(Crypto.CryptoDigestAlgorithm.SHA256, text, { encoding: Crypto.CryptoEncoding.HEX }),
+  },
   registry: {
     plugins: (): PluginInfo[] =>
       registry.list().map((p) => {
@@ -103,7 +118,7 @@ const host: HostServices = {
     },
     request: async (service, req) => {
       if (!campusAccount.get().signedIn) throw new Error('还没有登录校园账号（设置 → 校园账号）');
-      const res = await campusRequest(service, req);
+      const res = await pluginCampusRequest(service, req);
       return { status: res.status, url: res.url, headers: res.headers, body: res.body };
     },
     // 手机令牌 (src/core/campus/otp.ts). `services` is one shared object without caller identity,

@@ -136,7 +136,7 @@ async function cardRequest(req: RequestOptions, retried = false): Promise<Campus
   const res = await campusFetch('card', {
     ...req,
     url: req.url.startsWith('http') ? req.url : `${CARD_BASE}${req.url}`,
-    followRedirects: true,
+    followRedirects: req.followRedirects ?? true,
     headers: { ...APP_HEADERS, 'synjones-auth': `bearer ${jwt}`, synaccesssource: 'h5', ...req.headers },
   });
   // An expired JWT answers 401 (pkucli api.rs check_resp); refresh once.
@@ -332,6 +332,34 @@ export function campusRequest(service: CampusService, req: RequestOptions): Prom
   const adapter = adapters.get(service);
   if (!adapter) throw new Error(`没有这个校园服务：${service}`);
   return adapter.request(req);
+}
+
+/** A plugin's request as the SDK describes it (CampusRequest): optional form, auth-in-form, sign. */
+export type PluginCampusRequest = RequestOptions & {
+  form?: Record<string, string>;
+  authIn?: 'headers' | 'form';
+  sign?: (fields: Record<string, string>) => Record<string, string> | Promise<Record<string, string>>;
+};
+
+/**
+ * The session credential as form fields, for APIs that read (and sign) it from the body.
+ * card: pkucli crates/campuscard/src/api.rs create_recharge_order puts `synjones-auth` in the form.
+ */
+async function authFields(service: CampusService): Promise<Record<string, string>> {
+  if (service === 'card') return { 'synjones-auth': `bearer ${await cardJwt()}` };
+  throw new Error(`校园服务 ${service} 不支持把登录凭证放进表单`);
+}
+
+/** campusRequest plus the SDK's form handling: encode `form`, add auth fields, let the plugin sign. */
+export async function pluginCampusRequest(service: CampusService, req: PluginCampusRequest): Promise<CampusResponse> {
+  const { form: fields, authIn, sign, ...rest } = req;
+  if (!fields) {
+    if (authIn === 'form' || sign) throw new Error('authIn: "form" 和 sign 需要配合 form 使用');
+    return campusRequest(service, rest);
+  }
+  let final = authIn === 'form' ? { ...fields, ...(await authFields(service)) } : { ...fields };
+  if (sign) final = await sign(final);
+  return campusRequest(service, { ...rest, method: rest.method ?? 'POST', contentType: FORM, body: form(final) });
 }
 
 // ── More services (src/core/campus/adapters/*) ────────────────────────────────────────────────
