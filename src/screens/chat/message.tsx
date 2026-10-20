@@ -12,6 +12,7 @@ import { GenUIView } from '@/genui/view';
 import { checkSpec } from '@/genui/check';
 import { springs } from '@/theme';
 
+import { ReplyActions } from './reply-actions';
 import { ToolGroup } from './tool-chip';
 
 /** A sent message grows out of the composer: from its bottom-right corner, with a spring. */
@@ -45,8 +46,13 @@ export const MessageView = memo(function MessageView({
   message,
   onSubmitForm,
   streaming = false,
+  last = false,
+  onRegenerate,
 }: {
   message: ChatMessage;
+  /** The latest message: its finished reply gets 重新生成 and the resting glyph. */
+  last?: boolean;
+  onRegenerate?: () => void;
   /** The reply is still arriving (its last text part may hold unterminated Markdown). */
   streaming?: boolean;
   onSubmitForm: (callId: string, form: Record<string, unknown>, label?: string) => void;
@@ -104,6 +110,7 @@ export const MessageView = memo(function MessageView({
           }
         }
       })}
+      {!streaming && message.parts.length > 0 ? <ReplyActions message={message} last={last} onRegenerate={onRegenerate} /> : null}
     </View>
   );
-}, (a, b) => a.message === b.message && a.streaming === b.streaming);
+}, (a, b) => a.message === b.message && a.streaming === b.streaming && a.last === b.last);

@@ -36,6 +36,7 @@ export const icons = {
   palette: { ios: 'paintpalette', android: 'palette' },
   trash: { ios: 'trash', android: 'delete' },
   refresh: { ios: 'arrow.clockwise', android: 'refresh' },
+  copy: { ios: 'doc.on.doc', android: 'content_copy' },
   qr: { ios: 'qrcode', android: 'qr_code_2' },
   trendUp: { ios: 'arrow.up.right', android: 'trending_up' },
   trendDown: { ios: 'arrow.down.right', android: 'trending_down' },

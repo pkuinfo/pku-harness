@@ -13,7 +13,7 @@ import { Logo } from '@/components/logo';
 import { Text } from '@/components/text';
 import { chatStore, useChat, useChatSelector } from '@/core/agent/chat-store';
 import { useAIConfig } from '@/core/agent/provider';
-import { interruptedTurn, retryLast, sendMessage, stopGeneration } from '@/core/agent/run';
+import { interruptedTurn, regenerateLast, retryLast, sendMessage, stopGeneration } from '@/core/agent/run';
 import { radius, spacing } from '@/theme';
 import { floatingOverlay } from '@/hooks/use-floating-overlay';
 import { useFocusEnter } from '@/hooks/use-focus-enter';
@@ -73,14 +73,27 @@ export function Chat() {
     [scrollEnd],
   );
 
+  // Last distance from the end, so the pin can be re-checked when scrolling settles (a fling
+  // that coasts to the end ends while still "dragging"; no scroll event follows it).
+  const distance = useRef(0);
+  const settle = useCallback(() => {
+    dragging.current = false;
+    if (distance.current < NEAR_END && !pinned.current) {
+      pinned.current = true;
+      setUnread(false);
+    }
+    setAway(!pinned.current);
+  }, []);
+
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
     size.current = { content: contentSize.height, viewport: layoutMeasurement.height };
-    const distance = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    distance.current = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    const d = distance.current;
     if (dragging.current) {
       // Any pull away from the end while the finger is down hands control to the reader.
-      if (distance > 8) pinned.current = false;
-    } else if (distance < NEAR_END && !pinned.current) {
+      if (d > 8) pinned.current = false;
+    } else if (d < NEAR_END && !pinned.current) {
       pinned.current = true;
       setUnread(false);
     }
@@ -151,9 +164,9 @@ export function Chat() {
         // a fling keeps "dragging" until its momentum ends, and nothing else sets it.
         onScrollBeginDrag={() => (dragging.current = true)}
         onScrollEndDrag={(e) => {
-          if (Math.abs(e.nativeEvent.velocity?.y ?? 0) < 0.05) dragging.current = false;
+          if (Math.abs(e.nativeEvent.velocity?.y ?? 0) < 0.05) settle();
         }}
-        onMomentumScrollEnd={() => (dragging.current = false)}
+        onMomentumScrollEnd={settle}
         onContentSizeChange={onContentSizeChange}>
         {empty ? (
           <FadeIn style={styles.heroWrap}>
@@ -217,7 +230,14 @@ function Messages() {
   return (
     <>
       {chat.messages.map((m, i) => (
-        <MessageView key={m.id} message={m} onSubmitForm={submitForm} streaming={busy && i === chat.messages.length - 1} />
+        <MessageView
+              key={m.id}
+              message={m}
+              onSubmitForm={submitForm}
+              streaming={busy && i === chat.messages.length - 1}
+              last={i === chat.messages.length - 1}
+              onRegenerate={() => void regenerateLast()}
+            />
       ))}
       {busy ? <AgentStatus reply={chat.messages.at(-1)} startedAt={startedAt} /> : null}
       {interruptedTurn(chat) ? (

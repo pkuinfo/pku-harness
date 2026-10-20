@@ -136,3 +136,15 @@ export async function retryLast() {
   chatStore.set({ messages: msgs, history, error: undefined });
   await sendMessage(text);
 }
+
+/** Regenerate the latest reply: drop the last exchange (UI and model history) and ask again. */
+export async function regenerateLast() {
+  const s = chatStore.get();
+  if (s.status === 'streaming') return;
+  const at = s.messages.findLastIndex((m) => m.role === 'user');
+  if (at < 0) return;
+  const text = s.messages[at].parts.map((p) => (p.type === 'text' ? p.text : '')).join('');
+  const h = s.history.findLastIndex((m) => m.role === 'user');
+  chatStore.set({ messages: s.messages.slice(0, at), history: h >= 0 ? s.history.slice(0, h) : s.history, error: undefined });
+  await sendMessage(text);
+}
