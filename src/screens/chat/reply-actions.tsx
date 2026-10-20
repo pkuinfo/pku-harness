@@ -2,17 +2,15 @@ import * as Clipboard from 'expo-clipboard';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
+import { AgentOrbit } from '@/components/agent-orbit';
 import { IconButton } from '@/components/button';
-import { Text } from '@/components/text';
 import type { ChatMessage } from '@/core/agent/chat-store';
 import { haptics } from '@/utils/haptics';
 
-/** The status line's glyph, at rest: the spinner settles here when a reply is done. */
-const REST_GLYPH = '✻';
 
 /**
  * Quiet row under a finished reply (Claude app style): copy on every reply; on the latest one
- * also the resting glyph and 重新生成. Muted icons only, no labels, so it never competes with
+ * also the resting orbit and 重新生成. Muted icons only, no labels, so it never competes with
  * the answer.
  */
 export function ReplyActions({ message, last, onRegenerate }: { message: ChatMessage; last: boolean; onRegenerate?: () => void }) {
@@ -31,9 +29,10 @@ export function ReplyActions({ message, last, onRegenerate }: { message: ChatMes
   return (
     <View className="-ml-2 flex-row items-center gap-1">
       {last ? (
-        <Text variant="bodyStrong" tone="accent" className="w-8 text-center" accessibilityElementsHidden importantForAccessibility="no">
-          {REST_GLYPH}
-        </Text>
+        // The status orbit at rest: the dot has come home, the indicator is the brand mark again.
+        <View className="w-8 items-center">
+          <AgentOrbit state="rest" size={18} />
+        </View>
       ) : null}
       {text ? (
         <IconButton

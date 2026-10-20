@@ -125,8 +125,10 @@ export function Chat() {
   useFocusEffect(
     useCallback(() => {
       setFocused(true);
+      // Back on the tab while following: land on the latest, not wherever the list was left.
+      if (pinned.current) requestAnimationFrame(() => scrollEnd(false));
       return () => setFocused(false);
-    }, []),
+    }, [scrollEnd]),
   );
   const typing = useKeyboardState((k) => k.isVisible);
   const showJump = away && !empty && focused && !typing;

@@ -1,6 +1,7 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { AgentOrbit } from '@/components/agent-orbit';
 import { Aurora } from '@/components/aurora';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icon';
@@ -46,6 +47,31 @@ export function DesignBoard() {
           value={pref}
           onChange={setThemePreference}
         />
+
+        {/* The agent orbit in each state, large and at status-line size. */}
+        <Glass style={{ padding: spacing.lg, gap: spacing.md }} radius={radius.xl}>
+          <Text variant="micro" tone="faint">
+            AGENT ORBIT
+          </Text>
+          <View className="flex-row justify-between">
+            {(
+              [
+                ['thinking', '思考中'],
+                ['tool', '正在调用'],
+                ['writing', '输出中'],
+                ['rest', '完成'],
+              ] as const
+            ).map(([state, label]) => (
+              <View key={state} className="items-center gap-2">
+                <AgentOrbit state={state} size={56} />
+                <AgentOrbit state={state} size={20} />
+                <Text variant="caption" tone="muted">
+                  {label}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </Glass>
 
         <Glass style={{ padding: spacing.xl, alignItems: 'center', gap: spacing.lg }} radius={radius.xl}>
           <Logo size={84} intro orbiting />

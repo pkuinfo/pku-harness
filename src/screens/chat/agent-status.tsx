@@ -7,10 +7,9 @@ import type { ChatMessage } from '@/core/agent/chat-store';
 import { registry } from '@/core/runtime/registry';
 import { typography, useTheme } from '@/theme';
 
-/** Claude Code's spinner glyphs, cycled so the agent visibly breathes while it works. */
-export const GLYPHS = ['·', '✢', '✳', '✶', '✻', '✽', '✻', '✶', '✳', '✢'];
+import { AgentOrbit, type OrbitState } from '@/components/agent-orbit';
 
-type Phase = { verb: string; detail?: string };
+type Phase = { verb: string; detail?: string; orbit: Exclude<OrbitState, 'rest'> };
 
 /** What the agent is doing right now, read from the reply being built. */
 export function phaseOf(reply: ChatMessage | undefined): Phase {
@@ -19,28 +18,25 @@ export function phaseOf(reply: ChatMessage | undefined): Phase {
   if (running && running.type === 'tool') {
     const entry = registry.tool(running.toolId);
     const plugin = entry ? registry.get(entry.pluginId)?.name : undefined;
-    return { verb: '正在调用', detail: [plugin, entry?.def.title ?? running.toolId].filter(Boolean).join(' · ') };
+    return { verb: '正在调用', detail: [plugin, entry?.def.title ?? running.toolId].filter(Boolean).join(' · '), orbit: 'tool' };
   }
   const last = parts.at(-1);
-  if (last?.type === 'reasoning') return { verb: '思考中' };
-  if (last?.type === 'text' && last.text.trim()) return { verb: '输出中' };
-  if (last?.type === 'tool' || last?.type === 'ui') return { verb: '整理结果' };
-  return { verb: '思考中' };
+  if (last?.type === 'reasoning') return { verb: '思考中', orbit: 'thinking' };
+  if (last?.type === 'text' && last.text.trim()) return { verb: '输出中', orbit: 'writing' };
+  if (last?.type === 'tool' || last?.type === 'ui') return { verb: '整理结果', orbit: 'thinking' };
+  return { verb: '思考中', orbit: 'thinking' };
 }
 
 /**
- * The agent's live status line while a reply is in flight: a cycling glyph, the current phase
+ * The agent's live status line while a reply is in flight: the agent orbit, the current phase
  * (thinking / calling a plugin tool / writing), elapsed time and output size.
  */
 export function AgentStatus({ reply, startedAt }: { reply: ChatMessage | undefined; startedAt: number }) {
   const c = useTheme();
+  // Elapsed seconds only; the orbit animates on the UI thread, so no fast JS timer.
   const [now, setNow] = useState(() => Date.now());
-  const [frame, setFrame] = useState(0);
   useEffect(() => {
-    const id = setInterval(() => {
-      setFrame((f) => (f + 1) % GLYPHS.length);
-      setNow(Date.now());
-    }, 120);
+    const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -57,9 +53,7 @@ export function AgentStatus({ reply, startedAt }: { reply: ChatMessage | undefin
 
   return (
     <View accessibilityRole="progressbar" accessibilityLabel={`${phase.verb}${phase.detail ?? ''}`} className="flex-row items-center gap-2 py-1">
-      <Text variant="bodyStrong" tone="accent" className="w-5 text-center">
-        {GLYPHS[frame]}
-      </Text>
+      <AgentOrbit state={phase.orbit} size={20} />
       <Animated.Text style={[typography.callout, verbStyle]}>{`${phase.verb}…`}</Animated.Text>
       {phase.detail ? (
         <Text variant="callout" tone="muted" numberOfLines={1} className="shrink">

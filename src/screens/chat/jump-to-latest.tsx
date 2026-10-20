@@ -1,5 +1,4 @@
 import { BlurView } from 'expo-blur';
-import { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, useReducedMotion, ZoomIn, ZoomOut } from 'react-native-reanimated';
 
@@ -10,11 +9,13 @@ import { useChat } from '@/core/agent/chat-store';
 import { useTabsBlurTarget } from '@/hooks/use-floating-overlay';
 import { shadows, springs, useTheme, useThemeName } from '@/theme';
 
-import { GLYPHS, phaseOf } from './agent-status';
+import { AgentOrbit } from '@/components/agent-orbit';
+
+import { phaseOf } from './agent-status';
 
 /**
  * Floating "back to latest" pill, shown only while the reader has scrolled away from the end.
- * While the agent works it carries the live status (glyph + phase, e.g. 正在调用 树洞 · 读树洞帖子),
+ * While the agent works it carries the live status (agent orbit + phase, e.g. 正在调用 树洞 · 读树洞帖子),
  * so the reader knows what's happening below without being dragged there; after a reply lands
  * it says 新回复; otherwise it's just the arrow. One tap returns to the end and follows again.
  */
@@ -27,12 +28,6 @@ export function JumpToLatest({ unread, onPress }: { unread: boolean; onPress: ()
   const theme = useThemeName();
   const blurTarget = useTabsBlurTarget();
   const reduced = useReducedMotion();
-  const [frame, setFrame] = useState(0);
-  useEffect(() => {
-    if (!busy) return;
-    const id = setInterval(() => setFrame((f) => (f + 1) % GLYPHS.length), 120);
-    return () => clearInterval(id);
-  }, [busy]);
 
   const phase = busy ? phaseOf(reply) : null;
   const label = phase ? `${phase.verb}${phase.detail ? ` ${phase.detail}` : ''}` : unread ? '新回复' : null;
@@ -61,9 +56,7 @@ export function JumpToLatest({ unread, onPress }: { unread: boolean; onPress: ()
           <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.bg, opacity: 0.4 }]} />
           <View className={label ? 'flex-row items-center gap-2 py-2.5 pl-3.5 pr-3' : 'p-3'}>
             {phase ? (
-              <Text variant="bodyStrong" tone="accent" className="w-4 text-center">
-                {GLYPHS[frame]}
-              </Text>
+              <AgentOrbit state={phase.orbit} size={18} />
             ) : unread ? (
               <View className="h-2 w-2 rounded-full bg-brand" />
             ) : null}

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition, useAnimatedStyle, withSpring } from 'react-native-reanimated';
 
+import { AgentOrbit } from '@/components/agent-orbit';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
@@ -15,7 +16,7 @@ const titleOf = (part: ToolPart) => registry.tool(part.toolId)?.def.title ?? par
 
 function StatusIcon({ status }: { status: ToolPart['status'] }) {
   const c = useTheme();
-  if (status === 'running') return <ActivityIndicator size="small" color={c.accent} />;
+  if (status === 'running') return <AgentOrbit state="tool" size={16} />;
   return <Icon name={status === 'error' ? 'warning' : 'check'} size={14} color={status === 'error' ? c.down : c.up} />;
 }
 
