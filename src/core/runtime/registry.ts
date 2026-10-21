@@ -2,6 +2,7 @@ import { Platform } from 'react-native';
 
 import { t, type MessageKey } from '@/i18n';
 
+import { modelText, providerText } from './localize';
 import type { Capability, CommandContribution, PluginDef, ProviderDef, ToolDef } from './types';
 
 export type ToolEntry = { id: string; pluginId: string; name: string; def: ToolDef };
@@ -77,7 +78,15 @@ export const registry = {
   },
   /** Provider ids are `<plugin>.<provider>`. */
   providers(): ProviderEntry[] {
-    return this.list().flatMap((p) => Object.entries(p.providers ?? {}).map(([key, def]) => ({ id: `${p.id}.${key}`, pluginId: p.id, def })));
+    // Display strings (name, description, credential hint, model names) in the app language,
+    // from the plugin's i18n overlay; ids and factories are untouched.
+    return this.list().flatMap((p) =>
+      Object.entries(p.providers ?? {}).map(([key, def]) => {
+        const text = providerText(p, key, def);
+        const models = def.models.map((m) => ({ ...m, ...modelText(p, key, m) }));
+        return { id: `${p.id}.${key}`, pluginId: p.id, def: { ...def, ...text, models } };
+      }),
+    );
   },
   /** Slash commands contributed by all registered plugins, in plugin order. */
   commands(): CommandEntry[] {

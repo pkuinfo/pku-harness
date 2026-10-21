@@ -29,7 +29,7 @@ export const COMMAND_GROUPS: Command['group'][] = ['session', 'context', 'app', 
 const runLocal: LocalRunner = async (entry, input, ctx) => {
   const def = entry.def;
   if (!('run' in def)) return;
-  const out = await def.run(input, { services, navigate: ctx.navigate });
+  const out = await def.run(input, { services, navigate: ctx.navigate, locale: getLocale() });
   return typeof out === 'string' ? out : undefined;
 };
 

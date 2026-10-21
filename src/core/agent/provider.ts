@@ -6,7 +6,7 @@ import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { pluginName } from '@/core/runtime/localize';
 import { registry, type ProviderEntry } from '@/core/runtime/registry';
 import { kv } from '@/core/store/kv';
-import { t } from '@/i18n';
+import { subscribeLocale, t } from '@/i18n';
 import { secrets, type SecretKey } from '@/core/store/secrets';
 
 /**
@@ -108,11 +108,14 @@ export const aiConfig = {
   credential: (providerId: string) => secrets.get(keyOf(providerId)),
   subscribe(l: () => void) {
     listeners.add(l);
-    // Providers appear when plugins register; keep the snapshot fresh.
+    // Providers appear when plugins register; keep the snapshot fresh. The provider's display
+    // name is localized, so rebuild on language change too.
     const off = registry.subscribe(emit);
+    const offLocale = subscribeLocale(emit);
     return () => {
       listeners.delete(l);
       off();
+      offLocale();
     };
   },
   snapshot: () => snapshot,

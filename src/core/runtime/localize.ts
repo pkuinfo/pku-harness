@@ -32,9 +32,36 @@ export const settingsRowText = (p: PluginDef | undefined, screen: string, src: {
   return { title: o?.title ?? src.title, subtitle: o?.subtitle ?? src.subtitle };
 };
 
-export const commandText = (p: PluginDef | undefined, command: string, src: { description: string; argHint?: string; aliases?: string[] }, locale: Locale = getLocale()) => {
+export const commandText = (
+  p: PluginDef | undefined,
+  command: string,
+  src: { description: string; argHint?: string; aliases?: string[]; prompt?: string },
+  locale: Locale = getLocale(),
+) => {
   const o = overlay(p, locale)?.commands?.[command];
-  return { description: o?.description ?? src.description, argHint: o?.argHint ?? src.argHint, aliases: [...(src.aliases ?? []), ...(o?.aliases ?? [])] };
+  return {
+    description: o?.description ?? src.description,
+    argHint: o?.argHint ?? src.argHint,
+    aliases: [...(src.aliases ?? []), ...(o?.aliases ?? [])],
+    // Prompt commands send their template as the user's message: in English when translated.
+    ...(src.prompt !== undefined ? { prompt: o?.prompt ?? src.prompt } : {}),
+  };
+};
+
+/** A provider plugin's display strings (`providerId` is the provider key inside the plugin). */
+export const providerText = (
+  p: PluginDef | undefined,
+  providerKey: string,
+  src: { name: string; description: string; credentialHint?: string },
+  locale: Locale = getLocale(),
+) => {
+  const o = overlay(p, locale)?.providers?.[providerKey];
+  return { name: o?.name ?? src.name, description: o?.description ?? src.description, credentialHint: o?.credentialHint ?? src.credentialHint };
+};
+
+export const modelText = (p: PluginDef | undefined, providerKey: string, model: { id: string; name?: string; description?: string }, locale: Locale = getLocale()) => {
+  const o = overlay(p, locale)?.providers?.[providerKey]?.models?.[model.id];
+  return { name: o?.name ?? model.name, description: o?.description ?? model.description };
 };
 
 export const dataSourceTitle = (p: PluginDef | undefined, source: string, fallback: string, locale: Locale = getLocale()) =>
