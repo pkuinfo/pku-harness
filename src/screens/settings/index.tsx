@@ -95,11 +95,11 @@ export function Settings() {
       <FadeIn index={2}>
         <View className="gap-2">
           <Text variant="micro" tone="faint" className="px-4">
-            {t('core.settings.appearance')}
+            {t('core.settings.appearance').toUpperCase()}
           </Text>
           <Segmented options={themeOptions} value={pref} onChange={setThemePreference} />
           <Text variant="micro" tone="faint" className="mt-3 px-4">
-            {t('core.settings.language')}
+            {t('core.settings.language').toUpperCase()}
           </Text>
           <Segmented options={localeOptions} value={localePref} onChange={setLocalePreference} />
         </View>
