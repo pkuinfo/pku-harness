@@ -38,6 +38,23 @@ export function previewOf(messages: ChatMessage[]): string {
   return [...text].slice(0, 60).join('');
 }
 
+/**
+ * A Markdown reply as one plain line, for previews that can't render Markdown (notifications):
+ * no emphasis marks, code fences, headings, list markers, quotes or link targets.
+ */
+export function plainText(md: string): string {
+  return md
+    .replace(/```[^\n]*\n?/g, '')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/^\s{0,3}(#{1,6}\s+|>\s?|[-*+]\s+|\d+[.)]\s+)/gm, '')
+    .replace(/(\*\*|__|~~)(.+?)\1/g, '$2')
+    .replace(/(^|[^\w*])[*_]([^*_\n]+)[*_](?=[^\w*]|$)/g, '$1$2')
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /** Strip what models add despite the instruction: quotes, a "标题：" label, trailing punctuation. */
 export function cleanTitle(raw: string): string | null {
   let t = raw.split('\n').map((l) => l.trim()).find(Boolean) ?? '';

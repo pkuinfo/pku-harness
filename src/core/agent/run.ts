@@ -12,7 +12,7 @@ import { installRunHooks, newId, sessionStore, type AttachmentPart, type ChatMes
 import { capToolResultOutput, compactForOverflow, isContextOverflowError, maybeCompact } from '@/core/agent/context/compaction';
 import { gatherContext } from '@/core/agent/context/request-context';
 import { aiConfig, getModel } from './provider';
-import { attachmentsOf, cutBefore, nextQueued, textOf, userText } from '@/core/agent/session/session-utils';
+import { attachmentsOf, cutBefore, nextQueued, plainText, textOf, userText } from '@/core/agent/session/session-utils';
 import { sessions } from '@/core/agent/session/sessions';
 import { buildSystemPrompt } from '@/core/agent/context/system-prompt';
 import { autoTitle } from '@/core/agent/session/title';
@@ -347,7 +347,7 @@ function finishTurn(
     const reply = textOf(sessionStore.get(sid)?.messages.find((m) => m.id === assistantId));
     notifyNow({
       title: tr(t.ended === 'error' ? 'chat.agent.notifyError' : 'chat.agent.notifyDone', { title: meta?.title ?? tr('chat.agent.untitled') }),
-      body: t.error ?? (clip(reply.replace(/\s+/g, ' ').trim(), 80) || undefined),
+      body: t.error ?? (clip(plainText(reply), 80) || undefined),
       url: `/?session=${encodeURIComponent(sid)}`,
       channel: 'alerts',
     }).catch(() => {});

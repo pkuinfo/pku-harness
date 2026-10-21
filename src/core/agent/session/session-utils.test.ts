@@ -12,6 +12,7 @@ import {
   legacySession,
   markInterrupted,
   nextQueued,
+  plainText,
   previewOf,
   relativeTime,
   sectionOf,
@@ -177,3 +178,15 @@ describe('persistence mapping', () => {
     expect(moved.record.history).toHaveLength(1);
   });
 });
+
+describe('plainText', () => {
+  test('drops Markdown syntax, keeps the words', () => {
+    expect(plainText('**October in Yan Yuan**\n\nThe *ginkgo* goes first — see [the map](https://x.y).')).toBe('October in Yan Yuan The ginkgo goes first — see the map.');
+    expect(plainText('## 今天\n- 校园卡 `¥490.35`\n1. 未名湖\n> 引用')).toBe('今天 校园卡 ¥490.35 未名湖 引用');
+    expect(plainText('```ts\nconst a = 1;\n```')).toBe('const a = 1;');
+  });
+  test('leaves snake_case and lone asterisks alone', () => {
+    expect(plainText('use pku_harness, 3 * 4')).toBe('use pku_harness, 3 * 4');
+  });
+});
+
