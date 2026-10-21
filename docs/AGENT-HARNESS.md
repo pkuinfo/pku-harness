@@ -199,20 +199,33 @@ session opens; cleared on send.
 
 ## 5. Context management
 
-### 5.1 Cache-friendly prompt
+### 5.1 Cache-friendly prompt (context engineering)
 
-DeepSeek caches by prefix. The system prompt must be **static**: move "当前时间" and other
-per-turn facts out of it into the turn's `<context>` block (first line
-`当前时间：2026-10-20 周二 21:40（北京时间）`). Tools are sorted by id so the tool block is stable.
-Plugin instructions stay in the system prompt (they change only when plugins change).
+The prefix-cache hit rate is the metric that matters most: DeepSeek bills a cache hit at 1/50
+of a miss (deepseek-flash, per 1M input tokens: ¥0.02 vs ¥1 off-peak) and a hit also prefills
+faster. DeepSeek renders a request as **system prompt → tool block → messages** and a request
+hits only as far as it matches an earlier one byte for byte, so everything is built to append:
 
-**On-demand tools.** Sending all ~120 tool schemas cost ~20k tokens per request. The model
-always has the core plugins' tools (`ui`, `memory`, `plugins`) plus the host's `tools__load`;
-the system prompt carries a one-line catalog per plugin (id, name, description, tool names).
-`tools__load({ plugins })` adds plugins to the session's `tools` list (persisted with the
-session); `prepareStep` sends core + loaded tools each step, so a load takes effect on the next
-step of the same turn. The tool block changes once per load, then stays a stable prefix. Load
-calls are plumbing: no chip, not counted in usage. Pure logic: `tool-loading-core.ts`.
+1. **Static system prompt.** Fixed core + plugin instructions, plugins sorted by id. No time,
+   date or other per-turn facts; those ride in the turn's `<context>` block at the start of the
+   user message (first line `当前时间：2026-10-20 周二 21:40（北京时间）`), which is stored in the
+   history once and resent unchanged. Changes only with Settings (plugins, language).
+2. **Fixed tool block.** Every enabled tool, sorted by id, on every request. Never narrowed,
+   loaded on demand or reordered mid-session: a change invalidates everything after the system
+   prompt, i.e. the whole conversation. (Measured 2026-10-21: per-session tool loading cut the
+   block from ~20k to ~2.5k tokens but each load turned the history behind it into misses; the
+   fixed block hits on every request and across sessions, ~¥0.0004 per 20k cached tokens.)
+3. **Append-only history.** Tool outputs are capped once when stored (§5.5), never re-cut on
+   read; images resolve to the same bytes each time; assistant reasoning is sent back as stored.
+   Only compaction, edit/regenerate and overflow recovery rewrite it: an expected cache break.
+4. **One prefix for every request about a session** (`src/core/agent/context/request.ts`
+   `requestPrefix`): the chat turn, the auto title and the compaction summary all send the
+   same system + tools + stored history on the session's own model, then their own last message.
+   Side requests are cache hits except for their instruction. They keep the tool schemas (without
+   `execute`) and never set `toolChoice: 'none'`: DeepSeek drops the tool section from the prompt
+   for `none`, which misses the whole conversation.
+5. **Measure it.** Each request records provider-reported cached vs uncached input
+   (`src/core/usage`); the usage board shows the hit rate, its trend, misses and the money saved.
 
 ### 5.2 Token estimate
 
@@ -223,8 +236,12 @@ estimate of what was appended after it; otherwise the full estimate.
 ### 5.3 Budget
 
 Auto-compaction threshold = min(0.8 × model window, user budget). User budget (Settings → AI
-服务 → 上下文预算): 32k / **64k (default)** / 128k / 256k / 不限. Rationale: a 1M window is
-slow and costly on a phone; a campus assistant rarely needs it. Keep tail = 25 % of the budget.
+服务 → 上下文预算): 32k / 64k / **128k (default)** / 256k / 不限. Rationale (revised
+2026-10-21): the fixed prefix (system prompt + every tool) is ~30k, and a compaction rewrites the
+history, which is a cache miss for everything after it; with prefix caching a 128k request that
+hits costs ≈ ¥0.0026 (deepseek-flash), so compacting early saves nothing and costs misses. The
+model window is 1M (DeepSeek-V4.1-Flash-1017, api-docs.deepseek.com pricing page, checked
+2026-10-20); 128k keeps replies fast and focused. Keep tail = 25 % of the budget.
 
 ### 5.4 Compaction
 
@@ -274,7 +291,7 @@ assistant message's `meta`. `recordStep` never throws.
 
 ### 6.3 Context sheet (`/context`)
 
-- Big number `38.2k / 64k`, caption "模型上下文 1M · 超过预算会自动压缩较早的对话".
+- Big number `38.2k / 128k`, caption "模型上下文 1M · 超过预算会自动压缩较早的对话".
 - One stacked horizontal bar + legend with values: 系统提示, 工具定义, 插件上下文, 对话,
   工具结果. Below: "已压缩 2 次".
 - Actions: 压缩上下文 (secondary), 新对话 (ghost).

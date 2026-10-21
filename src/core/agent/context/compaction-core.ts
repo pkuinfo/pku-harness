@@ -336,7 +336,10 @@ export async function runCompaction(data: SessionData, mode: CompactionMode, dep
   if (mode === 'auto' && prunedCount && overhead + estimate(pruned) <= budget) return pruneOnly();
 
   const replaced = pruned.slice(0, cut);
-  const summary = cleanSummary(await deps.summarize(buildSummaryMessages(replaced)));
+  // The summary request reuses the conversation's cached prefix byte for byte (§5.1), so it reads
+  // the stored history, not the pruned copy. After an overflow the full history no longer fits.
+  const summaryInput = mode === 'overflow' ? replaced : data.history.slice(0, cut);
+  const summary = cleanSummary(await deps.summarize(buildSummaryMessages(summaryInput)));
   if (!summary) throw new CompactionRejected('empty', '模型没有返回摘要');
   const checkpoint = checkpointMessage(summary);
   if (estimate([checkpoint]) >= estimate(replaced)) throw new CompactionRejected('notShorter', '摘要没有比原对话更短，已放弃压缩');

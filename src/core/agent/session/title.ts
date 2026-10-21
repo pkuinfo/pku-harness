@@ -3,13 +3,17 @@ import { generateText, type LanguageModel } from 'ai';
 import { recordStep } from '@/core/usage';
 import { t } from '@/i18n';
 
+import { requestPrefix } from '@/core/agent/context/request';
+
 import { sessionStore } from './chat-store';
 import { cleanTitle, textOf } from './session-utils';
 
 
 /**
- * Auto title (§2): after the first assistant reply, one cheap request on the session's own model
- * (no tools, ≤ 64 output tokens). A user rename is never overwritten; failures keep the fallback.
+ * Auto title (§2): after the first assistant reply, one request on the session's own model. It
+ * sends the conversation's own prefix (system → tools → history, `requestPrefix`) plus one
+ * instruction, so all but the instruction is a cache hit (§5.1). A user
+ * rename is never overwritten; failures keep the fallback.
  */
 export async function autoTitle(sessionId: string, model: LanguageModel, ids: { providerId: string; model: string }) {
   const meta = sessionStore.meta(sessionId);
@@ -17,21 +21,18 @@ export async function autoTitle(sessionId: string, model: LanguageModel, ids: { 
   if (!meta || !s || meta.titleSource !== 'fallback') return;
   const user = s.messages.find((m) => m.role === 'user');
   const reply = s.messages.find((m) => m.role === 'assistant' && textOf(m).trim());
-  if (!user || !reply) return;
-  const clip = (s: string, n: number) => ([...s].length > n ? [...s].slice(0, n).join('') + '…' : s);
+  if (!user || !reply || !s.history.length) return;
   const started = Date.now();
   try {
+    const prefix = await requestPrefix(s.history, { sideRequest: true });
     const result = await generateText({
       model,
-      // Reasoning models (deepseek-flash) think before answering: 64 tokens could be spent on
+      ...prefix,
+      // In the app language, so the title matches the UI around it.
+      messages: [...prefix.messages, { role: 'user', content: t('chat.agent.titlePrompt') }],
+      // Reasoning models (deepseek-flash) think before answering: a small cap could be spent on
       // reasoning alone and leave an empty title. The title itself stays ≤ 12 characters.
       maxOutputTokens: 512,
-      messages: [
-        { role: 'user', content: clip(textOf(user), 600) },
-        { role: 'assistant', content: clip(textOf(reply), 600) },
-        // In the app language, so the title matches the UI around it.
-        { role: 'user', content: t('chat.agent.titlePrompt') },
-      ],
     });
     const u = result.usage;
     recordStep({

@@ -288,6 +288,17 @@ describe('runCompaction', () => {
     expect(out?.result.compactedMessages).toBeGreaterThan(0);
   });
 
+  test('manual: the summary request reuses the stored history verbatim (cache prefix), not the pruned copy', async () => {
+    const data = conversation(6);
+    // A big tool result early on: pruned in the committed history, but sent as stored for the summary.
+    data.history[2] = result('c0', 'z'.repeat(20_000));
+    let request: ModelMessage[] = [];
+    const out = (await runCompaction(data, 'manual', deps({ summarize: async (m) => ((request = m), '## 当前进展\n- 余额 42 元') })))!;
+    const cut = data.history.length - (out.data.history.length - 1);
+    expect(request.slice(0, -1)).toEqual(data.history.slice(0, cut));
+    expect(request.at(-1)?.content).toBe(SUMMARY_INSTRUCTION);
+  });
+
   test('auto: summarise and commit [checkpoint, ...tail] with a UI marker', async () => {
     const data = conversation(8);
     let request: ModelMessage[] = [];

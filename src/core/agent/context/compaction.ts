@@ -17,12 +17,12 @@ import {
   type RejectReason,
   type SessionData,
 } from './compaction-core';
-import { getModel } from '@/core/agent/provider';
 import { sessions } from '@/core/agent/session/sessions';
 import { contextBudget, loadContextBudget, sessionModel } from './budget';
-import { buildSystemPrompt } from './system-prompt';
 import { contextBreakdown, estimateMessages, estimateTokens } from './tokens';
-import { activeToolSet } from '@/core/agent/tools';
+import { buildToolSet } from '@/core/agent/tools';
+import { modelFor, requestPrefix } from './request';
+import { buildSystemPrompt } from './system-prompt';
 
 export { capToolOutput, capToolResultOutput, isContextOverflowError, CompactionRejected } from './compaction-core';
 
@@ -86,14 +86,11 @@ async function writeData(sessionId: string, before: SessionData, next: SessionDa
 async function summarize(sessionId: string, messages: ModelMessage[]): Promise<string> {
   const { providerId, model: modelName } = sessionModel(sessionId);
   const started = Date.now();
-  // Same system prompt and tools as the chat request so the provider's prefix cache is reused;
-  // tool calls are disabled for this request.
+  // The chat's own model and prefix (system → tools → history), so the provider's prefix cache is
+  // reused; the instruction is the only new message. Tools stay declared but can't run.
   const r = await generateText({
-    model: await getModel(providerId),
-    system: buildSystemPrompt(),
-    messages,
-    tools: activeToolSet(sessionId),
-    toolChoice: 'none',
+    model: await modelFor(providerId, modelName),
+    ...(await requestPrefix(messages, { sideRequest: true })),
     maxOutputTokens: 4_096,
   });
   recordStep({
@@ -115,7 +112,7 @@ async function summarize(sessionId: string, messages: ModelMessage[]): Promise<s
 
 /** System prompt + tool definitions, in estimated tokens. */
 function overheadTokens(sessionId: string): number {
-  const tools = Object.entries(activeToolSet(sessionId)).map(([name, t]) => [name, t.description]);
+  const tools = Object.entries(buildToolSet()).map(([name, t]) => [name, t.description]);
   const own = estimateTokens(buildSystemPrompt()) + estimateTokens(JSON.stringify(tools));
   try {
     const b = contextBreakdown(sessionId);

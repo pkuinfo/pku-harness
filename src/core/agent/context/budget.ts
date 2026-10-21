@@ -21,7 +21,8 @@ export function contextWindowOf(providerId: string, model: string): number {
   return typeof w === 'number' && w > 0 ? w : DEFAULT_CONTEXT_WINDOW;
 }
 
-export const DEFAULT_CONTEXT_BUDGET = 64_000;
+// 128k: the fixed prefix is ~30k and each compaction is a cache miss (AGENT-HARNESS §5.3).
+export const DEFAULT_CONTEXT_BUDGET = 128_000;
 /** Choices for 上下文预算; null = 不限 (only 80 % of the model window applies). */
 export const CONTEXT_BUDGET_OPTIONS: { label: string; value: number | null }[] = [
   { label: '32k', value: 32_000 },

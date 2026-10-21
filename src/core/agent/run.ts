@@ -1,22 +1,19 @@
 import { isStepCount, streamText, type LanguageModel, type ModelMessage, type StepResult, type ToolSet, type UserContent } from 'ai';
-import { fetch as expoFetch } from 'expo/fetch';
-import { File } from 'expo-file-system';
 import { AppState } from 'react-native';
 
 import { notifyNow } from '@/core/notify';
-import { registry } from '@/core/runtime/registry';
 import { recordStep, type ToolCallUsage } from '@/core/usage';
 import { t as tr } from '@/i18n';
 
 import { installRunHooks, newId, sessionStore, type AttachmentPart, type ChatMessage, type ChatPart, type ChatState, type TurnMeta } from '@/core/agent/session/chat-store';
 import { capToolResultOutput, compactForOverflow, isContextOverflowError, maybeCompact } from '@/core/agent/context/compaction';
 import { gatherContext } from '@/core/agent/context/request-context';
-import { aiConfig, getModel } from './provider';
+import { aiConfig } from './provider';
 import { attachmentsOf, cutBefore, nextQueued, plainText, textOf, userText } from '@/core/agent/session/session-utils';
 import { sessions } from '@/core/agent/session/sessions';
-import { buildSystemPrompt } from '@/core/agent/context/system-prompt';
 import { autoTitle } from '@/core/agent/session/title';
-import { activeToolNames, buildToolSet, fromModelName, LOAD_TOOL } from './tools';
+import { modelFor, requestPrefix } from '@/core/agent/context/request';
+import { fromModelName } from './tools';
 
 /** What the composer (and everything else) sends: plain text, or text plus attachments. */
 export type SendInput = string | { text: string; attachments?: AttachmentPart[] };
@@ -54,50 +51,6 @@ function patchTool(sid: string, messageId: string, callId: string, patch: Partia
 const normalize = (input: SendInput) =>
   typeof input === 'string' ? { text: input.trim(), attachments: [] as AttachmentPart[] } : { text: input.text.trim(), attachments: input.attachments ?? [] };
 
-/** The session's model: its own provider/model, else the active provider's. */
-async function modelFor(providerId: string, model: string | undefined): Promise<LanguageModel> {
-  const base = await getModel(providerId);
-  const s = aiConfig.settingsFor(providerId);
-  if (!model || model === s.model) return base;
-  const entry = registry.provider(providerId);
-  if (!entry) return base;
-  const credential = (await aiConfig.credential(providerId)) ?? undefined;
-  return entry.def.createModel({ ...s, model, credential, fetch: expoFetch as unknown as typeof fetch }) as LanguageModel;
-}
-
-/**
- * Images live in the history as their file:// URI (keeps the persisted record small); they are
- * read as base64 just before a request. Cached for the run of the app.
- */
-const imageCache = new Map<string, string>();
-async function resolveImages(history: ModelMessage[]): Promise<ModelMessage[]> {
-  if (!history.some((m) => m.role === 'user' && Array.isArray(m.content) && m.content.some((p) => p.type === 'image' && typeof p.image === 'string' && p.image.startsWith('file:')))) {
-    return history;
-  }
-  return Promise.all(
-    history.map(async (m): Promise<ModelMessage> => {
-      if (m.role !== 'user' || !Array.isArray(m.content)) return m;
-      const content = await Promise.all(
-        m.content.map(async (p) => {
-          if (p.type !== 'image' || typeof p.image !== 'string' || !p.image.startsWith('file:')) return p;
-          const uri = p.image;
-          try {
-            let b64 = imageCache.get(uri);
-            if (!b64) {
-              b64 = await new File(uri).base64();
-              imageCache.set(uri, b64);
-            }
-            return { ...p, image: b64 };
-          } catch {
-            return { type: 'text' as const, text: '（一张图片已无法读取）' };
-          }
-        }),
-      );
-      return { ...m, content };
-    }),
-  );
-}
-
 /** A user turn as the model sees it: text (+ inline text attachments) and image parts. */
 function userContent(text: string, attachments: AttachmentPart[]): UserContent {
   const images = attachments.filter((a) => a.kind === 'image' && a.uri);
@@ -120,7 +73,6 @@ function toolUsage(step: StepResult<ToolSet>, toolMs: Map<string, number>): Tool
   const out: ToolCallUsage[] = [];
   for (const c of step.content) {
     if (c.type !== 'tool-result' && c.type !== 'tool-error') continue;
-    if (c.toolName === LOAD_TOOL) continue;
     const toolId = fromModelName(c.toolName);
     const output = c.type === 'tool-result' ? (c.output as { error?: unknown } | undefined) : undefined;
     const ok = c.type === 'tool-result' && !(output && typeof output === 'object' && 'error' in output);
@@ -196,14 +148,11 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     let finishedSteps = 0;
     const toolStart = new Map<string, number>();
     const toolMs = new Map<string, number>();
-    const tools = buildToolSet(signal, sid);
+    // The conversation's prefix (system → tools → history), shared with title and summary requests.
+    const prefix = await requestPrefix(history, { signal });
     const result = streamText({
       model: model!,
-      system: buildSystemPrompt(),
-      messages: await resolveImages(history),
-      tools,
-      // Core plugins + what this session loaded; a `tools__load` call widens the next step (§5.1).
-      prepareStep: () => ({ activeTools: activeToolNames(tools, sid) }),
+      ...prefix,
       stopWhen: isStepCount(STEP_LIMIT),
       abortSignal: signal,
       onStepEnd: (step) => {
@@ -251,8 +200,6 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
           break;
         case 'tool-call':
           toolStart.set(part.toolCallId, Date.now());
-          // Loading tools is plumbing, not something the user asked for: no chip.
-          if (part.toolName === LOAD_TOOL) break;
           if (part.toolName === UI_TOOL) {
             appendPart(sid, assistant.id, { type: 'ui', callId: part.toolCallId, spec: (part.input as { spec?: unknown })?.spec });
           } else {
@@ -261,7 +208,6 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
           break;
         case 'tool-result': {
           toolMs.set(part.toolCallId, Date.now() - (toolStart.get(part.toolCallId) ?? Date.now()));
-          if (part.toolName === LOAD_TOOL) break;
           const out = part.output as { error?: string } | undefined;
           patchTool(
             sid,
