@@ -14,7 +14,8 @@ import { t } from '@/i18n';
  *   1. GET sso.lib.pku.edu.cn/oauth/authorize?client_id=oneStopWeb&redirect_uri=https://a.lib.pku.edu.cn:8443/sso/login
  *      → sets IAM_LOGIN_REQ and 302s to IAAA oauthLib.jsp?appID=lib_sso&redirectUrl=…/iaaa/ssologin?loginReqId=…
  *   2. IAAA password login for that app + redirectUrl (iaaaSignIn: SMS / 手机令牌 when asked)
- *   3. GET redirectUrl&_rand=…&token=… → 302 a.lib:8443/sso/login?code=… → 302 a.lib/portal/main?code=<session>
+ *   3. GET redirectUrl&_rand=…&token=… → 200 page (sets the IUAT/IURT/IUGT login cookies), then
+ *      GET /oauth/authorize again → 302 a.lib:8443/sso/login?code=… → 302 a.lib/portal/main?code=<session>
  *   4. The portal keeps `code` as its session ("pkulib_session") and passes it as a query/body
  *      field to /prod-api/* (header x-okapi-tenant: pkulib). A dead session answers
  *      getMyInfobySession with `data: null`.
@@ -106,10 +107,20 @@ async function libLogin(): Promise<string> {
   let url = withToken(app.redirectUrl, token);
   let oauthCode: string | null = null;
   let session: string | null = null;
-  for (let hop = 0; hop < 10; hop++) {
+  // ssologin answers 200 with a page (it only sets the IUAT/IURT/IUGT login cookies); the browser's
+  // script then asks /oauth/authorize again, which now 302s on to a.lib:8443/sso/login?code= →
+  // /portal/main?code=<session>. Verified live 2026-10-21. So: when a hop stops on a 200 without
+  // a session, request AUTHORIZE once more and keep following.
+  let retriedAuthorize = false;
+  for (let hop = 0; hop < 12; hop++) {
     const res = await campusFetch(LIB, { url, followRedirects: false, headers: LIB_HEADERS });
     if (res.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('library'), status: res.status }));
-    if (!(res.status >= 300 && res.status < 400 && res.location)) break;
+    if (!(res.status >= 300 && res.status < 400 && res.location)) {
+      if (session || retriedAuthorize) break;
+      retriedAuthorize = true;
+      url = AUTHORIZE;
+      continue;
+    }
     url = resolveUrl(res.location, url);
     if (__DEV__) console.log('[library] →', res.status, url.split('?')[0]);
     if (url.includes('iaaa.pku.edu.cn')) throw new Error(t('app.campus.errors.rejected', { service: serviceName('library') }));
