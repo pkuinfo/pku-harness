@@ -1,7 +1,9 @@
 /// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
 
-import { dailyTokens, heatmap, hourly, modelShare, pluginRanking, summarize, toolRanking, turnRows } from './aggregate';
+import type { ModelPricing } from '@pku-harness/sdk';
+
+import { cacheStats, dailyTokens, heatmap, hitTally, hourly, modelShare, pluginRanking, sessionCache, spending, summarize, toolRanking, turnRows } from './aggregate';
 import type { UsageStep } from './types';
 
 // Tuesday 2026-10-20 21:40 local.
@@ -38,7 +40,7 @@ describe('turnRows', () => {
 });
 
 describe('summarize', () => {
-  test('today, month, cache rate and turns', () => {
+  test('today, month and turns', () => {
     const rows = [
       row({ at: at(10, 20, 8), inputTokens: 2000, cachedInputTokens: 1500, outputTokens: 200 }),
       row({ at: at(10, 2), inputTokens: 1000, cachedInputTokens: 500, outputTokens: 100 }),
@@ -48,11 +50,10 @@ describe('summarize', () => {
     const k = summarize(rows, NOW);
     expect(k.todayTokens).toBe(2200);
     expect(k.monthTokens).toBe(3300);
-    expect(k.cacheHitRate).toBeCloseTo(2000 / 4000);
     expect(k.monthTurns).toBe(2);
   });
-  test('no input → null cache rate', () => {
-    expect(summarize([], NOW).cacheHitRate).toBeNull();
+  test('empty', () => {
+    expect(summarize([], NOW)).toEqual({ todayTokens: 0, monthTokens: 0, monthTurns: 0 });
   });
 });
 
@@ -128,5 +129,98 @@ describe('modelShare', () => {
     const m = modelShare([row({ at: at(10, 20), model: 'pro', inputTokens: 3000, outputTokens: 0 }), row({ at: at(10, 19), inputTokens: 1000, outputTokens: 0 })], NOW);
     expect(m.map((x) => x.model)).toEqual(['pro', 'deepseek-chat']);
     expect(m[0].share).toBeCloseTo(0.75);
+  });
+});
+
+// Flat prices (no peak) so the sums are easy to check.
+const CNY: ModelPricing = { currency: 'CNY', inputCacheHit: 0.02, inputCacheMiss: 1, output: 4 };
+const USD: ModelPricing = { currency: 'USD', inputCacheHit: 0.1, inputCacheMiss: 1, output: 2 };
+const price = (providerId: string, model: string) => (model === 'deepseek-chat' ? CNY : model === 'gpt' ? USD : undefined);
+
+describe('hitTally', () => {
+  test('cached ÷ input, clamped; null without input', () => {
+    expect(hitTally([row({ at: 0, inputTokens: 1000, cachedInputTokens: 800 }), row({ at: 0, inputTokens: 1000, cachedInputTokens: 5000 })])).toEqual({ requests: 2, input: 2000, cached: 1800, rate: 0.9 });
+    expect(hitTally([]).rate).toBeNull();
+  });
+});
+
+describe('cacheStats', () => {
+  const rows = [
+    row({ at: at(10, 20, 9), inputTokens: 10_000, cachedInputTokens: 8_000 }),
+    row({ at: at(10, 19, 9), inputTokens: 10_000, cachedInputTokens: 9_000 }),
+    row({ at: at(10, 20, 9), purpose: 'title', inputTokens: 500, cachedInputTokens: 0 }),
+    row({ at: at(10, 1, 9), purpose: 'compaction', inputTokens: 2_000, cachedInputTokens: 1_000 }),
+    row({ at: at(9, 28, 9), inputTokens: 1_000_000, cachedInputTokens: 1_000_000 }), // last month, within 30 days
+    row({ at: at(8, 1, 9), inputTokens: 9_999, cachedInputTokens: 9_999 }), // > 30 days
+    row({ at: at(10, 20, 10), model: 'unknown', inputTokens: 1_000, cachedInputTokens: 1_000 }), // unpriced
+  ];
+  const s = cacheStats(rows, NOW, price);
+  test('headline is chat requests over 30 days', () => {
+    expect(s.chat.requests).toBe(4);
+    expect(s.chat.rate).toBeCloseTo((8_000 + 9_000 + 1_000_000 + 1_000) / (10_000 + 10_000 + 1_000_000 + 1_000));
+  });
+  test('by purpose, in fixed order, only those used', () => {
+    expect(s.byPurpose.map((p) => p.purpose)).toEqual(['chat', 'title', 'compaction']);
+    expect(s.byPurpose[1].rate).toBe(0);
+    expect(s.byPurpose[2].rate).toBe(0.5);
+  });
+  test('daily chat rate for 14 days, null on idle days', () => {
+    expect(s.daily).toHaveLength(14);
+    const last = s.daily[13];
+    expect(new Date(last.date).getDate()).toBe(20);
+    expect(last.requests).toBe(2);
+    expect(last.rate).toBeCloseTo(9_000 / 11_000);
+    expect(s.daily[12].rate).toBeCloseTo(0.9);
+    expect(s.daily[0].rate).toBeNull();
+  });
+  test('misses and this month’s saving (priced models only)', () => {
+    expect(s.missTokens).toBe(2_000 + 1_000 + 500 + 1_000);
+    expect(s.savedMonth).toHaveLength(1);
+    expect(s.savedMonth[0].currency).toBe('CNY');
+    expect(s.savedMonth[0].amount).toBeCloseTo(((8_000 + 9_000 + 1_000) * 0.98) / 1e6);
+  });
+});
+
+describe('sessionCache', () => {
+  test('latest chat request and the whole session', () => {
+    const rows = [
+      row({ at: at(10, 20, 9), inputTokens: 1000, cachedInputTokens: 0 }),
+      row({ at: at(10, 20, 10), inputTokens: 1000, cachedInputTokens: 900 }),
+      row({ at: at(10, 20, 11), purpose: 'title', inputTokens: 1000, cachedInputTokens: 0 }),
+      row({ at: at(10, 20, 12), sessionId: 's2', inputTokens: 1000, cachedInputTokens: 1000 }),
+    ];
+    const c = sessionCache(rows, 's1');
+    expect(c.last).toBeCloseTo(0.9);
+    expect(c.session.rate).toBeCloseTo(0.45);
+    expect(sessionCache(rows, 'none')).toEqual({ last: null, session: { requests: 0, input: 0, cached: 0, rate: null } });
+  });
+});
+
+describe('spending', () => {
+  test('today, month and 30-day models, one sum per currency', () => {
+    const rows = [
+      row({ at: at(10, 20, 9), inputTokens: 1_000_000, cachedInputTokens: 500_000, outputTokens: 100_000 }), // 0.01 + 0.5 + 0.4
+      row({ at: at(10, 5, 9), inputTokens: 1_000_000, cachedInputTokens: 0, outputTokens: 0 }), // 1
+      row({ at: at(9, 25, 9), inputTokens: 1_000_000, cachedInputTokens: 0, outputTokens: 0 }), // 1, 30d only
+      row({ at: at(10, 20, 9), model: 'gpt', inputTokens: 1_000_000, cachedInputTokens: 0, outputTokens: 0 }), // $1
+      row({ at: at(10, 20, 9), model: 'mystery', inputTokens: 300, outputTokens: 30 }),
+    ];
+    const s = spending(rows, NOW, price);
+    expect(s.priced).toBe(true);
+    expect(s.today).toEqual([
+      { currency: 'USD', amount: 1 },
+      { currency: 'CNY', amount: expect.closeTo(0.91, 6) },
+    ]);
+    expect(s.month.find((m) => m.currency === 'CNY')!.amount).toBeCloseTo(1.91);
+    expect(s.models.map((m) => m.model)).toEqual(['deepseek-chat', 'gpt']);
+    expect(s.models[0].amount).toBeCloseTo(2.91);
+    expect(s.models[0].share).toBe(1);
+    expect(s.models[1].share).toBe(1);
+    expect(s.unpricedTokens).toBe(330);
+  });
+  test('nothing priced', () => {
+    const s = spending([row({ at: at(10, 20), model: 'mystery' })], NOW, price);
+    expect(s.priced).toBe(false);
+    expect(s.today).toEqual([]);
   });
 });

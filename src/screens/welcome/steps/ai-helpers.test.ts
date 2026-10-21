@@ -26,4 +26,12 @@ describe('AI step helpers', () => {
     expect(mergeModels(cat, null)).toEqual(cat);
     expect(mergeModels(cat, [{ id: 'a' }, { id: 'b' }]).map((m) => m.id)).toEqual(['a', 'b']);
   });
+
+  test('keeps catalog pricing and context window when the live listing has the same id', () => {
+    const pricing = { currency: 'CNY' as const, inputCacheHit: 0.02, inputCacheMiss: 1, output: 4 };
+    const cat = [{ id: 'deepseek-flash', contextWindow: 1_000_000, pricing }];
+    const merged = mergeModels(cat, [{ id: 'deepseek-flash' }, { id: 'other' }]);
+    expect(merged[0]).toEqual(cat[0]);
+    expect(merged[1]).toEqual({ id: 'other' });
+  });
 });

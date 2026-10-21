@@ -14,23 +14,32 @@ import { Segmented } from '@/components/segmented';
 import { Skeleton } from '@/components/skeleton';
 import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
+import { useProviderBalance } from '@/core/agent/balance';
+import { useAIConfig } from '@/core/agent/provider';
 import { pluginName, toolTitle } from '@/core/runtime/localize';
 import { registry } from '@/core/runtime/registry';
 import type { ToolRange, UsageReport } from '@/core/usage/aggregate';
-import { formatCompact, formatInt, formatPercent, formatShortDay } from '@/core/usage/format';
+import { hitDiscount } from '@/core/usage/cost';
+import { formatCompact, formatInt, formatMoney, formatPercent, formatShortDay } from '@/core/usage/format';
 import { useToolRanking, useUsageReport, type UsageState } from '@/core/usage/hooks';
+import { pricingOf } from '@/core/usage/pricing';
 import { useLocale, useT } from '@/i18n';
 import { radius, useTheme } from '@/theme';
 
+import { CacheSection } from './cache-section';
 import { RankedRow } from './ranked-row';
 import { Section } from './section';
+import { SpendSection } from './spend-section';
 
 const HOURS = [0, 6, 12, 18, 23];
 /** A `count` param: a number when it is 1 (so English picks the `_one` string), else grouped "1,234". */
 const count = (n: number) => (n === 1 ? 1 : formatInt(n));
 const TOOL_ROWS = 8;
 
-/** Usage screen (docs/AGENT-HARNESS.md §6.4): tokens, activity, tools and models. Tokens only, no money. */
+/**
+ * Usage screen (docs/AGENT-HARNESS.md §6.4): tokens, prompt cache, estimated spending (from
+ * published prices), activity, tools and models.
+ */
 export function UsageScreen() {
   const t = useT();
   const { state, reload } = useUsageReport();
@@ -100,7 +109,14 @@ function Content({ state, report }: { state: Extract<UsageState, { status: 'read
     { label: t('app.usage.all'), value: 'all' },
   ];
   const hourLabels = HOURS.map((h) => ({ index: h, label: t('app.usage.hour', { hour: h }) }));
-  const { kpis, heat, hours, days, models } = report;
+  const { kpis, cache, spend, heat, hours, days, models } = report;
+  // "A hit costs 1/N of a miss", from the most-used model that publishes prices.
+  const mainPricing = models.map((m) => pricingOf(m.providerId, m.model)).find(Boolean);
+  const discount = mainPricing ? hitDiscount(mainPricing) : null;
+  // Shown only when the active provider can report a balance (the card hides itself otherwise).
+  const balanceProvider = useAIConfig().config.providerId;
+  const balance = useProviderBalance(balanceProvider);
+  const monthCost = spend.month[0] ?? (spend.priced ? { currency: spend.models[0]?.currency ?? 'CNY', amount: 0 } : null);
   const [hour, setHour] = useState<number | null>(null);
   const [day, setDay] = useState<number | null>(null);
   const [range, setRange] = useState<ToolRange>('30d');
@@ -121,19 +137,29 @@ function Content({ state, report }: { state: Extract<UsageState, { status: 'read
             <Kpi label={t('app.usage.month')} value={kpis.monthTokens} format={formatCompact} unit="tokens" />
           </View>
           <View className="flex-row gap-3">
-            <Kpi label={t('app.usage.cacheHit')} value={kpis.cacheHitRate} format={formatPercent} />
             <Kpi label={t('app.usage.monthTurns')} value={kpis.monthTurns} format={formatInt} unit={t('app.usage.turnsUnit')} />
+            <Kpi label={t('app.usage.monthCost')} value={monthCost?.amount ?? null} format={(n) => formatMoney(n, monthCost?.currency ?? 'CNY')} />
           </View>
         </View>
       </FadeIn>
 
       <FadeIn index={1}>
+        <CacheSection cache={cache} discount={discount} />
+      </FadeIn>
+
+      {spend.priced || balance.state.kind !== 'unsupported' ? (
+        <FadeIn index={2}>
+          <SpendSection spend={spend} providerId={balanceProvider} turns={kpis.monthTurns} />
+        </FadeIn>
+      ) : null}
+
+      <FadeIn index={3}>
         <Section title={t('app.usage.activity')} meta={t('app.usage.activityMeta', { count: count(heat.totalTurns) })}>
           <HeatMap heat={heat} />
         </Section>
       </FadeIn>
 
-      <FadeIn index={2}>
+      <FadeIn index={4}>
         <Section
           title={t('app.usage.hours')}
           caption={
@@ -156,7 +182,7 @@ function Content({ state, report }: { state: Extract<UsageState, { status: 'read
         </Section>
       </FadeIn>
 
-      <FadeIn index={3}>
+      <FadeIn index={5}>
         <Section
           title={t('app.usage.tokens')}
           meta={formatCompact(sum.cached + sum.uncached + sum.output)}
@@ -184,7 +210,7 @@ function Content({ state, report }: { state: Extract<UsageState, { status: 'read
         </Section>
       </FadeIn>
 
-      <FadeIn index={4}>
+      <FadeIn index={6}>
         <Section title={t('app.usage.tools')}>
           <Segmented options={ranges} value={range} onChange={setRange} />
           {tools.length ? (
@@ -214,7 +240,7 @@ function Content({ state, report }: { state: Extract<UsageState, { status: 'read
       </FadeIn>
 
       {models.length ? (
-        <FadeIn index={5}>
+        <FadeIn index={7}>
           <Section title={t('app.usage.models')}>
             <View className="gap-3.5">
               {models.map((m) => {

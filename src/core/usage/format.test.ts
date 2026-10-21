@@ -5,7 +5,23 @@ import { describe, expect, mock, test } from 'bun:test';
 mock.module('expo-localization', () => ({ getLocales: () => [{ languageCode: 'en' }] }));
 mock.module('react-native', () => ({ AppState: { addEventListener: () => ({ remove() {} }) } }));
 
-const { formatCompact, formatDay, formatInt, formatPercent, formatShortDay } = await import('./format');
+const { formatCompact, formatDay, formatInt, formatMoney, formatMonies, formatPercent, formatShortDay } = await import('./format');
+
+describe('formatMoney', () => {
+  test('symbols, decimals and tiny amounts', () => {
+    expect(formatMoney(0, 'CNY')).toBe('¥0');
+    expect(formatMoney(0.0004, 'CNY')).toBe('<¥0.001');
+    expect(formatMoney(0.0342, 'CNY')).toBe('¥0.034');
+    expect(formatMoney(12.3, 'USD')).toBe('$12.30');
+    expect(formatMoney(1234.5, 'CNY')).toBe('¥1,235');
+    expect(formatMoney(3.2, 'EUR')).toBe('EUR 3.20');
+    expect(formatMoney(-2, 'CNY')).toBe('-¥2.00');
+  });
+  test('lists stay per currency', () => {
+    expect(formatMonies([{ currency: 'CNY', amount: 1.2 }, { currency: 'USD', amount: 0.4 }])).toBe('¥1.20 + $0.400');
+    expect(formatMonies([])).toBe('');
+  });
+});
 
 describe('formatInt', () => {
   test('groups thousands', () => {
@@ -46,6 +62,8 @@ describe('formatPercent', () => {
     expect(formatPercent(0)).toBe('0%');
     expect(formatPercent(1)).toBe('100%');
     expect(formatPercent(0.001)).toBe('<1%');
+    // A partial value never rounds up to a perfect score.
+    expect(formatPercent(0.9953)).toBe('99%');
   });
 });
 

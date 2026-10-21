@@ -208,6 +208,7 @@ export const chat = {
     neverCompacted: '还没有压缩过',
     calibrated: '按服务商上次报告的用量校准',
     estimated: '估算值',
+    cacheLine: '缓存命中 · 最近一次 {last} · 本会话 {session}',
     compact: '压缩上下文',
     afterReply: '回复结束后可用',
     nothingToCompact: '还没有可以压缩的内容',

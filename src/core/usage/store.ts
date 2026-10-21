@@ -80,6 +80,13 @@ export async function loadRows(since: number): Promise<UsageStep[]> {
   return rows.map(decode);
 }
 
+/** One session's 'chat' rows, oldest first (the context sheet's cache line). */
+export async function loadSessionChatRows(sessionId: string): Promise<UsageStep[]> {
+  const db = await getDb();
+  const rows = await db.getAllAsync<Row>(`SELECT * FROM usage WHERE session_id = ? AND purpose = 'chat' ORDER BY at ASC`, [sessionId]);
+  return rows.map(decode);
+}
+
 /** All-time rows that called tools (the "全部" tool ranking), oldest first. */
 export async function loadToolRows(): Promise<UsageStep[]> {
   const db = await getDb();

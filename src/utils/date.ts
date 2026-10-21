@@ -66,6 +66,11 @@ const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDat
  * A past timestamp, relative: "刚刚" / "Just now", "3 分钟前" / "3 min ago", today "21:04",
  * "昨天 21:04" / "Yesterday 21:04", else "10月18日 21:04" / "Oct 18, 21:04".
  */
+/** Within the last minute: what `formatAgo` calls 刚刚 / just now. */
+export function isJustNow(ms: number, now = Date.now()) {
+  return now - ms < 60_000;
+}
+
 export function formatAgo(ms: number, now = Date.now(), locale: Locale = getLocale()) {
   const en = locale === 'en';
   const diff = now - ms;

@@ -12,7 +12,7 @@ import { useChatSelector } from '@/core/agent/session/chat-store';
 import { compactNow } from '@/core/agent/context/compaction';
 import { sessions, useActiveSessionId } from '@/core/agent/session/sessions';
 import { formatCompact, formatPercent } from '@/core/usage/format';
-import { useContextBreakdown } from '@/core/usage/hooks';
+import { useContextBreakdown, useSessionCache } from '@/core/usage/hooks';
 import { useT } from '@/i18n';
 import { spacing } from '@/theme';
 import { haptics } from '@/utils/haptics';
@@ -25,6 +25,7 @@ export function ContextSheet() {
   const insets = useSafeAreaInsets();
   const sid = useActiveSessionId();
   const b = useContextBreakdown(sid);
+  const cache = useSessionCache(sid);
   const streaming = useChatSelector((s) => s.status === 'streaming');
   const [busy, setBusy] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>(null);
@@ -80,6 +81,11 @@ export function ContextSheet() {
         <Text variant="caption" tone="faint">
           {`${b.compactions > 0 ? t('chat.context.compactedTimes', { count: b.compactions }) : t('chat.context.neverCompacted')} · ${t(b.reportedInputTokens ? 'chat.context.calibrated' : 'chat.context.estimated')}`}
         </Text>
+        {cache && cache.last !== null && cache.session.rate !== null ? (
+          <Text variant="caption" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
+            {t('chat.context.cacheLine', { last: formatPercent(cache.last), session: formatPercent(cache.session.rate) })}
+          </Text>
+        ) : null}
       </View>
 
       {outcome ? (

@@ -11,6 +11,9 @@ const ink = courseColors.light;
 /** 14-day tokens, bottom → top: 缓存命中输入 · 未缓存输入 · 输出. */
 export const TOKEN_SERIES = [ink[0].ink, palette.pkuRed, ink[4].ink] as const;
 
+/** Prompt-cache hit share: the same hue as cached input above, so "cached" reads alike everywhere. */
+export const CACHE_HIT = TOKEN_SERIES[0];
+
 /** Context sheet bar: 系统提示 · 工具定义 · 插件上下文 · 对话 · 工具结果. */
 export const CONTEXT_SERIES = [ink[2].ink, ink[4].ink, ink[1].ink, palette.pkuRed, ink[0].ink] as const;
 

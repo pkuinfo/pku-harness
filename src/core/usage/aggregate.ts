@@ -2,7 +2,8 @@
  * Pure aggregation over usage rows for the usage screen (docs/AGENT-HARNESS.md §6.4). Local time
  * (the device's zone); weeks start on Monday. No React Native imports: unit-tested with bun.
  */
-import type { UsageStep } from './types';
+import { costOf, savedByCache, type Currency, type PriceLookup } from './cost';
+import type { UsagePurpose, UsageStep } from './types';
 
 const DAY = 86_400_000;
 
@@ -51,31 +52,22 @@ export function turnRows(rows: readonly UsageStep[]): UsageStep[] {
 export type UsageKpis = {
   todayTokens: number;
   monthTokens: number;
-  /** cached ÷ input over the last 30 days; null without any input yet. */
-  cacheHitRate: number | null;
   monthTurns: number;
 };
 
 export function summarize(rows: readonly UsageStep[], now: number): UsageKpis {
   const today = startOfDay(now);
   const month = startOfMonth(now);
-  const since30 = addDays(today, -29);
   let todayTokens = 0;
   let monthTokens = 0;
-  let input = 0;
-  let cached = 0;
   for (const r of rows) {
     if (r.at > now) continue;
     const t = tokensOf(r);
     if (r.at >= today) todayTokens += t;
     if (r.at >= month) monthTokens += t;
-    if (r.at >= since30) {
-      input += r.inputTokens;
-      cached += Math.min(r.cachedInputTokens, r.inputTokens);
-    }
   }
   const monthTurns = turnRows(rows).filter((r) => r.at >= month && r.at <= now).length;
-  return { todayTokens, monthTokens, cacheHitRate: input > 0 ? cached / input : null, monthTurns };
+  return { todayTokens, monthTokens, monthTurns };
 }
 
 export type HeatCell = { date: number; turns: number; tokens: number; level: 0 | 1 | 2 | 3 | 4 };
@@ -220,9 +212,172 @@ export function modelShare(rows: readonly UsageStep[], now: number, days = 30): 
     .sort((a, b) => b.tokens - a.tokens);
 }
 
+// ─── Prompt cache ────────────────────────────────────────────────────────────────────────────
+//
+// THE cache metric, used everywhere (usage board, context sheet): hit rate = Σ cached input ÷
+// Σ input (prompt tokens incl. cached) over a set of requests. The headline number is over
+// 'chat' requests only: they are the ones that share a stable prefix (system prompt + tools +
+// history), so they are what prompt design can improve. Title/compaction requests use their own
+// short prompts and are shown separately, never mixed into the headline.
+
+export type HitTally = { requests: number; input: number; cached: number; /** cached ÷ input; null without input. */ rate: number | null };
+
+const cachedOf = (r: UsageStep) => Math.max(0, Math.min(r.cachedInputTokens, r.inputTokens));
+
+/** Hit rate over a set of requests. */
+export function hitTally(rows: Iterable<UsageStep>): HitTally {
+  let requests = 0;
+  let input = 0;
+  let cached = 0;
+  for (const r of rows) {
+    requests++;
+    input += r.inputTokens;
+    cached += cachedOf(r);
+  }
+  return { requests, input, cached, rate: input > 0 ? cached / input : null };
+}
+
+export type Money = { currency: Currency; amount: number };
+
+/** Sums amounts per currency (never mixing them), largest first. */
+class Purse {
+  private map = new Map<Currency, number>();
+  add(currency: Currency, amount: number) {
+    this.map.set(currency, (this.map.get(currency) ?? 0) + amount);
+  }
+  list(): Money[] {
+    return [...this.map].map(([currency, amount]) => ({ currency, amount })).sort((a, b) => b.amount - a.amount);
+  }
+}
+
+export const CACHE_PURPOSES: readonly UsagePurpose[] = ['chat', 'title', 'compaction', 'scheduler'];
+
+export type DayHit = HitTally & { date: number };
+
+export type CacheStats = {
+  /** The headline: chat requests, last 30 days. */
+  chat: HitTally;
+  /** Every purpose with requests in the last 30 days, in CACHE_PURPOSES order. */
+  byPurpose: (HitTally & { purpose: UsagePurpose })[];
+  /** Chat hit rate per day, last `days` days (oldest first, today last). */
+  daily: DayHit[];
+  /** Input tokens that missed the cache, all purposes, last 30 days. */
+  missTokens: number;
+  /** What the cache saved this calendar month (priced models only), per currency. */
+  savedMonth: Money[];
+};
+
+/** Prompt-cache statistics for the usage board. */
+export function cacheStats(rows: readonly UsageStep[], now: number, price: PriceLookup, days = 14): CacheStats {
+  const today = startOfDay(now);
+  const since30 = addDays(today, -29);
+  const month = startOfMonth(now);
+  const recent = rows.filter((r) => r.at >= since30 && r.at <= now);
+
+  const byPurpose = CACHE_PURPOSES.map((purpose) => ({ purpose, ...hitTally(recent.filter((r) => r.purpose === purpose)) })).filter((p) => p.requests > 0);
+  const all = hitTally(recent);
+
+  const daily: DayHit[] = Array.from({ length: days }, (_, i) => ({ date: addDays(today, i - (days - 1)), requests: 0, input: 0, cached: 0, rate: null }));
+  const index = new Map(daily.map((d, i) => [dayKey(d.date), i]));
+  const saved = new Purse();
+  for (const r of rows) {
+    if (r.at > now) continue;
+    if (r.purpose === 'chat') {
+      const i = index.get(dayKey(r.at));
+      if (i !== undefined) {
+        daily[i].requests++;
+        daily[i].input += r.inputTokens;
+        daily[i].cached += cachedOf(r);
+      }
+    }
+    if (r.at >= month) {
+      const p = price(r.providerId, r.model);
+      if (p) saved.add(p.currency, savedByCache(r, p));
+    }
+  }
+  for (const d of daily) d.rate = d.input > 0 ? d.cached / d.input : null;
+
+  return {
+    chat: hitTally(recent.filter((r) => r.purpose === 'chat')),
+    byPurpose,
+    daily,
+    missTokens: all.input - all.cached,
+    savedMonth: saved.list().filter((m) => m.amount > 0),
+  };
+}
+
+export type SessionCache = { /** The session's latest chat request. */ last: number | null; session: HitTally };
+
+/** Cache hit rate of one session's chat requests: the latest one and the whole session. */
+export function sessionCache(rows: readonly UsageStep[], sessionId: string): SessionCache {
+  const chat = rows.filter((r) => r.sessionId === sessionId && r.purpose === 'chat');
+  let latest: UsageStep | undefined;
+  for (const r of chat) if (!latest || r.at >= latest.at) latest = r;
+  return { last: latest ? hitTally([latest]).rate : null, session: hitTally(chat) };
+}
+
+// ─── Spending ────────────────────────────────────────────────────────────────────────────────
+
+export type ModelCost = { providerId: string; model: string; currency: Currency; amount: number; tokens: number; /** Of the total in the same currency. */ share: number };
+
+export type Spending = {
+  today: Money[];
+  month: Money[];
+  /** Priced models, last 30 days, most expensive first. */
+  models: ModelCost[];
+  /** Tokens of the last 30 days from models without published prices (not in any sum). */
+  unpricedTokens: number;
+  /** Any request in the window had a price. */
+  priced: boolean;
+};
+
+/** Estimated spending from published prices; one sum per currency. */
+export function spending(rows: readonly UsageStep[], now: number, price: PriceLookup): Spending {
+  const today = startOfDay(now);
+  const month = startOfMonth(now);
+  const since30 = addDays(today, -29);
+  const start = Math.min(month, since30);
+  const day = new Purse();
+  const mon = new Purse();
+  const total30 = new Purse();
+  const models = new Map<string, ModelCost>();
+  let unpricedTokens = 0;
+  let priced = false;
+  for (const r of rows) {
+    if (r.at < start || r.at > now) continue;
+    const p = price(r.providerId, r.model);
+    if (!p) {
+      if (r.at >= since30) unpricedTokens += tokensOf(r);
+      continue;
+    }
+    priced = true;
+    const { total } = costOf(r, p);
+    if (r.at >= today) day.add(p.currency, total);
+    if (r.at >= month) mon.add(p.currency, total);
+    if (r.at >= since30) {
+      total30.add(p.currency, total);
+      const k = `${r.providerId}\u0000${r.model}`;
+      const m = models.get(k) ?? { providerId: r.providerId, model: r.model, currency: p.currency, amount: 0, tokens: 0, share: 0 };
+      m.amount += total;
+      m.tokens += tokensOf(r);
+      models.set(k, m);
+    }
+  }
+  const totals = new Map(total30.list().map((m) => [m.currency, m.amount]));
+  return {
+    today: day.list(),
+    month: mon.list(),
+    models: [...models.values()].map((m) => ({ ...m, share: (totals.get(m.currency) ?? 0) > 0 ? m.amount / totals.get(m.currency)! : 0 })).sort((a, b) => b.amount - a.amount),
+    unpricedTokens,
+    priced,
+  };
+}
+
 /** Everything the usage screen draws, from one pass of rows. */
 export type UsageReport = {
   kpis: UsageKpis;
+  cache: CacheStats;
+  spend: Spending;
   heat: Heatmap;
   hours: number[];
   days: DayTokens[];
@@ -230,9 +385,11 @@ export type UsageReport = {
   empty: boolean;
 };
 
-export function buildReport(rows: readonly UsageStep[], now: number): UsageReport {
+export function buildReport(rows: readonly UsageStep[], now: number, price: PriceLookup = () => undefined): UsageReport {
   return {
     kpis: summarize(rows, now),
+    cache: cacheStats(rows, now, price),
+    spend: spending(rows, now, price),
     heat: heatmap(rows, now),
     hours: hourly(rows, now),
     days: dailyTokens(rows, now),

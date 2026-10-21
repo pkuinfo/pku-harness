@@ -36,7 +36,33 @@ export function formatCompact(n: number): string {
 export function formatPercent(ratio: number): string {
   if (!Number.isFinite(ratio)) return '—';
   if (ratio > 0 && ratio < 0.005) return '<1%';
+  // Never round a partial value up to a perfect score (a 99.6 % cache hit is not 100 %).
+  if (ratio < 1 && Math.round(ratio * 100) === 100) return '99%';
   return `${Math.round(ratio * 100)}%`;
+}
+
+const SYMBOL: Record<string, string> = { CNY: '¥', USD: '$' };
+
+/**
+ * Money: "¥0.42", "$12.30", "¥1,234". Amounts under 1 keep three decimals (model costs are
+ * often fractions of a cent); a tiny non-zero amount shows "<¥0.001". Unknown currency codes
+ * are prefixed ("EUR 3.20").
+ */
+export function formatMoney(amount: number, currency: string): string {
+  if (!Number.isFinite(amount)) return '—';
+  const sym = SYMBOL[currency] ?? `${currency} `;
+  const sign = amount < 0 ? '-' : '';
+  const a = Math.abs(amount);
+  if (a === 0) return `${sym}0`;
+  if (a < 0.001) return `<${sym}0.001`;
+  if (a < 1) return `${sign}${sym}${a.toFixed(3)}`;
+  if (a < 1000) return `${sign}${sym}${a.toFixed(2)}`;
+  return `${sign}${sym}${formatInt(a)}`;
+}
+
+/** Several currencies, never summed: "¥1.20 + $0.40"; "" for none. */
+export function formatMonies(list: readonly { currency: string; amount: number }[]): string {
+  return list.map((m) => formatMoney(m.amount, m.currency)).join(' + ');
 }
 
 /** "10月19日 周一" / "Mon, Oct 19". */

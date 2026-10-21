@@ -11,16 +11,20 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Segmented } from '@/components/segmented';
 import { dismiss, SheetScreen } from '@/components/sheet-screen';
 import { Text } from '@/components/text';
+import { invalidateBalance } from '@/core/agent/balance';
 import { CONTEXT_BUDGET_OPTIONS, setContextBudgetSetting, useContextBudgetSetting } from '@/core/agent/context/compaction';
 import { aiConfig, getModel, useAIConfig } from '@/core/agent/provider';
 import { usePlugins } from '@/core/runtime/hooks';
+import { modelText, providerText } from '@/core/runtime/localize';
 import { usePluginSettings } from '@/core/runtime/plugin-settings';
 import type { ProviderEntry } from '@/core/runtime/registry';
 import type { ProviderModel } from '@/core/runtime/types';
-import { useT } from '@/i18n';
+import { useLocale, useT } from '@/i18n';
 import { useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
+
+import { AccountBalance } from './ai-balance';
 
 function ProviderCard({ entry, selected, onPress }: { entry: ProviderEntry; selected: boolean; onPress: () => void }) {
   const c = useTheme();
@@ -63,7 +67,14 @@ export function AISettings() {
   const t = useT();
   const { config, keys } = useAIConfig();
   const plugins = usePlugins();
-  const providers = plugins.flatMap((p) => Object.entries(p.providers ?? {}).map(([k, def]) => ({ id: `${p.id}.${k}`, pluginId: p.id, def })));
+  // Names, key hints and model blurbs through the plugin's i18n overlay (re-renders on a language change).
+  const locale = useLocale();
+  const providers = plugins.flatMap((p) =>
+    Object.entries(p.providers ?? {}).map(([k, def]) => {
+      const models = def.models.map((m) => ({ ...m, ...modelText(p, k, m, locale) }));
+      return { id: `${p.id}.${k}`, pluginId: p.id, def: { ...def, ...providerText(p, k, def, locale), models } };
+    }),
+  );
   const [selectedId, setSelectedId] = useState(config.providerId);
   const entry = providers.find((p) => p.id === selectedId) ?? providers[0];
   const initial = aiConfig.settingsFor(entry.id);
@@ -104,7 +115,10 @@ export function AISettings() {
 
   const save = async () => {
     const next = credential.trim();
-    await aiConfig.save(entry.id, { baseURL: baseURL.trim(), model: model.trim() }, { credential: next === savedCredential ? undefined : next, activate: true });
+    const changed = next !== savedCredential;
+    await aiConfig.save(entry.id, { baseURL: baseURL.trim(), model: model.trim() }, { credential: changed ? next : undefined, activate: true });
+    // A new key may belong to another account: drop the cached balance so it's read again.
+    if (changed) invalidateBalance(entry.id);
     setSavedCredential(next);
   };
 
@@ -156,6 +170,8 @@ export function AISettings() {
       </View>
 
       <Animated.View key={entry.id} entering={FadeIn} layout={LinearTransition} className="gap-4">
+        <AccountBalance providerId={entry.id} />
+
         {models.length ? (
           <View className="gap-2">
             <Text variant="callout" tone="muted">
@@ -242,7 +258,7 @@ function ContextBudget() {
   const t = useT();
   const budget = useContextBudgetSetting();
   const options = CONTEXT_BUDGET_OPTIONS.map((o) => ({ label: o.label, value: o.label }));
-  const current = CONTEXT_BUDGET_OPTIONS.find((o) => o.value === budget)?.label ?? '64k';
+  const current = CONTEXT_BUDGET_OPTIONS.find((o) => o.value === budget)?.label ?? '128k';
   return (
     <View className="gap-2">
       <Text variant="callout" tone="muted">

@@ -205,6 +205,7 @@ export const chat: Messages['chat'] = {
     neverCompacted: 'Not compacted yet',
     calibrated: 'calibrated to the provider’s last reported usage',
     estimated: 'estimated',
+    cacheLine: 'Cache hit · last request {last} · this chat {session}',
     compact: 'Compact context',
     afterReply: 'Available when the reply finishes',
     nothingToCompact: 'Nothing to compact yet',

@@ -97,7 +97,8 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T11.5 Usage & context visualization: per-request recording (migration 3), context ring + sheet, usage screen (KPIs, 20-week heat map, hour-of-day, 14-day tokens, tools, models) (2026-10-21)
 - [x] T11.6 Device pass (picky): swipe-delete bleed-through, context total, partial-command send, model picker sizing, stale cleared drafts, duplicate interruption UI; then long paste (one chip), chip ✕ target, queue + pause/resume, list pinning, full editor focus, text files, /compact, background reply notification (2026-10-21)
 - [x] T11.7 First-run onboarding: 3D welcome, then AI service → PKU sign-in → plugin picks → done (resumable); English pass + fixed an SVG gradient-id collision that crashed the AI step (2026-10-21)
-- [x] T11.8a On-demand tools: core plugins + `tools__load`, plugin catalog in the system prompt; a new chat's request went from ~30k to ~10k tokens (2026-10-21)
+- [x] T11.8a Context engineering for the prefix cache: one request prefix (system → fixed tool block → append-only history) shared by chat, title and compaction; on-demand tool loading tried and reverted (it broke the cache); see AGENT-HARNESS §5.1 (2026-10-21)
+- [x] T11.9 Cache & cost visibility: usage board prompt-cache section (hit rate, trend, by purpose, saved), spending from published prices, DeepSeek balance (Settings + usage board), default context budget 64k → 128k (2026-10-21)
 - [ ] T11.8b Chart palette as theme tokens; compaction notice uses the same calibrated numbers as the context sheet
 
 ## M12 Plugin batch 2 (in progress, 2026-10-21)

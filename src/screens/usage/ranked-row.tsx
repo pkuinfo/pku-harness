@@ -3,10 +3,11 @@ import { View } from 'react-native';
 import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
 import { useT } from '@/i18n';
+import { cx } from '@/utils/cx';
 import { useTheme } from '@/theme';
 
 /** One row of a ranked list: name, caption, value, and a thin share bar in the accent. */
-export function RankedRow({ title, subtitle, value, detail, share, warn }: { title: string; subtitle?: string; value: string; detail?: string; share: number; warn?: boolean }) {
+export function RankedRow({ title, subtitle, value, detail, share, warn, color }: { title: string; subtitle?: string; value: string; detail?: string; share: number; warn?: boolean; color?: string }) {
   const c = useTheme();
   const t = useT();
   return (
@@ -37,7 +38,8 @@ export function RankedRow({ title, subtitle, value, detail, share, warn }: { tit
         </View>
       </View>
       <View className="h-1 w-full overflow-hidden rounded-full bg-surface-2">
-        <View className="h-full rounded-full bg-accent" style={{ width: `${Math.max(2, Math.min(100, share * 100))}%` }} />
+        {/* `color` ties the bar to a chart's series (e.g. cache hits); otherwise the accent. */}
+        <View className={cx('h-full rounded-full', !color && 'bg-accent')} style={[{ width: `${Math.max(2, Math.min(100, share * 100))}%` }, color ? { backgroundColor: color } : null]} />
       </View>
     </View>
   );

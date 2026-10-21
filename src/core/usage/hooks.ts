@@ -8,8 +8,9 @@ import { contextBreakdown, type ContextBreakdown } from '@/core/agent/context/to
 import { registry } from '@/core/runtime/registry';
 
 import { usageEvents } from './index';
-import { buildReport, REPORT_WINDOW_MS, toolRanking, type ToolRange, type ToolStat, type UsageReport } from './aggregate';
-import { loadRows, loadToolRows } from './store';
+import { buildReport, REPORT_WINDOW_MS, sessionCache, toolRanking, type SessionCache, type ToolRange, type ToolStat, type UsageReport } from './aggregate';
+import { pricingOf } from './pricing';
+import { loadRows, loadSessionChatRows, loadToolRows } from './store';
 import type { UsageStep } from './types';
 
 function subscribeAll(l: () => void) {
@@ -55,7 +56,7 @@ export function useUsageReport() {
     try {
       const now = Date.now();
       const [rows, toolRows] = await Promise.all([loadRows(now - REPORT_WINDOW_MS), loadToolRows()]);
-      if (alive.current) setState({ status: 'ready', report: buildReport(rows, now), rows, toolRows, now });
+      if (alive.current) setState({ status: 'ready', report: buildReport(rows, now, pricingOf), rows, toolRows, now });
     } catch (e) {
       if (alive.current) setState({ status: 'error', message: e instanceof Error ? e.message : String(e) });
     }
@@ -89,4 +90,25 @@ export function useToolRanking(state: UsageState, range: ToolRange): ToolStat[] 
     if (state.status !== 'ready') return [];
     return toolRanking(range === 'all' ? state.toolRows : state.rows, state.now, range);
   }, [state, range]);
+}
+
+/** Prompt-cache hit rate of one session (latest chat request + whole session); refreshes on new rows. */
+export function useSessionCache(sessionId: string): SessionCache | null {
+  const [state, setState] = useState<{ id: string; cache: SessionCache } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    const load = () =>
+      loadSessionChatRows(sessionId)
+        .then((rows) => {
+          if (alive) setState({ id: sessionId, cache: sessionCache(rows, sessionId) });
+        })
+        .catch(() => {});
+    load();
+    const off = usageEvents.subscribe(load);
+    return () => {
+      alive = false;
+      off();
+    };
+  }, [sessionId]);
+  return state?.id === sessionId ? state.cache : null;
 }
