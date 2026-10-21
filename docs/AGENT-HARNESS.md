@@ -206,6 +206,14 @@ per-turn facts out of it into the turn's `<context>` block (first line
 `当前时间：2026-10-20 周二 21:40（北京时间）`). Tools are sorted by id so the tool block is stable.
 Plugin instructions stay in the system prompt (they change only when plugins change).
 
+**On-demand tools.** Sending all ~120 tool schemas cost ~20k tokens per request. The model
+always has the core plugins' tools (`ui`, `memory`, `plugins`) plus the host's `tools__load`;
+the system prompt carries a one-line catalog per plugin (id, name, description, tool names).
+`tools__load({ plugins })` adds plugins to the session's `tools` list (persisted with the
+session); `prepareStep` sends core + loaded tools each step, so a load takes effect on the next
+step of the same turn. The tool block changes once per load, then stays a stable prefix. Load
+calls are plumbing: no chip, not counted in usage. Pure logic: `tool-loading-core.ts`.
+
 ### 5.2 Token estimate
 
 `estimateTokens`: CJK characters × 0.6 + other characters ÷ 4, + 4 per message/part. Session

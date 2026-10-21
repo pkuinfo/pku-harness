@@ -38,7 +38,8 @@ export function countLines(text: string): number {
   if (!text) return 0;
   let n = 1;
   for (let i = 0; i < text.length; i++) if (text.charCodeAt(i) === 10) n++;
-  return n;
+  // A file's final newline ends its last line; it doesn't start another.
+  return text.charCodeAt(text.length - 1) === 10 && n > 1 ? n - 1 : n;
 }
 
 /** `1,234` (thin thousands formatting used across the harness). */

@@ -97,7 +97,8 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T11.5 Usage & context visualization: per-request recording (migration 3), context ring + sheet, usage screen (KPIs, 20-week heat map, hour-of-day, 14-day tokens, tools, models) (2026-10-21)
 - [~] T11.6 Device pass (picky): swipe-delete bleed-through, context total, partial-command send, model picker sizing, stale cleared drafts, duplicate interruption UI fixed; full pass of attachments / queue / compaction / usage screen pending (2026-10-21)
 - [~] T11.7 First-run onboarding: 3D welcome, then AI service → PKU sign-in → plugin picks → done (resumable) (in progress)
-- [ ] T11.8 Chart palette as theme tokens; trim the ~14k-token tool block (tool search / plugin-scoped activation)
+- [x] T11.8a On-demand tools: core plugins + `tools__load`, plugin catalog in the system prompt; a new chat's request went from ~30k to ~10k tokens (2026-10-21)
+- [ ] T11.8b Chart palette as theme tokens; compaction notice uses the same calibrated numbers as the context sheet
 
 ## M12 Plugin batch 2 (in progress, 2026-10-21)
 - [~] T12.1 Money & utilities: cwfw expansion (salaries/rewards, tuition, tax), dorm electricity / water / bath balances + cashier recharge

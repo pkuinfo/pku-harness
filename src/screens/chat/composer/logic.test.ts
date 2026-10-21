@@ -30,6 +30,11 @@ describe('countLines', () => {
     expect(countLines('a')).toBe(1);
     expect(countLines('a\nb')).toBe(2);
   });
+  test('a trailing newline ends the last line', () => {
+    expect(countLines('a\nb\nc\n')).toBe(3);
+    expect(countLines('a\n\n')).toBe(2);
+    expect(countLines('\n')).toBe(1);
+  });
 });
 
 describe('formatCount', () => {
@@ -76,7 +81,7 @@ describe('detectPaste', () => {
 
 describe('labels', () => {
   test('paste chip label', () => {
-    const text = `${'字'.repeat(3214 - 85)}${'\n'.repeat(85)}`;
+    const text = `${'\n'.repeat(85)}${'字'.repeat(3214 - 85)}`;
     expect(pasteLabel(text, makeTr('zh-Hans'))).toBe('粘贴的文本 · 3,214 字 · 86 行');
     expect(pasteLabel(text, makeTr('en'))).toBe('Pasted text · 3,214 chars · 86 lines');
     expect(pasteLabel('a', makeTr('en'))).toBe('Pasted text · 1 char · 1 line');

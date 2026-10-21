@@ -22,7 +22,7 @@ import { sessions } from '@/core/agent/session/sessions';
 import { contextBudget, loadContextBudget, sessionModel } from './budget';
 import { buildSystemPrompt } from './system-prompt';
 import { contextBreakdown, estimateMessages, estimateTokens } from './tokens';
-import { buildToolSet } from '@/core/agent/tools';
+import { activeToolSet } from '@/core/agent/tools';
 
 export { capToolOutput, capToolResultOutput, isContextOverflowError, CompactionRejected } from './compaction-core';
 
@@ -92,7 +92,7 @@ async function summarize(sessionId: string, messages: ModelMessage[]): Promise<s
     model: await getModel(providerId),
     system: buildSystemPrompt(),
     messages,
-    tools: buildToolSet(),
+    tools: activeToolSet(sessionId),
     toolChoice: 'none',
     maxOutputTokens: 4_096,
   });
@@ -115,7 +115,7 @@ async function summarize(sessionId: string, messages: ModelMessage[]): Promise<s
 
 /** System prompt + tool definitions, in estimated tokens. */
 function overheadTokens(sessionId: string): number {
-  const tools = Object.entries(buildToolSet()).map(([name, t]) => [name, t.description]);
+  const tools = Object.entries(activeToolSet(sessionId)).map(([name, t]) => [name, t.description]);
   const own = estimateTokens(buildSystemPrompt()) + estimateTokens(JSON.stringify(tools));
   try {
     const b = contextBreakdown(sessionId);

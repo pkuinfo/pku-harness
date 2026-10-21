@@ -16,7 +16,7 @@ import { attachmentsOf, cutBefore, nextQueued, textOf, userText } from '@/core/a
 import { sessions } from '@/core/agent/session/sessions';
 import { buildSystemPrompt } from '@/core/agent/context/system-prompt';
 import { autoTitle } from '@/core/agent/session/title';
-import { buildToolSet, fromModelName } from './tools';
+import { activeToolNames, buildToolSet, fromModelName, LOAD_TOOL } from './tools';
 
 /** What the composer (and everything else) sends: plain text, or text plus attachments. */
 export type SendInput = string | { text: string; attachments?: AttachmentPart[] };
@@ -120,6 +120,7 @@ function toolUsage(step: StepResult<ToolSet>, toolMs: Map<string, number>): Tool
   const out: ToolCallUsage[] = [];
   for (const c of step.content) {
     if (c.type !== 'tool-result' && c.type !== 'tool-error') continue;
+    if (c.toolName === LOAD_TOOL) continue;
     const toolId = fromModelName(c.toolName);
     const output = c.type === 'tool-result' ? (c.output as { error?: unknown } | undefined) : undefined;
     const ok = c.type === 'tool-result' && !(output && typeof output === 'object' && 'error' in output);
@@ -195,11 +196,14 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     let finishedSteps = 0;
     const toolStart = new Map<string, number>();
     const toolMs = new Map<string, number>();
+    const tools = buildToolSet(signal, sid);
     const result = streamText({
       model: model!,
       system: buildSystemPrompt(),
       messages: await resolveImages(history),
-      tools: buildToolSet(signal),
+      tools,
+      // Core plugins + what this session loaded; a `tools__load` call widens the next step (§5.1).
+      prepareStep: () => ({ activeTools: activeToolNames(tools, sid) }),
       stopWhen: isStepCount(STEP_LIMIT),
       abortSignal: signal,
       onStepEnd: (step) => {
@@ -247,6 +251,8 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
           break;
         case 'tool-call':
           toolStart.set(part.toolCallId, Date.now());
+          // Loading tools is plumbing, not something the user asked for: no chip.
+          if (part.toolName === LOAD_TOOL) break;
           if (part.toolName === UI_TOOL) {
             appendPart(sid, assistant.id, { type: 'ui', callId: part.toolCallId, spec: (part.input as { spec?: unknown })?.spec });
           } else {
@@ -255,6 +261,7 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
           break;
         case 'tool-result': {
           toolMs.set(part.toolCallId, Date.now() - (toolStart.get(part.toolCallId) ?? Date.now()));
+          if (part.toolName === LOAD_TOOL) break;
           const out = part.output as { error?: string } | undefined;
           patchTool(
             sid,

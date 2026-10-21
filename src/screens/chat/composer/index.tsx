@@ -1,7 +1,7 @@
 import { router, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
 import { TextInput, View, type TextInputContentSizeChangeEvent } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition, useReducedMotion, ZoomIn, ZoomOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, LinearTransition, useReducedMotion, withSpring, ZoomIn, ZoomOut, type LayoutAnimationFunction } from 'react-native-reanimated';
 
 import { IconButton } from '@/components/button';
 import { ContextRing } from '@/components/context-ring';
@@ -308,7 +308,7 @@ export function Composer({ glass = false }: { glass?: boolean }) {
       <QueueChips queue={queue} paused={paused} onPull={pullBack} onRemove={removeQueued} onResume={onResume} />
       <CommandMenu draft={text} busy={busy} onRun={runCommand} onComplete={completeCommand} />
       <Animated.View
-        layout={layout}
+        layout={reduced ? undefined : growFromBottom}
         className={cx('overflow-hidden rounded-lg border-[0.5px] border-edge', glass ? 'bg-surface' : 'bg-surface-2')}
         style={CURVE}>
         {attachments.length || pending ? <AttachmentTray items={attachments} pending={pending} onOpen={setPreview} onRemove={removeAttachment} /> : null}
@@ -427,6 +427,25 @@ export function Composer({ glass = false }: { glass?: boolean }) {
     </View>
   );
 }
+
+/**
+ * The composer box's layout transition. The composer is anchored to the bottom, so the box only
+ * really moves when its own height changes: keep its bottom edge fixed and spring the top. A
+ * LinearTransition would also animate position changes caused by siblings above it (the command
+ * menu filtering down, queue chips), sliding the box over them for a few frames.
+ */
+const growFromBottom: LayoutAnimationFunction = (v) => {
+  'worklet';
+  const config = { damping: springs.smooth.damping, stiffness: springs.smooth.stiffness };
+  // Same height: only a sibling changed. Land in place, nothing to animate.
+  if (Math.abs(v.targetHeight - v.currentHeight) < 0.5) {
+    return { initialValues: { originX: v.targetOriginX, originY: v.targetOriginY, width: v.targetWidth, height: v.targetHeight }, animations: {} };
+  }
+  return {
+    initialValues: { originX: v.targetOriginX, width: v.targetWidth, originY: v.targetOriginY + v.targetHeight - v.currentHeight, height: v.currentHeight },
+    animations: { originY: withSpring(v.targetOriginY, config), height: withSpring(v.targetHeight, config) },
+  };
+};
 
 /** Short model name for the session (§4.5); tap → the model picker sheet. */
 function ModelPill({ label }: { label: string }) {

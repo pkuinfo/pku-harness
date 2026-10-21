@@ -102,10 +102,12 @@ export type ChatState = {
   editing?: string;
   /** Bumped when the draft is replaced from outside the composer (编辑), so it reloads it. */
   draftRev?: number;
+  /** Plugins whose tools the agent loaded in this session (`tools__load`, §5.1). */
+  tools?: string[];
 };
 
 /** What one session persists in kv('session') under its id. */
-type SessionRecord = Pick<ChatState, 'messages' | 'history' | 'draft' | 'queue' | 'queuePaused' | 'running' | 'editing'>;
+type SessionRecord = Pick<ChatState, 'messages' | 'history' | 'draft' | 'queue' | 'queuePaused' | 'running' | 'editing' | 'tools'>;
 
 const records = kv('session');
 const EMPTY: ChatState = { messages: [], history: [], status: 'idle' };
@@ -186,8 +188,8 @@ async function writeSession(id: string, withRecord: boolean) {
     r.id, r.title, r.created_at, r.updated_at, r.pinned ?? 0, r.title_source ?? 'fallback', r.preview ?? '', r.provider_id, r.model, r.message_count ?? 0, r.unread ?? 0,
   );
   if (withRecord && s) {
-    const { messages, history, draft, queue, queuePaused, running, editing } = s;
-    const record: SessionRecord = { messages, history, draft, queue, queuePaused, running, editing };
+    const { messages, history, draft, queue, queuePaused, running, editing, tools } = s;
+    const record: SessionRecord = { messages, history, draft, queue, queuePaused, running, editing, tools };
     await records.set(id, record);
   }
 }
@@ -306,6 +308,7 @@ async function ensure(id: string): Promise<ChatState> {
       queue: saved.queue ?? [],
       queuePaused: saved.queuePaused,
       editing: saved.editing && messages.some((m) => m.id === saved.editing) ? saved.editing : undefined,
+      tools: saved.tools,
     };
     // A queue that was waiting on a reply the app never finished stays paused (nothing sends by itself).
     if (saved.running && s.queue?.length) s.queuePaused = true;
