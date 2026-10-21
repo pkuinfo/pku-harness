@@ -97,6 +97,19 @@ export function Chat() {
     setAway(!pinned.current);
   }, []);
 
+  // What counts as "new content" for the 新回复 pill: more messages or more streamed parts/text.
+  // Plain relayout (an image loading, a theme switch, a font scale change) is not new.
+  const contentSig = useChatSelector((s) => {
+    const last = s.messages.at(-1);
+    const lastText = last?.parts.reduce((n, p) => n + (p.type === 'text' ? p.text.length : 0), 0) ?? 0;
+    return `${s.messages.length}:${last?.parts.length ?? 0}:${lastText}`;
+  });
+  const sig = useRef(contentSig);
+  useEffect(() => {
+    sig.current = contentSig;
+  }, [contentSig]);
+  const sigAtLeave = useRef(contentSig);
+
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
     size.current = { content: contentSize.height, viewport: layoutMeasurement.height };
@@ -104,7 +117,10 @@ export function Chat() {
     const d = distance.current;
     if (dragging.current) {
       // Any pull away from the end while the finger is down hands control to the reader.
-      if (d > 8) pinned.current = false;
+      if (d > 8 && pinned.current) {
+        pinned.current = false;
+        sigAtLeave.current = sig.current;
+      }
     } else if (d < NEAR_END && !pinned.current) {
       pinned.current = true;
       setUnread(false);
@@ -145,7 +161,7 @@ export function Chat() {
     } else if (pinned.current && !dragging.current) {
       // Never move the list under a finger.
       scrollEnd(!busy);
-    } else {
+    } else if (sig.current !== sigAtLeave.current) {
       setUnread(true);
     }
   }, [busy, lastUserId, toEnd, scrollEnd]);

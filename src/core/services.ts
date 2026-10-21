@@ -1,9 +1,10 @@
 import * as Crypto from 'expo-crypto';
+import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
 import { z } from 'zod';
 
 import '@/core/campus/adapters';
-import { campusAccount, pluginCampusRequest } from '@/core/campus/account';
+import { campusAccount, campusHandoff, pluginCampusRequest } from '@/core/campus/account';
 import { bindFinish, bindStart, currentCodeAsync, otpStatus, unbindLocal } from '@/core/campus/otp';
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';
@@ -32,6 +33,20 @@ const host: HostServices = {
       // createTask: false keeps the tab in the app's task, so Back returns to the conversation.
       await WebBrowser.openBrowserAsync(url, { showTitle: true, enableBarCollapsing: true, createTask: false });
       return { opened: true };
+    },
+  },
+  files: {
+    // System document picker (expo-document-picker, SDK 58). Copies go to the app cache so the
+    // native uploader can stream them (modules/campus-http accepts file:// only inside the app's
+    // own storage). Plugins get references, never file bytes.
+    pick: async (opts) => {
+      const res = await DocumentPicker.getDocumentAsync({
+        type: opts?.types?.length ? opts.types : '*/*',
+        multiple: opts?.multiple ?? false,
+        copyToCacheDirectory: true,
+      });
+      if (res.canceled) return [];
+      return res.assets.map((a) => ({ name: a.name, mime: a.mimeType || 'application/octet-stream', size: a.size ?? null, uri: a.uri }));
     },
   },
   crypto: {
@@ -137,6 +152,13 @@ const host: HostServices = {
     },
     otpBindFinish: (smsCode) => bindFinish(smsCode),
     otpUnbindLocal: unbindLocal,
+    openSignedIn: async (service) => {
+      if (!campusAccount.get().signedIn) throw new Error('还没有登录校园账号（设置 → 校园账号）');
+      const url = await campusHandoff(service);
+      if (!/^https:\/\//i.test(url)) throw new Error('无法打开该校园服务');
+      await WebBrowser.openBrowserAsync(url, { showTitle: true, enableBarCollapsing: true, createTask: false });
+      return { opened: true };
+    },
   },
   timetable: {
     get: () => timetable.get(),

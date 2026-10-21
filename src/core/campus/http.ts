@@ -1,4 +1,4 @@
-import CampusHttp, { type CampusResponse, type RequestOptions, type StoredCookie } from '../../../modules/campus-http';
+import CampusHttp, { type CampusResponse, type MultipartOptions, type RequestOptions, type StoredCookie } from '../../../modules/campus-http';
 
 import { secrets } from '@/core/store/secrets';
 
@@ -36,9 +36,13 @@ async function persist(id: CampusSessionId) {
   await secrets.set(cookieKey(id), JSON.stringify(cookies));
 }
 
+/** Uploads stream whole files; give them more than the default 20 s. */
+const UPLOAD_TIMEOUT_MS = 120_000;
+
 /** One request in a session; Set-Cookie updates the session's jar (persisted afterwards). */
 export async function campusFetch(id: CampusSessionId, req: RequestOptions): Promise<CampusResponse> {
   await ensure(id);
+  if (req.multipart) req = { ...req, method: req.method ?? 'POST', timeoutMs: req.timeoutMs ?? UPLOAD_TIMEOUT_MS };
   let res: CampusResponse;
   try {
     res = await CampusHttp.request(id, req);
@@ -79,4 +83,4 @@ export function cookieValue(id: CampusSessionId, url: string, name: string) {
   return CampusHttp.hasSession(id) ? CampusHttp.cookieValue(id, url, name) : null;
 }
 
-export type { CampusResponse, RequestOptions };
+export type { CampusResponse, MultipartOptions, RequestOptions };

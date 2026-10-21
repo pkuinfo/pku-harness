@@ -4,7 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { kv } from '@/core/store/kv';
 import { secrets } from '@/core/store/secrets';
 
-import { APP_HEADERS, campusFetch, cookieValue, FORM, form, resetSession, type CampusResponse, type RequestOptions } from './http';
+import { APP_HEADERS, campusFetch, cookieValue, FORM, form, resetSession, type CampusResponse, type MultipartOptions, type RequestOptions } from './http';
 import { credentials } from './credentials';
 import { iaaaSignIn, PORTAL_APP, type IaaaApp } from './iaaa';
 
@@ -316,7 +316,9 @@ function bbLoggedOut(res: CampusResponse) {
 async function bbRequest(req: RequestOptions, retried = false): Promise<CampusResponse> {
   if (!bbReady) await bbLogin();
   const res = await bbFetch({ ...req, url: req.url.startsWith('http') ? req.url : `${BB_BASE}${req.url}` });
-  if (!retried && (res.status === 401 || bbLoggedOut(res))) {
+  // Never replay an upload: its form carries a one-time nonce, and a lost session means it was
+  // not accepted anyway. The plugin re-reads the form (which signs in again) and asks again.
+  if (!retried && !req.multipart && (res.status === 401 || bbLoggedOut(res))) {
     bbReady = false;
     return bbRequest(req, true);
   }
@@ -334,8 +336,9 @@ export function campusRequest(service: CampusService, req: RequestOptions): Prom
   return adapter.request(req);
 }
 
-/** A plugin's request as the SDK describes it (CampusRequest): optional form, auth-in-form, sign. */
-export type PluginCampusRequest = RequestOptions & {
+/** A plugin's request as the SDK describes it (CampusRequest): optional form, auth-in-form, sign, multipart. */
+export type PluginCampusRequest = Omit<RequestOptions, 'multipart'> & {
+  multipart?: { fields: Record<string, string> | [string, string][]; files: MultipartOptions['files'] };
   form?: Record<string, string>;
   authIn?: 'headers' | 'form';
   sign?: (fields: Record<string, string>) => Record<string, string> | Promise<Record<string, string>>;
@@ -352,7 +355,11 @@ async function authFields(service: CampusService): Promise<Record<string, string
 
 /** campusRequest plus the SDK's form handling: encode `form`, add auth fields, let the plugin sign. */
 export async function pluginCampusRequest(service: CampusService, req: PluginCampusRequest): Promise<CampusResponse> {
-  const { form: fields, authIn, sign, ...rest } = req;
+  const { form: fields, authIn, sign, multipart, ...rest } = req;
+  if (multipart) {
+    if (fields || rest.body != null || authIn === 'form' || sign) throw new Error('multipart 不能和 body / form / authIn / sign 同时使用');
+    return campusRequest(service, { ...rest, method: rest.method ?? 'POST', multipart: toMultipart(multipart) });
+  }
   if (!fields) {
     if (authIn === 'form' || sign) throw new Error('authIn: "form" 和 sign 需要配合 form 使用');
     return campusRequest(service, rest);
@@ -362,6 +369,15 @@ export async function pluginCampusRequest(service: CampusService, req: PluginCam
   return campusRequest(service, { ...rest, method: rest.method ?? 'POST', contentType: FORM, body: form(final) });
 }
 
+/** SDK multipart (record or ordered pairs) → the native module's ordered field list. */
+export function toMultipart(m: NonNullable<PluginCampusRequest['multipart']>): MultipartOptions {
+  const pairs = Array.isArray(m.fields) ? m.fields : Object.entries(m.fields);
+  for (const f of m.files) {
+    if (!/^(content|file):\/\//i.test(f.uri)) throw new Error(`只能上传本机选择的文件（${f.name}）`);
+  }
+  return { fields: pairs.map(([name, value]) => ({ name, value: String(value) })), files: m.files.map(({ field, name, mime, uri }) => ({ field, name, mime, uri })) };
+}
+
 // ── More services (src/core/campus/adapters/*) ────────────────────────────────────────────────
 
 export type CampusAdapter = {
@@ -369,7 +385,16 @@ export type CampusAdapter = {
   request(req: RequestOptions): Promise<CampusResponse>;
   /** Forget the service session (sign-out). */
   reset(): Promise<void>;
+  /** Signed-in hand-off URL for the system browser (carries the session; never given to plugins). */
+  handoff?(): Promise<string>;
 };
+
+/** The signed-in hand-off URL of a campus service, for the host to open (services.campus.openSignedIn). */
+export async function campusHandoff(service: string): Promise<string> {
+  const adapter = adapters.get(service);
+  if (!adapter?.handoff) throw new Error(`校园服务 ${service} 不支持在浏览器中打开`);
+  return adapter.handoff();
+}
 
 const adapters = new Map<string, CampusAdapter>();
 

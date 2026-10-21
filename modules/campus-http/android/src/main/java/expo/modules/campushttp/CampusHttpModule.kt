@@ -1,5 +1,8 @@
 package expo.modules.campushttp
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import android.util.Base64
 import expo.modules.kotlin.exception.CodedException
 import expo.modules.kotlin.modules.Module
@@ -10,12 +13,19 @@ import okhttp3.Cookie
 import okhttp3.CookieJar
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
+import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
 import okhttp3.Protocol
 import okhttp3.Request
+import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import okio.BufferedSink
+import okio.source
 import java.io.ByteArrayInputStream
+import java.io.File
+import java.io.IOException
 import java.net.Proxy
 import java.security.KeyStore
 import java.security.cert.CertificateException
@@ -35,7 +45,9 @@ import javax.net.ssl.X509TrustManager
  * pkucli does with reqwest Policy::none), HTTP/1.1 only, no proxy (campus-only hosts must be
  * reached directly) and an extra trust anchor for PKU hosts that serve a broken chain
  * (pkucli crates/common/src/tls.rs). Credentials never pass through here in clear except as
- * request bodies the JS layer builds; nothing is logged.
+ * request bodies the JS layer builds; nothing is logged. Requests may carry a multipart body
+ * whose files are streamed from local URIs (uploads, e.g. Blackboard submissions), so file
+ * bytes never cross the JS bridge.
  */
 
 private const val ALPHASSL_CA_2025 = """
@@ -89,6 +101,56 @@ class RequestOptions : Record {
   @Field val timeoutMs: Int = 20000
   /** "text" (UTF-8) or "base64" (binary, e.g. captcha images). */
   @Field val responseType: String = "text"
+  /** multipart/form-data body (file uploads); takes precedence over `body`. */
+  @Field val multipart: MultipartOptions? = null
+}
+
+/** One text part. A list (not a map) keeps the order and allows repeated names. */
+class MultipartField : Record {
+  @Field val name: String = ""
+  @Field val value: String = ""
+}
+
+/** One file part, read from a local URI when the request is written (never held in JS). */
+class MultipartFile : Record {
+  @Field val field: String = ""
+  @Field val name: String = ""
+  @Field val mime: String = "application/octet-stream"
+  /** content:// (granted to the app, e.g. by the document picker) or file:// inside the app's own cache/files dir. */
+  @Field val uri: String = ""
+}
+
+class MultipartOptions : Record {
+  @Field val fields: List<MultipartField> = emptyList()
+  @Field val files: List<MultipartFile> = emptyList()
+}
+
+/**
+ * Streams a local file into the request body. Re-opens the stream on every write, so OkHttp may
+ * retry. The length is reported when known so the server gets a Content-Length, not chunked.
+ */
+private class UriRequestBody(
+  private val context: Context,
+  private val uri: Uri,
+  private val mime: MediaType?,
+) : RequestBody() {
+  private val length: Long = when (uri.scheme) {
+    "file" -> File(uri.path ?: "").length()
+    else -> runCatching {
+      context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { c ->
+        if (c.moveToFirst() && !c.isNull(0)) c.getLong(0) else -1L
+      } ?: -1L
+    }.getOrDefault(-1L)
+  }
+
+  override fun contentType(): MediaType? = mime
+
+  override fun contentLength(): Long = length
+
+  override fun writeTo(sink: BufferedSink) {
+    val input = context.contentResolver.openInputStream(uri) ?: throw IOException("无法读取文件 ${uri.lastPathSegment}")
+    input.source().use { sink.writeAll(it) }
+  }
 }
 
 class StoredCookie : Record {
@@ -169,7 +231,9 @@ class CampusHttpModule : Module() {
       options.headers.forEach { (k, v) -> builder.header(k, v) }
       val method = options.method.uppercase()
       val text = options.body
+      val multipart = options.multipart
       val body = when {
+        multipart != null -> buildMultipart(multipart)
         text != null -> text.toRequestBody((options.contentType ?: "text/plain; charset=utf-8").toMediaTypeOrNull())
         method == "POST" || method == "PUT" -> ByteArray(0).toRequestBody(null)
         else -> null
@@ -234,6 +298,39 @@ class CampusHttpModule : Module() {
     }
   }
 
+  /** multipart/form-data: text fields first (in order), then the files streamed from their URIs. */
+  private fun buildMultipart(opts: MultipartOptions): MultipartBody {
+    val context = appContext.reactContext ?: throw FileNotReadable("no Android context")
+    val builder = MultipartBody.Builder().setType(MultipartBody.FORM)
+    for (f in opts.fields) builder.addFormDataPart(f.name, f.value)
+    for (f in opts.files) {
+      val uri = checkedUri(context, f.uri)
+      // OkHttp writes non-ASCII file names as raw UTF-8 in Content-Disposition, as browsers do.
+      builder.addFormDataPart(f.field, f.name, UriRequestBody(context, uri, f.mime.toMediaTypeOrNull()))
+    }
+    return builder.build()
+  }
+
+  /**
+   * Only URIs the app may legitimately read: content:// (the picker granted access) or file://
+   * inside the app's own cache/files directories (the picker's copies). Anything else is refused,
+   * so a request can't upload arbitrary files from the device.
+   */
+  private fun checkedUri(context: Context, raw: String): Uri {
+    val uri = Uri.parse(raw)
+    return when (uri.scheme) {
+      "content" -> uri
+      "file" -> {
+        val file = File(uri.path ?: throw FileNotReadable(raw)).canonicalFile
+        val roots = listOfNotNull(context.cacheDir, context.filesDir, context.externalCacheDir).map { it.canonicalPath + File.separator }
+        if (roots.none { file.path.startsWith(it) }) throw FileNotReadable("file outside the app's storage")
+        if (!file.isFile || !file.canRead()) throw FileNotReadable(file.name)
+        uri
+      }
+      else -> throw FileNotReadable("unsupported URI scheme: ${uri.scheme}")
+    }
+  }
+
   /** System trust store plus the bundled AlphaSSL CA 2025 intermediate as an extra anchor. */
   private fun buildTrust(): Pair<SSLContext, X509TrustManager> {
     val systemTm = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm()).run {
@@ -267,5 +364,7 @@ class CampusHttpModule : Module() {
 }
 
 private class SessionNotFound(id: String) : CodedException("ERR_NO_SESSION", "No campus HTTP session '$id'", null)
+
+private class FileNotReadable(message: String) : CodedException("ERR_FILE", "Cannot upload file: $message", null)
 
 private class NetworkError(message: String) : CodedException("ERR_NETWORK", message, null)

@@ -23,7 +23,9 @@ export async function autoTitle(sessionId: string, model: LanguageModel, ids: { 
   try {
     const result = await generateText({
       model,
-      maxOutputTokens: 64,
+      // Reasoning models (deepseek-flash) think before answering: 64 tokens could be spent on
+      // reasoning alone and leave an empty title. The title itself stays ≤ 12 characters.
+      maxOutputTokens: 512,
       messages: [
         { role: 'user', content: clip(textOf(user), 600) },
         { role: 'assistant', content: clip(textOf(reply), 600) },
@@ -45,6 +47,7 @@ export async function autoTitle(sessionId: string, model: LanguageModel, ids: { 
       purpose: 'title',
     });
     const title = cleanTitle(result.text);
+    if (!title) console.warn('auto title: empty response', result.finishReason);
     // The user may have renamed it while the request ran.
     if (title && sessionStore.meta(sessionId)?.titleSource === 'fallback') sessionStore.setMeta(sessionId, { title, titleSource: 'auto' });
   } catch (e) {

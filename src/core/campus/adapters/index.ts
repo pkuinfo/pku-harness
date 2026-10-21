@@ -4,4 +4,6 @@
  */
 import './bdkj';
 import './cwfw';
+import './cwpay';
 import './elective';
+import './library';

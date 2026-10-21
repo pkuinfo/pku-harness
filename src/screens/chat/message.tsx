@@ -251,25 +251,30 @@ function UserBubble({ message }: { message: ChatMessage }) {
 }
 
 /** Sent images: one at its own aspect, several in a 2-column grid. */
+/** Grid width (dp) of sent images; explicit sizes because expo-image on Android leaves percentage-sized views blank. */
+const GRID_W = 256;
+const GRID_GAP = 4;
+
 function ImageGrid({ images }: { images: AttachmentPart[] }) {
   const single = images.length === 1;
+  const cell = (GRID_W - GRID_GAP) / 2;
   return (
-    <View className="w-64 flex-row flex-wrap justify-end gap-1">
-      {images.map((a) => (
-        <Image
-          key={a.id}
-          source={{ uri: a.uri }}
-          contentFit="cover"
-          transition={160}
-          accessibilityLabel={a.name}
-          style={{
-            width: single ? '100%' : '49%',
-            aspectRatio: single && a.width && a.height ? Math.max(0.6, Math.min(1.8, a.width / a.height)) : 1,
-            borderRadius: radius.md,
-            borderCurve: 'continuous',
-          }}
-        />
-      ))}
+    <View className="flex-row flex-wrap justify-end" style={{ width: GRID_W, gap: GRID_GAP }}>
+      {images.map((a) => {
+        // Portrait shots are cropped to 3:4 (cover) so one image never fills half the screen.
+        const ratio = single && a.width && a.height ? Math.max(0.75, Math.min(1.8, a.width / a.height)) : 1;
+        const w = single ? GRID_W : cell;
+        return (
+          <Image
+            key={a.id}
+            source={{ uri: a.uri }}
+            contentFit="cover"
+            transition={160}
+            accessibilityLabel={a.name}
+            style={{ width: w, height: w / ratio, borderRadius: radius.md, borderCurve: 'continuous' }}
+          />
+        );
+      })}
     </View>
   );
 }

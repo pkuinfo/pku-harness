@@ -16,6 +16,15 @@ export type RequestOptions = {
   followRedirects?: boolean;
   timeoutMs?: number;
   responseType?: 'text' | 'base64';
+  /** multipart/form-data body (takes precedence over `body`); files are streamed natively. */
+  multipart?: MultipartOptions;
+};
+
+export type MultipartOptions = {
+  /** Text parts in order (names may repeat). */
+  fields: { name: string; value: string }[];
+  /** File parts: content:// URIs, or file:// inside the app's cache/files dir (others are refused). */
+  files: { field: string; name: string; mime: string; uri: string }[];
 };
 
 export type CampusResponse = {

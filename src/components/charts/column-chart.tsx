@@ -21,6 +21,9 @@ const GAP = 2;
  * bottom → top in series order with a 2px gap. Grows from the baseline once on mount (UI thread;
  * a fade under reduced motion). Tap a column to select it; others dim.
  */
+/** Width (dp) of one x-axis label. */
+const AXIS_LABEL_W = 64;
+
 export function ColumnChart({
   series,
   colors,
@@ -97,9 +100,10 @@ export function ColumnChart({
                 variant="micro"
                 tone="faint"
                 numberOfLines={1}
-                className="absolute w-12"
+                className="absolute"
                 align="center"
-                style={{ left: Math.min(width - 48, Math.max(0, index * slot + slot / 2 - 24)) }}>
+                // Wide enough for "10月15日" at the micro size; clamped inside the chart.
+                style={{ width: AXIS_LABEL_W, left: Math.min(width - AXIS_LABEL_W, Math.max(0, index * slot + slot / 2 - AXIS_LABEL_W / 2)) }}>
                 {label}
               </Text>
             ))

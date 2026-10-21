@@ -66,7 +66,7 @@ function Loading() {
   );
 }
 
-function Kpi({ label, value, format }: { label: string; value: number | null; format: (n: number) => string }) {
+function Kpi({ label, value, format, unit }: { label: string; value: number | null; format: (n: number) => string; unit?: string }) {
   return (
     <Surface className="flex-1 gap-1">
       <Text variant="micro" tone="faint">
@@ -77,7 +77,14 @@ function Kpi({ label, value, format }: { label: string; value: number | null; fo
           —
         </Text>
       ) : (
-        <AnimatedNumber value={value} variant="numberL" format={format} />
+        <View className="flex-row items-baseline gap-1">
+          <AnimatedNumber value={value} variant="numberL" format={format} />
+          {unit ? (
+            <Text variant="caption" tone="muted">
+              {unit}
+            </Text>
+          ) : null}
+        </View>
       )}
     </Surface>
   );
@@ -102,12 +109,12 @@ function Content({ state, report }: { state: Extract<UsageState, { status: 'read
       <FadeIn index={0}>
         <View className="gap-3">
           <View className="flex-row gap-3">
-            <Kpi label="今天 TOKENS" value={kpis.todayTokens} format={formatCompact} />
-            <Kpi label="本月 TOKENS" value={kpis.monthTokens} format={formatCompact} />
+            <Kpi label="今日用量" value={kpis.todayTokens} format={formatCompact} unit="tokens" />
+            <Kpi label="本月用量" value={kpis.monthTokens} format={formatCompact} unit="tokens" />
           </View>
           <View className="flex-row gap-3">
             <Kpi label="缓存命中率 · 30 天" value={kpis.cacheHitRate} format={formatPercent} />
-            <Kpi label="本月对话" value={kpis.monthTurns} format={(n) => `${formatInt(n)} 轮`} />
+            <Kpi label="本月对话" value={kpis.monthTurns} format={formatInt} unit="轮" />
           </View>
         </View>
       </FadeIn>
@@ -143,7 +150,7 @@ function Content({ state, report }: { state: Extract<UsageState, { status: 'read
 
       <FadeIn index={3}>
         <Section
-          title="TOKENS · 近 14 天"
+          title="用量 · 近 14 天"
           meta={formatCompact(sum.cached + sum.uncached + sum.output)}
           caption={d ? `${formatShortDay(new Date(d.date))} · 缓存 ${formatCompact(d.cached)} · 未缓存 ${formatCompact(d.uncached)} · 输出 ${formatCompact(d.output)}` : '点按柱子查看当天'}>
           <ColumnChart
