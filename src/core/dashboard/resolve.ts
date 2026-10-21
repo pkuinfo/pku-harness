@@ -1,8 +1,7 @@
-import { getPath } from '@/core/scheduler/check';
+import { getPath , setPointer } from '@pku-harness/sdk';
 
 import { live } from './live-store';
-import { setPointer } from './pointer';
-import type { Binding, Widget } from './types';
+import type { Binding, Widget } from '@pku-harness/sdk';
 
 /** One binding's value through the shared live store (TTL cache; `force` refetches). */
 export async function resolveBinding(b: Binding, force = false): Promise<unknown> {

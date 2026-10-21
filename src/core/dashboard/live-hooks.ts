@@ -3,13 +3,12 @@ import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
 import type { LiveData } from '@/core/runtime/types';
-import { getPath } from '@/core/scheduler/check';
+import { getPath , setPointer } from '@pku-harness/sdk';
 import { formatAgo as formatAgoIn } from '@/utils/date';
 
 import { queryKey } from './live';
 import { live } from './live-store';
-import { setPointer } from './pointer';
-import type { Binding, Widget } from './types';
+import type { Binding, Widget } from '@pku-harness/sdk';
 
 /** Visible stale queries are rechecked this often; each query's TTL decides if it refetches. */
 const TICK_MS = 30_000;

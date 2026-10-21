@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 
 import { diffArmed, MAX_ARMED, planNotifications } from './plan';
-import type { Job } from './types';
+import type { Job } from '@pku-harness/sdk';
 
 const at = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
 const now = at(2026, 10, 18, 10);

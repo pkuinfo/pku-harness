@@ -2,7 +2,7 @@ import { kv } from '@/core/store/kv';
 import { t } from '@/i18n';
 
 import { widgetStore } from './store';
-import type { Widget } from './types';
+import type { Widget } from '@pku-harness/sdk';
 
 const n = null;
 

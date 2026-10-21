@@ -1,5 +1,5 @@
-import { occurrencesAfter, totalOccurrences } from './recurrence';
-import type { Job } from './types';
+import { occurrencesAfter, totalOccurrences } from '@pku-harness/sdk';
+import type { Job } from '@pku-harness/sdk';
 
 /**
  * Which notifications should be armed with the OS right now. Pure, so it is unit-tested;

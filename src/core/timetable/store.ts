@@ -6,7 +6,7 @@ import { jobStore } from '@/core/scheduler/store';
 import { kv } from '@/core/store/kv';
 import { t } from '@/i18n';
 
-import { courseReminderTrigger, type Course, type Semester } from './model';
+import { courseReminderTrigger, type Course, type Semester } from '@pku-harness/sdk';
 
 /**
  * Courses + class-reminder setting, persisted in KV. Class reminders are ordinary scheduler

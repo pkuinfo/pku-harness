@@ -1,4 +1,4 @@
-import type { Binding } from './types';
+import type { Binding } from '@pku-harness/sdk';
 
 /**
  * Stale-while-revalidate store for read-tool results (the TanStack Query model, sized for us).

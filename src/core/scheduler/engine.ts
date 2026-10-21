@@ -7,12 +7,11 @@ import { invokeTool } from '@/core/runtime/invoke';
 import { t } from '@/i18n';
 import { registry } from '@/core/runtime/registry';
 
-import { evaluate, fillTemplate, getPath } from './check';
+import { evaluate, fillTemplate, getPath , lastOccurrence, nextOccurrence, runsBy } from '@pku-harness/sdk';
 import { dismissWake, EventType, isWakeEvent, notifee, syncWakeups } from './exact-wake';
 import { diffArmed, planNotifications } from './plan';
-import { lastOccurrence, nextOccurrence, runsBy } from './recurrence';
 import { jobStore } from './store';
-import { actionSchema, triggerSchema, type Job, type JobInput, type JobPatch } from './types';
+import { actionSchema, triggerSchema, type Job, type JobInput, type JobPatch } from '@pku-harness/sdk';
 
 /**
  * Scheduler engine (docs/ARCHITECTURE.md §8).

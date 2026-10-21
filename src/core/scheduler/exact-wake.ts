@@ -3,7 +3,7 @@ import notifee, { AlarmType, AndroidImportance, AndroidVisibility, EventType, Tr
 
 import { t } from '@/i18n';
 
-import type { Job } from './types';
+import type { Job } from '@pku-harness/sdk';
 
 /**
  * Exact background wake-ups for `check` jobs (docs/ARCHITECTURE.md §8, T6.5).

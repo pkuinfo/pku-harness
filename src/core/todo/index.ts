@@ -1,6 +1,6 @@
 import { createJob, deleteJob, updateJob } from '@/core/scheduler/engine';
 import { jobStore } from '@/core/scheduler/store';
-import type { JobSource, Trigger } from '@/core/scheduler/types';
+import type { JobSource, Trigger } from '@pku-harness/sdk';
 
 import { t } from '@/i18n';
 

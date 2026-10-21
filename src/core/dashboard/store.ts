@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 
 import { getDb } from '@/core/store/db';
 
-import type { Widget } from './types';
+import type { Widget } from '@pku-harness/sdk';
 
 /** Widgets in the `widgets` table, ordered by position; screens subscribe to the list. */
 

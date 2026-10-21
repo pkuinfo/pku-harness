@@ -3,7 +3,7 @@ import { useSyncExternalStore } from 'react';
 
 import { getDb } from '@/core/store/db';
 
-import type { Job } from './types';
+import type { Job } from '@pku-harness/sdk';
 
 /**
  * Jobs live in the `jobs` table (full JSON in `data`, hot fields mirrored in columns) and in
