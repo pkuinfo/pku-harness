@@ -17,11 +17,19 @@ export const plainCell = (s: string) => s.replace(/[*_`~]/g, '').trim();
 
 const NUMERIC = /^[\s¥$€£+\-−~≈]*\d[\d,.\s]*(%|元|k|w|万)?\s*$/i;
 
-/** A column whose body cells are (almost) all numbers: right-aligned. */
+/**
+ * A column of quantities (almost all numbers): right-aligned so figures line up. Equal-length
+ * plain codes (room 109 / 308 / 111, IDs) are identifiers, not quantities, and stay left —
+ * unless they carry money, decimal or percent marks.
+ */
 export function numericColumn(body: readonly string[]): boolean {
   const filled = body.map(plainCell).filter(Boolean);
   if (!filled.length) return false;
-  return filled.filter((s) => NUMERIC.test(s)).length / filled.length >= 0.8;
+  const numbers = filled.filter((s) => NUMERIC.test(s));
+  if (numbers.length / filled.length < 0.8) return false;
+  const marked = numbers.some((s) => /[¥$€£%,.]/.test(s));
+  const lengths = new Set(numbers.map((s) => s.replace(/\s/g, '').length));
+  return marked || lengths.size > 1;
 }
 
 export type TableLayout = { widths: number[]; scroll: boolean };

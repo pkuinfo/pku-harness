@@ -47,8 +47,27 @@ export function menuQuery(draft: string): string | null {
   return match[1];
 }
 
+/**
+ * How the input joins the text before `{{input}}`: nothing after a space, opening quote or
+ * bracket ("搜索「{{input}}」"), a space after sentence punctuation, "：" after Chinese, ": "
+ * after a Latin word ("study in{{input}}" + "二教" → "study in: 二教"). Without a joiner the
+ * model got "study in nowScience Teaching Building".
+ */
+function joiner(before: string, input: string): string {
+  const prev = before.at(-1) ?? '';
+  if (!input || !prev || /[\s“"'‘「『（(【\[]/.test(prev) || /^[\s,，、:：;；.。!！?？)）」』]/.test(input)) return '';
+  if (/[.!?]/.test(prev)) return ' ';
+  if (/[。！？，；：]/.test(prev)) return '';
+  if (/[\u3400-\u9fff]/.test(prev)) return '：';
+  return ': ';
+}
+
 /** Expand a prompt template: `{{input}}` becomes the input; without a placeholder, input is appended. */
 export function expandPrompt(template: string, input: string): string {
-  if (template.includes('{{input}}')) return template.replaceAll('{{input}}', input).trim();
-  return input ? `${template}\n\n${input}` : template;
+  const text = input.trim();
+  if (template.includes('{{input}}')) {
+    const parts = template.split('{{input}}');
+    return parts.reduce((out, part, i) => (i === 0 ? part : `${out}${joiner(out, text)}${text}${part}`), '').trim();
+  }
+  return text ? `${template}\n\n${text}` : template;
 }

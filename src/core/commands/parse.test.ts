@@ -76,6 +76,16 @@ describe('expandPrompt', () => {
   test('placeholder', () => {
     expect(expandPrompt('在树洞搜索「{{input}}」并总结', '考试')).toBe('在树洞搜索「考试」并总结');
   });
+  test('the input joins the template naturally', () => {
+    expect(expandPrompt('Find me a free classroom to study in{{input}} (if I didn’t say when, I mean now)', 'Science Teaching Building tomorrow morning')).toBe(
+      'Find me a free classroom to study in: Science Teaching Building tomorrow morning (if I didn’t say when, I mean now)',
+    );
+    expect(expandPrompt('帮我找能自习的空闲教室{{input}}（没说时间就是现在）', '理教 明天上午')).toBe('帮我找能自习的空闲教室：理教 明天上午（没说时间就是现在）');
+    expect(expandPrompt('Sort them by deadline.{{input}}', 'Calculus only')).toBe('Sort them by deadline. Calculus only');
+    expect(expandPrompt('按截止时间排好。{{input}}', '只看数学')).toBe('按截止时间排好。只看数学');
+    // Empty input leaves no stray joiner.
+    expect(expandPrompt('帮我找能自习的空闲教室{{input}}（没说时间就是现在）', '')).toBe('帮我找能自习的空闲教室（没说时间就是现在）');
+  });
   test('no placeholder appends input', () => {
     expect(expandPrompt('校园卡还剩多少钱？', '')).toBe('校园卡还剩多少钱？');
     expect(expandPrompt('今天有什么课？', '下午')).toBe('今天有什么课？\n\n下午');

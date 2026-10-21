@@ -13,13 +13,16 @@ describe('textUnits', () => {
 describe('numericColumn', () => {
   test('money, counts and percentages are numeric; words are not', () => {
     expect(numericColumn(['¥3,000', '¥14,000', '¥17,000'])).toBe(true);
-    expect(numericColumn(['1', '2', '3'])).toBe(true);
+    expect(numericColumn(['130', '84', '30'])).toBe(true);
+    // Equal-length codes are identifiers (room numbers), not quantities.
+    expect(numericColumn(['109', '308', '111'])).toBe(false);
+    expect(numericColumn(['1', '2', '13'])).toBe(true);
     expect(numericColumn(['82%', '95%'])).toBe(true);
     expect(numericColumn(['2026-09', '2026-10', 'Total'])).toBe(false);
     expect(numericColumn(['物理学院', '学工办'])).toBe(false);
     expect(numericColumn([])).toBe(false);
     // A bolded total row is still a number.
-    expect(numericColumn(['1', '2', '**3**'])).toBe(true);
+    expect(numericColumn(['¥1', '¥2', '**¥3**'])).toBe(true);
   });
 });
 
