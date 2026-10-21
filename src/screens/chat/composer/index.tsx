@@ -184,6 +184,14 @@ export function Composer({ glass = false }: { glass?: boolean }) {
     [addAttachments, t],
   );
 
+  // The full editor opens with the keyboard up and the cursor after the last character.
+  const editorInput = useRef<ComponentRef<typeof TextInput>>(null);
+  const focusEditor = useCallback(() => {
+    const end = composerDraft.get().text.length;
+    editorInput.current?.focus();
+    editorInput.current?.setSelection(end, end);
+  }, []);
+
   const onContentSize = useCallback((e: TextInputContentSizeChangeEvent) => {
     setTall(e.nativeEvent.contentSize.height > MAX_INPUT_HEIGHT + 1);
   }, []);
@@ -400,11 +408,11 @@ export function Composer({ glass = false }: { glass?: boolean }) {
         onRemove={removeAttachment}
         onRestore={restoreText}
       />
-      <FullEditor visible={editor} onClose={() => setEditor(false)} counter={counterView}>
+      <FullEditor visible={editor} onClose={() => setEditor(false)} onShow={focusEditor} counter={counterView}>
         <TextInput
+          ref={editorInput}
           value={text}
           onChangeText={composerDraft.setText}
-          autoFocus
           multiline
           textAlignVertical="top"
           placeholder={t('chat.composer.placeholder')}

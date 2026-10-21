@@ -208,7 +208,13 @@ export function Chat() {
         keyboardShouldPersistTaps="handled"
         onScroll={onScroll}
         scrollEventThrottle={32}
-        onLayout={(e) => (size.current.viewport = e.nativeEvent.layout.height)}
+        onLayout={(e) => {
+          // The composer grows (queue chips, the paused banner, a longer draft): stay at the end.
+          const h = e.nativeEvent.layout.height;
+          const shrank = h < size.current.viewport;
+          size.current.viewport = h;
+          if (shrank && pinned.current && !dragging.current) scrollEnd(true);
+        }}
         // Only a finger unpins. Android also fires momentum events for programmatic scrolls, so
         // a fling keeps "dragging" until its momentum ends, and nothing else sets it.
         onScrollBeginDrag={() => (dragging.current = true)}

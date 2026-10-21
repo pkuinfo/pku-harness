@@ -13,9 +13,21 @@ import { spacing, springs, useTheme } from '@/theme';
 import { textChipLines } from './attachment-tray';
 
 /** Full-screen layer over everything (edge to edge, back button closes). */
-function FullScreen({ visible, onClose, animation, children }: { visible: boolean; onClose: () => void; animation: 'fade' | 'slide'; children: ReactNode }) {
+function FullScreen({
+  visible,
+  onClose,
+  onShow,
+  animation,
+  children,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  onShow?: () => void;
+  animation: 'fade' | 'slide';
+  children: ReactNode;
+}) {
   return (
-    <Modal visible={visible} onRequestClose={onClose} animationType={animation} transparent={animation === 'fade'} statusBarTranslucent navigationBarTranslucent>
+    <Modal visible={visible} onRequestClose={onClose} onShow={onShow} animationType={animation} transparent={animation === 'fade'} statusBarTranslucent navigationBarTranslucent>
       {children}
     </Modal>
   );
@@ -115,11 +127,24 @@ export function TextPreview({
 }
 
 /** ⤢ → a full-screen editor for long drafts (§4.3); edits the draft live, 完成 returns. */
-export function FullEditor({ visible, onClose, children, counter }: { visible: boolean; onClose: () => void; children: ReactNode; counter: ReactNode }) {
+export function FullEditor({
+  visible,
+  onClose,
+  onShow,
+  children,
+  counter,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  /** Focus the field here: autoFocus inside an Android Modal opens no keyboard. */
+  onShow: () => void;
+  children: ReactNode;
+  counter: ReactNode;
+}) {
   const insets = useSafeAreaInsets();
   const t = useT();
   return (
-    <FullScreen visible={visible} onClose={onClose} animation="slide">
+    <FullScreen visible={visible} onClose={onClose} onShow={onShow} animation="slide">
       <KeyboardAvoidingView className="flex-1 bg-bg" behavior="padding">
         <View className="flex-row items-center gap-3 px-4 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
           <Text variant="headline" className="flex-1">
