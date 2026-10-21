@@ -1,5 +1,7 @@
 import * as Crypto from 'expo-crypto';
 
+import { t } from '@/i18n';
+
 import { APP_HEADERS, campusFetch, form, FORM } from './http';
 import { currentCodeAsync } from './otp';
 import { encryptPkcs1 } from './rsa';
@@ -27,8 +29,10 @@ export class IaaaError extends Error {
   }
 }
 
-/** Codes pkucli documents; anything else shows IAAA's own message (it is already Chinese). */
-const FRIENDLY: Record<string, string> = { E02: '账号需要先激活' };
+/** Codes pkucli documents; anything else shows IAAA's own message (always Chinese). */
+const FRIENDLY: Record<string, () => string> = { E02: () => t('app.campus.errors.activate') };
+/** Our code for wrong credentials (IAAA's own code for it varies). */
+const WRONG_PASSWORD = 'WRONG_PASSWORD';
 
 /**
  * What second factor IAAA wants for this account + app (OAuthLogin.js `showOrHideSmsCode`:
@@ -52,7 +56,7 @@ export async function iaaaSendCode(app: IaaaApp, username: string): Promise<stri
     headers: { ...APP_HEADERS, 'x-requested-with': 'XMLHttpRequest', referer: `${IAAA_BASE}/oauth.jsp` },
   });
   const j = parseJson<{ success?: boolean; mobileMask?: string; message?: string }>(res.body, '发送验证码');
-  if (!j.success) throw new IaaaError(j.message || '验证码发送失败', 'SMS_FAILED');
+  if (!j.success) throw new IaaaError(j.message || t('app.campus.errors.sendCodeFailed'), 'SMS_FAILED');
   return j.mobileMask;
 }
 
@@ -63,7 +67,7 @@ export async function iaaaSendCode(app: IaaaApp, username: string): Promise<stri
 export async function iaaaSignIn(app: IaaaApp, username: string, password: string, service: string): Promise<string> {
   const check = await iaaaPrecheck(app, username).catch(() => ({ mode: 'none' as const, otpBound: true }));
   if (check.mode === 'none') return iaaaLogin(app, username, password);
-  if (check.mode === 'otp' && !check.otpBound) throw new IaaaError('账号要求手机令牌，但还没有绑定。可在「设置 → 手机令牌」绑定', 'OTP_UNBOUND');
+  if (check.mode === 'otp' && !check.otpBound) throw new IaaaError(t('app.campus.errors.otpUnbound'), 'OTP_UNBOUND');
   if (check.mode === 'otp') {
     // The harness's own authenticator (otp.ts): answer with its code instead of prompting.
     // Wait for the next code when this one is about to roll over; prompt if IAAA rejects it.
@@ -78,7 +82,7 @@ export async function iaaaSignIn(app: IaaaApp, username: string, password: strin
         return await iaaaLogin(app, username, password, { otp: auto.code });
       } catch (e) {
         // Wrong password is not an OTP problem; anything else falls through to the prompt.
-        if (e instanceof IaaaError && e.message === '学号或密码错误') throw e;
+        if (e instanceof IaaaError && e.code === WRONG_PASSWORD) throw e;
       }
     }
   }
@@ -89,7 +93,7 @@ export async function iaaaSignIn(app: IaaaApp, username: string, password: strin
     service,
     resend: check.mode === 'otp' ? undefined : () => iaaaSendCode(app, username),
   });
-  if (!code) throw new IaaaError('已取消验证', 'CANCELLED');
+  if (!code) throw new IaaaError(t('app.campus.errors.cancelled'), 'CANCELLED');
   return check.mode === 'otp' ? iaaaLogin(app, username, password, { otp: code }) : iaaaLogin(app, username, password, { sms: code });
 }
 
@@ -99,7 +103,7 @@ export async function iaaaLogin(app: IaaaApp, username: string, password: string
     headers: { ...APP_HEADERS, 'x-requested-with': 'XMLHttpRequest', referer: `${IAAA_BASE}/oauth.jsp` },
   });
   const key = parseJson<{ success: boolean; key?: string }>(keyRes.body, '获取公钥');
-  if (!key.success || !key.key) throw new IaaaError('获取 IAAA 公钥失败', 'NO_KEY');
+  if (!key.success || !key.key) throw new IaaaError(t('app.campus.errors.noPublicKey'), 'NO_KEY');
 
   const encrypted = encryptPkcs1(key.key, password, (n) => Crypto.getRandomBytes(n));
   const res = await campusFetch('iaaa', {
@@ -122,14 +126,14 @@ export async function iaaaLogin(app: IaaaApp, username: string, password: string
   const code = out.errors?.code ?? 'UNKNOWN';
   const msg = out.errors?.msg ?? '';
   // IAAA answers wrong credentials with this English text (seen on device, 2026-10-18).
-  const translated = /not correct/i.test(msg) ? '学号或密码错误' : undefined;
-  throw new IaaaError(FRIENDLY[code] ?? translated ?? (msg || 'IAAA 登录失败'), code);
+  if (/not correct/i.test(msg)) throw new IaaaError(t('app.campus.errors.wrongPassword'), WRONG_PASSWORD);
+  throw new IaaaError(FRIENDLY[code]?.() ?? (msg || t('app.campus.errors.iaaaFailed')), code);
 }
 
 function parseJson<T>(body: string, step: string): T {
   try {
     return JSON.parse(body) as T;
   } catch {
-    throw new IaaaError(`${step}响应无法解析（可能需要校园网或服务暂时不可用）`, 'BAD_RESPONSE');
+    throw new IaaaError(t('app.campus.errors.badResponse', { step }), 'BAD_RESPONSE');
   }
 }

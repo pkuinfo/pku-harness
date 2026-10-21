@@ -9,6 +9,7 @@ import { aiConfig } from '@/core/agent/provider';
 import { sessions } from '@/core/agent/session/sessions';
 import { registry } from '@/core/runtime/registry';
 import { kv } from '@/core/store/kv';
+import { t } from '@/i18n';
 
 import { computeBudget } from './compaction-core';
 
@@ -27,7 +28,13 @@ export const CONTEXT_BUDGET_OPTIONS: { label: string; value: number | null }[] =
   { label: '64k', value: 64_000 },
   { label: '128k', value: 128_000 },
   { label: '256k', value: 256_000 },
-  { label: '不限', value: null },
+  // Read in the app language each time (Settings shows it).
+  {
+    get label() {
+      return t('chat.context.unlimited');
+    },
+    value: null,
+  },
 ];
 
 const agentStore = kv('agent');

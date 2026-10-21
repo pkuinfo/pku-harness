@@ -5,6 +5,7 @@ import Svg, { Circle } from 'react-native-svg';
 
 import { useContextBreakdown } from '@/core/usage/hooks';
 import { formatCompact, formatPercent } from '@/core/usage/format';
+import { useT } from '@/i18n';
 import { springs, useTheme } from '@/theme';
 
 import { PressableScale } from './pressable-scale';
@@ -23,6 +24,7 @@ const LEN = 2 * Math.PI * R;
  */
 export function ContextRing({ sessionId, onPress }: { sessionId?: string; onPress?: () => void }) {
   const c = useTheme();
+  const t = useT();
   const reduced = useReducedMotion();
   const b = useContextBreakdown(sessionId);
   const ratio = b.budget > 0 ? b.total / b.budget : 0;
@@ -39,8 +41,8 @@ export function ContextRing({ sessionId, onPress }: { sessionId?: string; onPres
   return (
     <PressableScale
       accessibilityRole="button"
-      accessibilityLabel={`上下文 ${formatPercent(ratio)} · ${formatCompact(b.total)} / ${formatCompact(b.budget)}`}
-      accessibilityHint="查看上下文用量"
+      accessibilityLabel={t('chat.context.ringA11y', { pct: formatPercent(ratio), used: formatCompact(b.total), budget: formatCompact(b.budget) })}
+      accessibilityHint={t('chat.context.ringHint')}
       hitSlop={10}
       scaleTo={0.9}
       onPress={onPress ?? (() => router.push('/context'))}

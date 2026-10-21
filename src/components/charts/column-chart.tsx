@@ -3,6 +3,7 @@ import { Pressable, View, type GestureResponderEvent } from 'react-native';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Line, Path } from 'react-native-svg';
 
+import { useT } from '@/i18n';
 import { springs, useTheme } from '@/theme';
 
 import { Text } from '../text';
@@ -44,6 +45,7 @@ export function ColumnChart({
   accessibilityLabel: string;
 }) {
   const c = useTheme();
+  const t = useT();
   const reduced = useReducedMotion();
   const [width, setWidth] = useState(0);
   const count = series[0]?.length ?? 0;
@@ -66,7 +68,7 @@ export function ColumnChart({
 
   return (
     <View accessible accessibilityRole="image" accessibilityLabel={accessibilityLabel}>
-      <Pressable onPress={onPress} onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ height }} accessibilityHint="点按柱子查看数值">
+      <Pressable onPress={onPress} onLayout={(e) => setWidth(e.nativeEvent.layout.width)} style={{ height }} accessibilityHint={t('app.ui.tapBars')}>
         {width > 0 ? (
           <Animated.View pointerEvents="none" style={[{ width, height, transformOrigin: 'bottom' }, growStyle]}>
             <Svg width={width} height={height}>

@@ -13,19 +13,29 @@ import type { IconName } from '@/components/icon';
 import { usePlugins } from '@/core/runtime/hooks';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
+import { settingsRowText } from '@/core/runtime/localize';
 import { haptics } from '@/utils/haptics';
+import { setLocalePreference, useLocale, useLocalePreference, useT, type LocalePreference } from '@/i18n';
 import { setThemePreference, useTheme, useThemePreference, type ThemePreference } from '@/theme';
 
-const THEME_OPTIONS: { label: string; value: ThemePreference }[] = [
-  { label: '跟随系统', value: 'system' },
-  { label: '深色', value: 'dark' },
-  { label: '浅色', value: 'light' },
-];
 
 /** Settings tab: account, AI provider, plugins, preferences (docs/ARCHITECTURE.md §2). */
 export function Settings() {
   const c = useTheme();
+  const t = useT();
+  const locale = useLocale();
   const pref = useThemePreference();
+  const localePref = useLocalePreference();
+  const themeOptions: { label: string; value: ThemePreference }[] = [
+    { label: t('core.settings.themeSystem'), value: 'system' },
+    { label: t('core.settings.themeDark'), value: 'dark' },
+    { label: t('core.settings.themeLight'), value: 'light' },
+  ];
+  const localeOptions: { label: string; value: LocalePreference }[] = [
+    { label: t('core.settings.languageSystem'), value: 'system' },
+    { label: t('core.settings.languageZh'), value: 'zh-Hans' },
+    { label: t('core.settings.languageEn'), value: 'en' },
+  ];
   const ai = useAIConfig();
   const campus = useCampusAccount();
   const plugins = usePlugins();
@@ -35,84 +45,91 @@ export function Settings() {
     .filter((p) => pluginSettings.get(p.id).enabled && !registry.unavailable(p.id))
     .flatMap((p) => (p.contributes?.settings ?? []).map((row) => ({ plugin: p, row })));
   return (
-    <Screen title="设置" subtitle="Settings">
+    <Screen title={t('app.settings.title')} subtitle={t('app.settings.eyebrow')}>
       <FadeIn index={0}>
-        <ListGroup title="账号">
+        <ListGroup title={t('app.settings.account')}>
           <ListRow
             icon="person"
-            title="校园账号"
-            subtitle={campus.signedIn ? `${campus.name ? `${campus.name} · ` : ''}${campus.username} · 已登录` : '未登录 · IAAA 统一身份认证'}
+            title={t('app.settings.campus')}
+            subtitle={campus.signedIn ? t('app.settings.campusSignedIn', { who: [campus.name, campus.username].filter(Boolean).join(' · ') }) : t('app.settings.campusSignedOut')}
             onPress={() => router.push('/campus')}
           />
           <ListRow
             icon="sparkles"
             iconTint={c.accent}
-            title="AI 服务"
-            subtitle={ai.hasKey ? `${ai.config.name} · ${ai.config.model}` : '未连接 · 默认 DeepSeek'}
+            title={t('app.settings.ai')}
+            subtitle={ai.hasKey ? `${ai.config.name} · ${ai.config.model}` : t('app.settings.aiNotConnected')}
             onPress={() => router.push('/ai-settings')}
           />
-          <ListRow icon="trendUp" title="用量" subtitle="Token 用量、活跃时段与常用工具" onPress={() => router.push('/usage')} />
+          <ListRow icon="trendUp" title={t('app.settings.usage')} subtitle={t('app.settings.usageSubtitle')} onPress={() => router.push('/usage')} />
         </ListGroup>
       </FadeIn>
       {contributed.length ? (
         <FadeIn index={1}>
-          <ListGroup title="插件设置">
-            {contributed.map(({ plugin, row }) => (
-              <ListRow
-                key={`${plugin.id}/${row.screen}`}
-                icon={(row.icon as IconName | undefined) ?? (plugin.icon as IconName | undefined) ?? 'puzzle'}
-                title={row.title}
-                subtitle={row.subtitle}
-                onPress={() =>
-                  router.push({
-                    pathname: plugin.contributes?.screens?.[row.screen]?.presentation === 'modal' ? '/m/[plugin]/[screen]' : '/p/[plugin]/[screen]',
-                    params: { plugin: plugin.id, screen: row.screen },
-                  })
-                }
-              />
-            ))}
+          <ListGroup title={t('app.settings.pluginSettings')}>
+            {contributed.map(({ plugin, row }) => {
+              const text = settingsRowText(plugin, row.screen, row, locale);
+              return (
+                <ListRow
+                  key={`${plugin.id}/${row.screen}`}
+                  icon={(row.icon as IconName | undefined) ?? (plugin.icon as IconName | undefined) ?? 'puzzle'}
+                  title={text.title}
+                  subtitle={text.subtitle}
+                  onPress={() =>
+                    router.push({
+                      pathname: plugin.contributes?.screens?.[row.screen]?.presentation === 'modal' ? '/m/[plugin]/[screen]' : '/p/[plugin]/[screen]',
+                      params: { plugin: plugin.id, screen: row.screen },
+                    })
+                  }
+                />
+              );
+            })}
           </ListGroup>
         </FadeIn>
       ) : null}
       <FadeIn index={1}>
-        <ListGroup title="插件与权限" footer="授权后，AI 可直接代你操作对应服务；可在每个插件里单独调整。">
-          <ListRow icon="puzzle" title="插件" value={`${pluginCount} 个`} onPress={() => router.push('/plugins')} />
+        <ListGroup title={t('app.settings.pluginsGroup')} footer={t('app.settings.pluginsFooter')}>
+          <ListRow icon="puzzle" title={t('app.settings.plugins')} value={t('app.settings.pluginCount', { count: pluginCount })} onPress={() => router.push('/plugins')} />
         </ListGroup>
       </FadeIn>
       <FadeIn index={2}>
         <View className="gap-2">
           <Text variant="micro" tone="faint" className="px-4">
-            外观
+            {t('core.settings.appearance')}
           </Text>
-          <Segmented options={THEME_OPTIONS} value={pref} onChange={setThemePreference} />
+          <Segmented options={themeOptions} value={pref} onChange={setThemePreference} />
+          <Text variant="micro" tone="faint" className="mt-3 px-4">
+            {t('core.settings.language')}
+          </Text>
+          <Segmented options={localeOptions} value={localePref} onChange={setLocalePreference} />
         </View>
       </FadeIn>
       <FadeIn index={3}>
-        <ListGroup title="通知">
-          <ListRow icon="bell" title="提醒与通知" subtitle="精确提醒、后台检查" onPress={() => router.push('/notifications')} />
+        <ListGroup title={t('app.settings.notifications')}>
+          <ListRow icon="bell" title={t('app.settings.reminders')} subtitle={t('app.settings.remindersSubtitle')} onPress={() => router.push('/notifications')} />
         </ListGroup>
       </FadeIn>
       <FadeIn index={4}>
-        <ListGroup title="数据" footer="所有数据只保存在这台手机上。导出内容不包含密码和 API Key。">
+        <ListGroup title={t('app.settings.data')} footer={t('app.settings.dataFooter')}>
           <ListRow
             icon="send2"
-            title="导出数据"
-            subtitle="提醒、待办、课表、看板与设置（JSON）"
+            title={t('app.settings.export')}
+            subtitle={t('app.settings.exportSubtitle')}
             onPress={async () => {
               const data = await exportData();
-              await Share.share({ title: 'PKU Harness 数据', message: JSON.stringify(data, null, 2) });
+              await Share.share({ title: t('app.settings.exportTitle'), message: JSON.stringify(data, null, 2) });
             }}
           />
           <ListRow
             icon="trash"
             iconTint={c.down}
-            title="清除所有数据"
-            subtitle="删除本机上的全部数据和已保存的密钥"
+            title={t('app.settings.reset')}
+            subtitle={t('app.settings.resetSubtitle')}
             onPress={() =>
-              Alert.alert('清除所有数据？', '提醒、待办、课表、看板、对话和已保存的密钥都会被删除，无法恢复。', [
-                { text: '取消', style: 'cancel' },
+              Alert.alert(t('app.settings.resetTitle'), t('app.settings.resetMessage'), [
+                { text: t('core.common.cancel'), style: 'cancel' },
                 {
-                  text: '清除',
+                  text: t('app.settings.resetConfirm'),
                   style: 'destructive',
                   onPress: async () => {
                     await resetData();

@@ -1,5 +1,7 @@
 import { Platform } from 'react-native';
 
+import { t, type MessageKey } from '@/i18n';
+
 import type { Capability, CommandContribution, PluginDef, ProviderDef, ToolDef } from './types';
 
 export type ToolEntry = { id: string; pluginId: string; name: string; def: ToolDef };
@@ -16,14 +18,14 @@ export const HOST_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
   ...(Platform.OS === 'android' ? (['campus-session'] as const) : []),
 ]);
 
-const CAPABILITY_LABEL: Record<Capability, string> = {
-  network: '网络',
-  'campus-network': '校园网',
-  'campus-session': '校园账号登录',
-  notifications: '通知',
-  background: '后台运行',
-  shell: '命令行',
-  filesystem: '文件系统',
+const CAPABILITY_LABEL: Record<Capability, MessageKey> = {
+  network: 'app.plugins.capability.network',
+  'campus-network': 'app.plugins.capability.campusNetwork',
+  'campus-session': 'app.plugins.capability.campusSession',
+  notifications: 'app.plugins.capability.notifications',
+  background: 'app.plugins.capability.background',
+  shell: 'app.plugins.capability.shell',
+  filesystem: 'app.plugins.capability.filesystem',
 };
 
 export type ProviderEntry = { id: string; pluginId: string; def: ProviderDef };
@@ -54,10 +56,10 @@ export const registry = {
   list(): PluginDef[] {
     return [...plugins.values()];
   },
-  /** Why a plugin can't run on this device, or null. */
+  /** Why a plugin can't run on this device (in the app language), or null. */
   unavailable(id: string): string | null {
     const missing = (plugins.get(id)?.requires ?? []).filter((c) => !HOST_CAPABILITIES.has(c));
-    return missing.length ? `需要${missing.map((c) => CAPABILITY_LABEL[c]).join('、')}，这台设备暂不支持` : null;
+    return missing.length ? t('app.plugins.unsupported', { list: missing.map((c) => t(CAPABILITY_LABEL[c])).join(t('app.ui.listSep')) }) : null;
   },
   /** Resolve `<plugin>.<tool>`. */
   tool(id: string): ToolEntry | undefined {

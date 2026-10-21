@@ -7,6 +7,7 @@ import { Text } from '@/components/text';
 import { sendMessage } from '@/core/agent/run';
 import { invokeTool } from '@/core/runtime/invoke';
 import { askVerification } from '@/core/campus/verify';
+import { t } from '@/i18n';
 
 /**
  * Dev-only tool runner so tools can be exercised on a device without a model:
@@ -24,7 +25,7 @@ export function DevTools() {
   useEffect(() => {
     // `?verify=sms|otp|email` previews the second-factor prompt with demo values (no network).
     if (!__DEV__ || !verify) return;
-    void askVerification({ mode: verify, sentTo: verify === 'otp' ? undefined : '138****0000', service: '演示', resend: verify === 'otp' ? undefined : async () => '138****0000' }).then((code) => setOut(`code: ${code ?? '(cancelled)'}`));
+    void askVerification({ mode: verify, sentTo: verify === 'otp' ? undefined : '138****0000', service: t('app.dev.demoService'), resend: verify === 'otp' ? undefined : async () => '138****0000' }).then((code) => setOut(`code: ${code ?? '(cancelled)'}`));
   }, [verify, n]);
   useEffect(() => {
     if (!__DEV__ || !tool) return;

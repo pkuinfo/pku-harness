@@ -59,6 +59,16 @@
           "cameraPermission": "允许 PKU Harness 使用相机，以便拍照后作为附件发给 AI 助手",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-localization",
+        {
+          "supportedLocales": [
+            "zh-Hans",
+            "en"
+          ],
+          "supportsRTL": false
+        }
       ]
     ],
     "experiments": {

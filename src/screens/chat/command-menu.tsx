@@ -12,7 +12,8 @@ import { Chip } from '@/components/chip';
 import { Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
-import { COMMAND_GROUPS, menuQuery, rankCommands, useCommands, type Command } from '@/core/commands';
+import { COMMAND_GROUPS, isAsciiAlias, menuQuery, rankCommands, useCommands, type Command } from '@/core/commands';
+import { useLocale, useT } from '@/i18n';
 import { duration, shadows, spacing, springs, typography, useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 
@@ -49,6 +50,7 @@ type Item = { kind: 'header'; title: string } | { kind: 'command'; command: Comm
 
 export function CommandMenu({ draft, busy, onRun, onComplete }: CommandMenuProps) {
   const commands = useCommands();
+  const t = useT();
   const reduced = useReducedMotion();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
   const query = menuQuery(draft);
@@ -57,12 +59,13 @@ export function CommandMenu({ draft, busy, onRun, onComplete }: CommandMenuProps
     if (query === null) return [];
     if (query === '') {
       return COMMAND_GROUPS.flatMap((g) => {
-        const inGroup = commands.filter((c) => c.group === g.id);
-        return inGroup.length ? [{ kind: 'header' as const, title: g.title }, ...inGroup.map((command) => ({ kind: 'command' as const, command }))] : [];
+        const inGroup = commands.filter((c) => c.group === g);
+        return inGroup.length ? [{ kind: 'header' as const, title: t(`chat.commands.groups.${g}`) }, ...inGroup.map((command) => ({ kind: 'command' as const, command }))] : [];
       });
     }
     return rankCommands(commands, query).map((command) => ({ kind: 'command' as const, command }));
-  }, [commands, query]);
+    // `t` changes with the language, like `commands`.
+  }, [commands, query, t]);
 
   // A new query shows its best match first.
   useEffect(() => {
@@ -83,7 +86,7 @@ export function CommandMenu({ draft, busy, onRun, onComplete }: CommandMenuProps
       className="mb-2 overflow-hidden rounded-lg border-edge bg-elevated"
       style={{ maxHeight: MAX_HEIGHT, borderCurve: 'continuous', borderWidth: StyleSheet.hairlineWidth, boxShadow: shadows.float }}
       accessibilityRole="menu"
-      accessibilityLabel="命令">
+      accessibilityLabel={t('chat.commands.menu')}>
       <ScrollView ref={scroll} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false} contentContainerClassName="py-1">
         {items.map((item) =>
           item.kind === 'header' ? (
@@ -101,14 +104,18 @@ export function CommandMenu({ draft, busy, onRun, onComplete }: CommandMenuProps
 
 function CommandRow({ command, disabled, onPress }: { command: Command; disabled: boolean; onPress: (c: Command) => void }) {
   const c = useTheme();
-  const alias = command.aliases[0];
+  const t = useT();
+  const locale = useLocale();
+  // The chip shows an alias in the app language: English ones in English (none if there is none).
+  const alias = locale === 'en' ? command.aliases.find(isAsciiAlias) : command.aliases[0];
+  const description = disabled ? t('chat.commands.afterReply') : command.description;
   return (
     <PressableScale
       scaleTo={0.98}
       disabled={disabled}
       onPress={() => onPress(command)}
       accessibilityRole="menuitem"
-      accessibilityLabel={`/${command.name}${alias ? `，${alias}` : ''}，${disabled ? '回复结束后可用' : command.description}`}
+      accessibilityLabel={[`/${command.name}`, alias, description].filter(Boolean).join(t('chat.model.a11ySep'))}
       accessibilityState={{ disabled }}
       className={cx('mx-1 flex-row items-center gap-3 rounded-md px-2', disabled && 'opacity-50')}
       style={{ height: ROW_HEIGHT, borderCurve: 'continuous' }}>
@@ -121,7 +128,7 @@ function CommandRow({ command, disabled, onPress }: { command: Command; disabled
           {alias ? <Chip label={alias} /> : null}
         </View>
         <Text variant="caption" tone="muted" numberOfLines={1}>
-          {disabled ? '回复结束后可用' : command.description}
+          {description}
         </Text>
       </View>
     </PressableScale>

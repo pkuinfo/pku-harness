@@ -2,11 +2,13 @@ import { useState } from 'react';
 import { View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
+import { useT } from '@/i18n';
 import { useTheme } from '@/theme';
 
 /** Minimal trend line with a soft gradient fill (dashboards). Scales to its container width. */
 export function Sparkline({ values, tone = 'accent', height = 44 }: { values: number[]; tone?: 'accent' | 'up' | 'down' | 'info'; height?: number }) {
   const c = useTheme();
+  const t = useT();
   const [w, setW] = useState(0);
   const color = tone === 'up' ? c.up : tone === 'down' ? c.down : tone === 'info' ? c.info : c.accent;
   const pts = values.filter((v) => Number.isFinite(v));
@@ -22,7 +24,7 @@ export function Sparkline({ values, tone = 'accent', height = 44 }: { values: nu
     area = `${line} L${w} ${height} L0 ${height} Z`;
   }
   return (
-    <View style={{ height }} onLayout={onLayout} accessibilityLabel={`趋势：${pts.join('、')}`}>
+    <View style={{ height }} onLayout={onLayout} accessibilityLabel={t('app.ui.trend', { values: pts.join(t('app.ui.listSep')) })}>
       {line ? (
         <Svg width={w} height={height}>
           <Defs>

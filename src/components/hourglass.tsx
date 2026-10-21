@@ -13,6 +13,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Line, Path } from 'react-native-svg';
 
+import { useT } from '@/i18n';
 import { curves, useTheme } from '@/theme';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -31,6 +32,7 @@ const GRAIN_MS = 220;
  */
 export function Hourglass({ period = 30, size = 56, tone = 'accent' }: { period?: number; size?: number; tone?: 'accent' | 'up' | 'down' | 'warn' }) {
   const c = useTheme();
+  const t = useT();
   const reduced = useReducedMotion();
   const sand = tone === 'up' ? c.up : tone === 'down' ? c.down : tone === 'warn' ? c.warn : c.accent;
   const p = useSharedValue(0); // 0 = top full, 1 = bottom full
@@ -117,7 +119,7 @@ export function Hourglass({ period = 30, size = 56, tone = 'accent' }: { period?
   const flipStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.get()}deg` }] }));
 
   return (
-    <View style={{ width: size * (40 / 56), height: size }} accessibilityRole="progressbar" accessibilityLabel="倒计时沙漏">
+    <View style={{ width: size * (40 / 56), height: size }} accessibilityRole="progressbar" accessibilityLabel={t('app.ui.countdown')}>
       <Animated.View style={[{ flex: 1 }, flipStyle]}>
         <Svg width="100%" height="100%" viewBox="0 0 40 56">
           <AnimatedPath animatedProps={topSand} fill={sand} />

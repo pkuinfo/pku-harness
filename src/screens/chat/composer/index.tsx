@@ -11,7 +11,7 @@ import { Text } from '@/components/text';
 import {
   acceptsImages,
   discardAttachmentFile,
-  LIMIT_NOTICE,
+  limitNotice,
   MAX_ATTACHMENTS,
   pickFiles,
   pickImages,
@@ -23,13 +23,14 @@ import type { AttachmentPart } from '@/core/agent/session/chat-store';
 import { sendMessage, stopGeneration } from '@/core/agent/run';
 import { sessions, useDraftRevision, useQueue, type QueuedMessage } from '@/core/agent/session/sessions';
 import { executeCommandLine, listCommands, menuQuery, parseCommand, rankCommands, type Command, type CommandContext } from '@/core/commands';
+import { useT } from '@/i18n';
 import { springs, typography, useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
 
 import { CommandMenu } from '@/screens/chat/command-menu';
 import { AttachSheet, type AttachAction } from './attach-sheet';
-import { AttachmentTray, PASTE_NAME } from './attachment-tray';
+import { AttachmentTray, pasteName } from './attachment-tray';
 import { composerDraft, useComposerRevision, useDraft } from './draft';
 import { counterState, countChars, detectPaste, formatCount, MAX_LINES } from './logic';
 import { imageModelSuggestion, modelLabel } from './models';
@@ -50,6 +51,7 @@ const CURVE = { borderCurve: 'continuous' } as const;
  */
 export function Composer({ glass = false }: { glass?: boolean }) {
   const c = useTheme();
+  const t = useT();
   const reduced = useReducedMotion();
   const sessionId = useActiveSessionId();
   const busy = useSessionBusy();
@@ -100,7 +102,7 @@ export function Composer({ glass = false }: { glass?: boolean }) {
     const cur = composerDraft.get().attachments;
     const room = remainingSlots(cur.length);
     composerDraft.setAttachments([...cur, ...added.slice(0, room)]);
-    if (added.length > room) composerToast.show(LIMIT_NOTICE, 'warn');
+    if (added.length > room) composerToast.show(limitNotice(), 'warn');
   }, []);
 
   const removeAttachment = useCallback((a: AttachmentPart) => {
@@ -129,12 +131,12 @@ export function Composer({ glass = false }: { glass?: boolean }) {
         }
       } catch {
         haptics.warning();
-        composerToast.show('没能添加附件，请重试', 'warn');
+        composerToast.show(t('chat.composer.attachFailed'), 'warn');
       } finally {
         setPending(0);
       }
     },
-    [addAttachments],
+    [addAttachments, t],
   );
 
   const onAttach = useCallback(
@@ -161,17 +163,17 @@ export function Composer({ glass = false }: { glass?: boolean }) {
       const paste = detectPaste(prev, next);
       if (paste) {
         if (remainingSlots(composerDraft.get().attachments.length) === 0) {
-          composerToast.show('附件已满，粘贴的文本留在输入框里', 'warn');
+          composerToast.show(t('chat.composer.pasteFull'), 'warn');
         } else {
           haptics.select();
           composerDraft.setText(paste.rest);
-          addAttachments([textAttachment(paste.pasted, PASTE_NAME)]);
+          addAttachments([textAttachment(paste.pasted, pasteName())]);
           return;
         }
       }
       composerDraft.setText(next);
     },
-    [addAttachments],
+    [addAttachments, t],
   );
 
   const onContentSize = useCallback((e: TextInputContentSizeChangeEvent) => {
@@ -188,11 +190,11 @@ export function Composer({ glass = false }: { glass?: boolean }) {
   const toAttachment = useCallback(() => {
     const { text: cur, attachments: atts } = composerDraft.get();
     if (remainingSlots(atts.length) === 0) {
-      composerToast.show(LIMIT_NOTICE, 'warn');
+      composerToast.show(limitNotice(), 'warn');
       return;
     }
     haptics.select();
-    composerDraft.put({ text: '', attachments: [...atts, textAttachment(cur, PASTE_NAME)] });
+    composerDraft.put({ text: '', attachments: [...atts, textAttachment(cur, pasteName())] });
   }, []);
 
   // ---- commands (§3) ------------------------------------------------------------------------
@@ -248,7 +250,7 @@ export function Composer({ glass = false }: { glass?: boolean }) {
     const { text: cur, attachments: atts } = composerDraft.get();
     const merged = [...m.attachments, ...atts];
     composerDraft.put({ text: cur.trim() ? `${m.text}\n${cur}` : m.text, attachments: merged.slice(0, MAX_ATTACHMENTS) });
-    if (merged.length > MAX_ATTACHMENTS) composerToast.show(LIMIT_NOTICE, 'warn');
+    if (merged.length > MAX_ATTACHMENTS) composerToast.show(limitNotice(), 'warn');
   }, []);
 
   const removeQueued = useCallback((m: QueuedMessage) => {
@@ -266,8 +268,8 @@ export function Composer({ glass = false }: { glass?: boolean }) {
     if (!suggestion) return;
     haptics.select();
     await applyModel(suggestion.providerId, suggestion.model);
-    composerToast.show(`已切换到 ${suggestion.label}`);
-  }, [suggestion]);
+    composerToast.show(t('chat.composer.switchedTo', { model: suggestion.label }));
+  }, [suggestion, t]);
 
   // ---- command token styling (§3 Menu: chip + ghost argHint) --------------------------------
   const command = useMemo(() => (text.startsWith('/') && !text.includes('\n') ? parseCommand(text) : null), [text]);
@@ -279,8 +281,8 @@ export function Composer({ glass = false }: { glass?: boolean }) {
   const unpop = reduced ? FadeOut : ZoomOut.duration(120);
 
   const counterView = counter.show ? (
-    <Text variant="caption" tone={counter.over ? 'down' : 'faint'} style={{ fontVariant: ['tabular-nums'] }} accessibilityLabel={`${chars} 字`}>
-      {formatCount(chars)} 字
+    <Text variant="caption" tone={counter.over ? 'down' : 'faint'} style={{ fontVariant: ['tabular-nums'] }} accessibilityLabel={t('chat.count.chars', { count: chars, n: chars })}>
+      {t('chat.count.chars', { count: chars, n: formatCount(chars) })}
     </Text>
   ) : null;
 
@@ -301,7 +303,7 @@ export function Composer({ glass = false }: { glass?: boolean }) {
             value={text}
             onChangeText={onChangeText}
             onContentSizeChange={onContentSize}
-            placeholder="问点什么，或让我帮你做点什么…"
+            placeholder={t('chat.composer.placeholder')}
             placeholderTextColor={c.textFaint}
             selectionColor={c.accent}
             cursorColor={c.accent}
@@ -310,7 +312,7 @@ export function Composer({ glass = false }: { glass?: boolean }) {
             textAlignVertical="top"
             className={cx('px-0 py-2', tall ? 'pr-9' : 'pr-2')}
             style={[typography.body, { maxHeight: MAX_INPUT_HEIGHT, color: command ? 'transparent' : c.text }]}
-            accessibilityLabel="消息输入框"
+            accessibilityLabel={t('chat.composer.inputA11y')}
           />
           {command ? (
             // Mirror of the input with the command token as a chip and the argument hint as
@@ -327,7 +329,7 @@ export function Composer({ glass = false }: { glass?: boolean }) {
           ) : null}
           {tall ? (
             <Animated.View entering={pop} exiting={unpop} className="absolute right-2 top-2">
-              <IconButton icon="expand" label="全屏编辑" variant="ghost" size={32} onPress={() => setEditor(true)} />
+              <IconButton icon="expand" label={t('chat.composer.fullEditor')} variant="ghost" size={32} onPress={() => setEditor(true)} />
             </Animated.View>
           ) : null}
         </View>
@@ -336,33 +338,33 @@ export function Composer({ glass = false }: { glass?: boolean }) {
           <Animated.View entering={FadeIn} exiting={FadeOut} className="mx-3 flex-row items-center gap-2 rounded-md bg-down-muted px-3 py-2" style={CURVE}>
             <Icon name="warning" size={14} color={c.down} />
             <Text variant="caption" tone="down" className="flex-1">
-              内容太长，可以作为附件发送
+              {t('chat.composer.tooLong')}
             </Text>
-            <PressableScale accessibilityRole="button" accessibilityLabel="转为附件" onPress={toAttachment} hitSlop={6}>
+            <PressableScale accessibilityRole="button" accessibilityLabel={t('chat.composer.toAttachment')} onPress={toAttachment} hitSlop={6}>
               <Text variant="caption" tone="down" style={typography.micro}>
-                转为附件
+                {t('chat.composer.toAttachment')}
               </Text>
             </PressableScale>
           </Animated.View>
         ) : null}
 
         <View className="flex-row items-center gap-1 px-2 pb-2 pt-1">
-          <IconButton icon="plus" label="添加附件或命令" variant="ghost" size={36} onPress={() => setSheet(true)} />
-          <ModelPill label={modelLabel(providerId, model)} />
+          <IconButton icon="plus" label={t('chat.composer.add')} variant="ghost" size={36} onPress={() => setSheet(true)} />
+          <ModelPill label={modelLabel(providerId, model) || t('chat.composer.noModel')} />
           {empty ? null : <ContextRing sessionId={sessionId} />}
           <View className="flex-1" />
           {counterView}
           <Animated.View layout={layout} className="flex-row items-center gap-1.5">
             {busy ? (
               <Animated.View key="stop" entering={pop} exiting={unpop}>
-                <IconButton icon="stop" label="停止生成" variant={hasContent ? 'secondary' : 'primary'} size={36} onPress={onStop} />
+                <IconButton icon="stop" label={t('chat.composer.stop')} variant={hasContent ? 'secondary' : 'primary'} size={36} onPress={onStop} />
               </Animated.View>
             ) : null}
             {!busy || hasContent ? (
               <Animated.View key={busy ? 'queue' : 'send'} entering={pop} exiting={unpop}>
                 <IconButton
                   icon={busy ? 'queue' : 'send'}
-                  label={busy ? '排队发送' : '发送'}
+                  label={t(busy ? 'chat.composer.queue' : 'chat.composer.send')}
                   variant="primary"
                   size={36}
                   disabled={!canSend}
@@ -397,13 +399,13 @@ export function Composer({ glass = false }: { glass?: boolean }) {
           autoFocus
           multiline
           textAlignVertical="top"
-          placeholder="问点什么，或让我帮你做点什么…"
+          placeholder={t('chat.composer.placeholder')}
           placeholderTextColor={c.textFaint}
           selectionColor={c.accent}
           cursorColor={c.accent}
           className="flex-1 px-0 py-2 text-fg"
           style={typography.body}
-          accessibilityLabel="全屏编辑消息"
+          accessibilityLabel={t('chat.composer.fullEditorA11y')}
         />
       </FullEditor>
     </View>
@@ -413,10 +415,11 @@ export function Composer({ glass = false }: { glass?: boolean }) {
 /** Short model name for the session (§4.5); tap → the model picker sheet. */
 function ModelPill({ label }: { label: string }) {
   const c = useTheme();
+  const t = useT();
   return (
     <PressableScale
       accessibilityRole="button"
-      accessibilityLabel={`模型：${label}，点按切换`}
+      accessibilityLabel={t('chat.composer.model', { model: label })}
       onPress={() => router.push('/model-picker' as Href)}
       className="h-8 flex-row items-center gap-1 rounded-md px-2"
       style={CURVE}>

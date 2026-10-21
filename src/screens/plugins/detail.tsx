@@ -13,23 +13,27 @@ import { Screen } from '@/components/screen';
 import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { usePlugin } from '@/core/runtime/hooks';
+import { pluginDescription, pluginName, toolTitle } from '@/core/runtime/localize';
 import { pluginSettings, usePluginSettings } from '@/core/runtime/plugin-settings';
 import { remotePlugins } from '@/core/runtime/remote';
+import { useLocale, useT } from '@/i18n';
 import { useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
 
-import { EFFECTS, effectsOf, MODE_OPTIONS, pluginIcon } from './effects';
+import { effectInfo, effectsOf, modeOptions, pluginIcon } from './effects';
 
 /** Settings → 插件 → one plugin: on/off, per-effect modes, scopes, and its tools. */
 export function PluginDetail({ id }: { id: string }) {
   const c = useTheme();
+  const t = useT();
+  const locale = useLocale();
   const plugin = usePlugin(id);
   const settings = usePluginSettings(id);
   if (!plugin) {
     return (
-      <Screen title="插件" back>
-        <EmptyState icon="puzzle" title="找不到这个插件" message={`没有已安装的插件 ${id}`} />
+      <Screen title={t('app.plugins.title')} back>
+        <EmptyState icon="puzzle" title={t('app.plugins.detail.notFound')} message={t('app.plugins.detail.notFoundMessage', { id })} />
       </Screen>
     );
   }
@@ -37,30 +41,30 @@ export function PluginDetail({ id }: { id: string }) {
   const tools = Object.entries(plugin.tools);
 
   return (
-    <Screen title={plugin.name} subtitle={`${plugin.id} · v${plugin.version}`} back>
+    <Screen title={pluginName(plugin, locale)} subtitle={`${plugin.id} · v${plugin.version}`} back>
       <FadeIn index={0}>
         <View className="flex-row items-center gap-4">
           <View className="h-[52px] w-[52px] items-center justify-center rounded-lg bg-accent-muted" style={{ borderCurve: 'continuous' }}>
             <Icon name={pluginIcon(plugin)} size={26} color={c.accent} />
           </View>
           <Text variant="callout" tone="muted" className="flex-1">
-            {plugin.description}
+            {pluginDescription(plugin, locale)}
           </Text>
         </View>
       </FadeIn>
 
       <FadeIn index={1}>
-        <ListGroup footer={plugin.core ? undefined : '关闭后，AI 和看板都无法调用这个插件。'}>
+        <ListGroup footer={plugin.core ? undefined : t('app.plugins.detail.offFooter')}>
           <ListRow
             icon="bolt"
-            title={plugin.core ? '系统能力' : '启用插件'}
-            subtitle={plugin.core ? '应用本身的一部分，始终开启' : undefined}
+            title={plugin.core ? t('app.plugins.detail.coreTitle') : t('app.plugins.detail.enable')}
+            subtitle={plugin.core ? t('app.plugins.detail.coreSubtitle') : undefined}
             accessory={
               plugin.core ? (
-                <Chip label="已开启" tone="up" icon="check" />
+                <Chip label={t('app.ui.enabled')} tone="up" icon="check" />
               ) : (
                 <NativeSwitch
-                  label="启用插件"
+                  label={t('app.plugins.detail.enable')}
                   value={settings.enabled}
                   onValueChange={(v) => {
                     haptics.tap();
@@ -77,19 +81,19 @@ export function PluginDetail({ id }: { id: string }) {
         <FadeIn index={2}>
           <View className="gap-2">
             <Text variant="micro" tone="faint" className="px-4">
-              AI 代你操作时
+              {t('app.plugins.detail.whenAgent')}
             </Text>
             <View className="overflow-hidden rounded-lg bg-surface" style={{ borderCurve: 'continuous' }}>
               {effects.map((e, i) => (
                 <View key={e} className={cx('gap-3 p-4', i > 0 && 'border-t-[0.5px] border-edge')}>
                   <View className="flex-row items-center gap-2">
-                    <Chip label={EFFECTS[e].label} tone={EFFECTS[e].tone} />
+                    <Chip label={effectInfo(e, t).label} tone={effectInfo(e, t).tone} />
                     <Text variant="caption" tone="muted" className="flex-1">
-                      {EFFECTS[e].hint}
+                      {effectInfo(e, t).hint}
                     </Text>
                   </View>
                   <Segmented
-                    options={MODE_OPTIONS}
+                    options={modeOptions(t)}
                     value={settings.modes[e]}
                     onChange={(m) => pluginSettings.update(id, { modes: { ...settings.modes, [e]: m } })}
                   />
@@ -97,7 +101,7 @@ export function PluginDetail({ id }: { id: string }) {
               ))}
             </View>
             <Text variant="caption" tone="faint" className="px-4">
-              你在界面上亲手点击的操作不受这里限制。
+              {t('app.plugins.detail.tapNote')}
             </Text>
           </View>
         </FadeIn>
@@ -105,7 +109,7 @@ export function PluginDetail({ id }: { id: string }) {
 
       {plugin.scopes.length && !plugin.remote ? (
         <FadeIn index={3}>
-          <ListGroup title="访问范围">
+          <ListGroup title={t('app.plugins.detail.scopes')}>
             {plugin.scopes.map((s) => (
               <ListRow key={s} icon="globe" title={s} />
             ))}
@@ -115,11 +119,11 @@ export function PluginDetail({ id }: { id: string }) {
 
       {plugin.remote ? (
         <FadeIn index={3}>
-          <ListGroup title="远程服务" footer="第三方服务返回的内容只作为数据交给 AI，不会被当作指令。">
+          <ListGroup title={t('app.plugins.detail.remote')} footer={t('app.plugins.detail.remoteFooter')}>
             <ListRow icon="server" title={plugin.remote.server} subtitle={plugin.remote.url} />
             <ListRow
               icon="refresh"
-              title="刷新能力列表"
+              title={t('app.plugins.detail.refresh')}
               onPress={async () => {
                 await remotePlugins.refresh(plugin.id).catch(() => haptics.warning());
                 haptics.success();
@@ -130,13 +134,13 @@ export function PluginDetail({ id }: { id: string }) {
       ) : null}
 
       <FadeIn index={4}>
-        <ListGroup title={`能力 · ${tools.length}`}>
-          {tools.map(([name, t]) => (
+        <ListGroup title={t('app.plugins.detail.tools', { count: tools.length })}>
+          {tools.map(([name, tool]) => (
             <ListRow
               key={name}
-              title={t.title}
+              title={toolTitle(plugin, name, tool.title, locale)}
               subtitle={`${plugin.id}.${name}`}
-              accessory={<Chip label={EFFECTS[t.effect].label} tone={EFFECTS[t.effect].tone} />}
+              accessory={<Chip label={effectInfo(tool.effect, t).label} tone={effectInfo(tool.effect, t).tone} />}
             />
           ))}
         </ListGroup>
@@ -145,7 +149,7 @@ export function PluginDetail({ id }: { id: string }) {
       {plugin.remote ? (
         <FadeIn index={5}>
           <Button
-            title="移除插件"
+            title={t('app.plugins.detail.remove')}
             variant="danger"
             icon="trash"
             onPress={async () => {

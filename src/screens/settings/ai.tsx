@@ -17,12 +17,14 @@ import { usePlugins } from '@/core/runtime/hooks';
 import { usePluginSettings } from '@/core/runtime/plugin-settings';
 import type { ProviderEntry } from '@/core/runtime/registry';
 import type { ProviderModel } from '@/core/runtime/types';
+import { useT } from '@/i18n';
 import { useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
 
 function ProviderCard({ entry, selected, onPress }: { entry: ProviderEntry; selected: boolean; onPress: () => void }) {
   const c = useTheme();
+  const t = useT();
   const { config } = useAIConfig();
   const enabled = usePluginSettings(entry.pluginId).enabled;
   const active = config.providerId === entry.id;
@@ -48,16 +50,17 @@ function ProviderCard({ entry, selected, onPress }: { entry: ProviderEntry; sele
       <View className="flex-1 gap-0.5">
         <Text variant="bodyStrong">{entry.def.name}</Text>
         <Text variant="caption" tone="muted" numberOfLines={2}>
-          {enabled ? entry.def.description : '插件已关闭'}
+          {enabled ? entry.def.description : t('app.ai.pluginOff')}
         </Text>
       </View>
-      {active ? <Chip label="使用中" tone="up" icon="check" /> : null}
+      {active ? <Chip label={t('app.ai.active')} tone="up" icon="check" /> : null}
     </PressableScale>
   );
 }
 
 /** Settings → AI 服务: pick a provider plugin, model, endpoint and credential; test it. */
 export function AISettings() {
+  const t = useT();
   const { config, keys } = useAIConfig();
   const plugins = usePlugins();
   const providers = plugins.flatMap((p) => Object.entries(p.providers ?? {}).map(([k, def]) => ({ id: `${p.id}.${k}`, pluginId: p.id, def })));
@@ -111,8 +114,8 @@ export function AISettings() {
     try {
       await save();
       const { generateText } = await import('ai');
-      const r = await generateText({ model: await getModel(entry.id), prompt: '只回复：好的' });
-      setStatus({ tone: 'up', text: `连接成功：${r.text.slice(0, 40)}` });
+      const r = await generateText({ model: await getModel(entry.id), prompt: t('app.ai.testPrompt') });
+      setStatus({ tone: 'up', text: t('app.ai.testOk', { reply: r.text.slice(0, 40) }) });
       haptics.success();
       if (entry.def.listModels) {
         const cred = (await aiConfig.credential(entry.id)) ?? undefined;
@@ -131,19 +134,19 @@ export function AISettings() {
 
   return (
     <SheetScreen
-      title="AI 服务"
-      primary="保存并测试连接"
+      title={t('app.ai.title')}
+      primary={t('app.ai.saveAndTest')}
       onPrimary={test}
       loading={busy}
       primaryDisabled={!canTest}
-      secondary="仅保存"
+      secondary={t('app.ai.saveOnly')}
       onSecondary={async () => {
         await save();
         haptics.success();
         dismiss('/settings');
       }}>
       <Text variant="callout" tone="muted">
-        AI 服务也是插件。密钥只保存在本机的安全存储中，只会发送给你选择的服务商。
+        {t('app.ai.intro')}
       </Text>
 
       <View className="gap-2">
@@ -156,7 +159,7 @@ export function AISettings() {
         {models.length ? (
           <View className="gap-2">
             <Text variant="callout" tone="muted">
-              模型
+              {t('app.ai.models')}
             </Text>
             <View className="gap-2">
               {models.map((m) => (
@@ -188,25 +191,25 @@ export function AISettings() {
           </View>
         ) : null}
 
-        <Field label="模型 ID" value={model} onChangeText={setModel} autoCapitalize="none" autoCorrect={false} placeholder="例如 gpt-4o-mini" />
+        <Field label={t('app.ai.modelId')} value={model} onChangeText={setModel} autoCapitalize="none" autoCorrect={false} placeholder={t('app.ai.modelIdPlaceholder')} />
         {entry.def.editableBaseURL ? (
           <Field label="Base URL" value={baseURL} onChangeText={setBaseURL} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
         ) : (
           <Text variant="caption" tone="faint">
-            接口地址：{baseURL}
+            {t('app.ai.endpoint', { url: baseURL })}
           </Text>
         )}
 
         {entry.def.auth === 'apiKey' ? (
           <View className="gap-2">
             <SecretField label="API Key" value={credential} onChangeText={setCredential} placeholder="sk-…" hint={entry.def.credentialHint} />
-            {hasKey ? <Chip label={credential.trim() === savedCredential ? '已保存在本机安全存储' : '有改动，保存后生效'} tone={credential.trim() === savedCredential ? 'up' : 'warn'} icon="lock" /> : null}
+            {hasKey ? <Chip label={credential.trim() === savedCredential ? t('app.ai.keySaved') : t('app.ai.keyChanged')} tone={credential.trim() === savedCredential ? 'up' : 'warn'} icon="lock" /> : null}
           </View>
         ) : null}
 
         {entry.def.auth === 'account' ? (
           <Button
-            title={hasKey ? '已登录 · 重新登录' : `登录 ${entry.def.name}`}
+            title={hasKey ? t('app.ai.signInAgain') : t('app.ai.signIn', { name: entry.def.name })}
             variant="secondary"
             icon="person"
             onPress={async () => {
@@ -236,13 +239,14 @@ export function AISettings() {
 
 /** 上下文预算 (docs/AGENT-HARNESS.md §5.3): older turns are summarised above it. Saved on change. */
 function ContextBudget() {
+  const t = useT();
   const budget = useContextBudgetSetting();
   const options = CONTEXT_BUDGET_OPTIONS.map((o) => ({ label: o.label, value: o.label }));
   const current = CONTEXT_BUDGET_OPTIONS.find((o) => o.value === budget)?.label ?? '64k';
   return (
     <View className="gap-2">
       <Text variant="callout" tone="muted">
-        上下文预算
+        {t('app.ai.budget')}
       </Text>
       <Segmented
         options={options}
@@ -253,7 +257,7 @@ function ContextBudget() {
         }}
       />
       <Text variant="caption" tone="faint">
-        对话超过预算（或模型上下文的 80%）时，会自动把较早的内容压缩成摘要。预算越小回复越快、越省。
+        {t('app.ai.budgetHint')}
       </Text>
     </View>
   );

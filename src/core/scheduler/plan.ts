@@ -24,13 +24,17 @@ export const HORIZON_MS = 14 * 86_400_000;
 
 export const armId = (job: Job, index: number) => `${ARM_PREFIX}${job.id}:${job.updatedAt}:${index}`;
 
-export function planNotifications(jobs: Job[], now: number): ArmedNotification[] {
+/** "第 3/16 次" / "3 of 16": appended to a bounded series' notification body. Pure by default; the engine passes the app language. */
+export type ProgressLabel = (n: number, total: number) => string;
+const zhProgress: ProgressLabel = (n, total) => `第 ${n}/${total} 次`;
+
+export function planNotifications(jobs: Job[], now: number, progressLabel: ProgressLabel = zhProgress): ArmedNotification[] {
   const out: ArmedNotification[] = [];
   for (const job of jobs) {
     if (!job.enabled || job.action.type !== 'notify') continue;
     const total = totalOccurrences(job.trigger);
     for (const o of occurrencesAfter(job.trigger, now, PER_JOB, now + HORIZON_MS)) {
-      const progress = total != null && total > 1 ? `第 ${o.index + 1}/${total} 次` : undefined;
+      const progress = total != null && total > 1 ? progressLabel(o.index + 1, total) : undefined;
       out.push({
         identifier: armId(job, o.index),
         at: o.at,

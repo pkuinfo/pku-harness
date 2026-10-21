@@ -17,6 +17,7 @@ import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
 import { registry } from '@/core/runtime/registry';
+import { t } from '@/i18n';
 
 import {
   classifyFile,
@@ -33,7 +34,8 @@ export * from './attachment-rules';
 /** What a pick produced, plus an optional reason to show (partial or refused picks). */
 export type PickOutcome = { added: AttachmentPart[]; notice?: string };
 
-export const LIMIT_NOTICE = `每条消息最多 ${MAX_ATTACHMENTS} 个附件`;
+/** "每条消息最多 9 个附件", in the app language. */
+export const limitNotice = () => t('chat.attach.limit', { max: MAX_ATTACHMENTS });
 
 const attachmentsDir = () => new Directory(Paths.document, 'attachments');
 
@@ -61,7 +63,7 @@ async function storeImage(asset: { uri: string; width: number; height: number; f
   const out = new File(dir, `${id}.jpg`);
   // The manipulator writes into the cache directory; move it somewhere that lasts.
   new File(result.uri).moveSync(out);
-  const base = asset.fileName?.replace(/\.[^.]+$/, '') || '图片';
+  const base = asset.fileName?.replace(/\.[^.]+$/, '') || t('chat.attach.imageName');
   return {
     type: 'attachment',
     id,
@@ -90,15 +92,15 @@ async function storeImages(assets: ImagePicker.ImagePickerAsset[], slots: number
     }
   }
   const dropped = Math.max(0, assets.length - slots);
-  const notice = failed ? `有 ${failed} 张图片无法读取` : dropped ? LIMIT_NOTICE : undefined;
+  const notice = failed ? t('chat.attach.imagesUnreadable', { count: failed }) : dropped ? limitNotice() : undefined;
   return { added, notice };
 }
 
 /** 拍照: the system camera, one photo. */
 export async function takePhoto(current: number, onProcessing?: OnProcessing): Promise<PickOutcome> {
-  if (remainingSlots(current) === 0) return { added: [], notice: LIMIT_NOTICE };
+  if (remainingSlots(current) === 0) return { added: [], notice: limitNotice() };
   const perm = await ImagePicker.requestCameraPermissionsAsync();
-  if (!perm.granted) return { added: [], notice: '没有相机权限，可以在系统设置里开启' };
+  if (!perm.granted) return { added: [], notice: t('chat.attach.noCamera') };
   const res = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 1, exif: false });
   if (res.canceled) return { added: [] };
   return storeImages(res.assets, remainingSlots(current), onProcessing);
@@ -107,7 +109,7 @@ export async function takePhoto(current: number, onProcessing?: OnProcessing): P
 /** 相册: the system photo picker, up to 4 at once (fewer when the message is nearly full). */
 export async function pickImages(current: number, onProcessing?: OnProcessing): Promise<PickOutcome> {
   const limit = libraryPickLimit(current);
-  if (limit === 0) return { added: [], notice: LIMIT_NOTICE };
+  if (limit === 0) return { added: [], notice: limitNotice() };
   const res = await ImagePicker.launchImageLibraryAsync({
     mediaTypes: ['images'],
     allowsMultipleSelection: limit > 1,
@@ -123,7 +125,7 @@ export async function pickImages(current: number, onProcessing?: OnProcessing): 
 /** 文件: the document picker; text-like files up to 200 KB become text attachments. */
 export async function pickFiles(current: number): Promise<PickOutcome> {
   const slots = remainingSlots(current);
-  if (slots === 0) return { added: [], notice: LIMIT_NOTICE };
+  if (slots === 0) return { added: [], notice: limitNotice() };
   const res = await DocumentPicker.getDocumentAsync({ multiple: true, copyToCacheDirectory: true });
   if (res.canceled) return { added: [] };
   const added: AttachmentPart[] = [];
@@ -149,19 +151,19 @@ export async function pickFiles(current: number): Promise<PickOutcome> {
   }
   const overflow = res.assets.length - unsupported - tooLarge - unreadable - added.length;
   const notice = unsupported
-    ? '暂不支持这种文件'
+    ? t('chat.attach.unsupported')
     : tooLarge
-      ? '文件太大，文本文件最多 200 KB'
+      ? t('chat.attach.tooLarge')
       : unreadable
-        ? '文件无法读取'
+        ? t('chat.attach.unreadable')
         : overflow > 0
-          ? LIMIT_NOTICE
+          ? limitNotice()
           : undefined;
   return { added, notice };
 }
 
 /** A `text` attachment (long paste, small text file). `size` counts characters. */
-export function textAttachment(text: string, name = '粘贴的文本', mime = 'text/plain'): AttachmentPart {
+export function textAttachment(text: string, name = t('chat.attach.pasted'), mime = 'text/plain'): AttachmentPart {
   return { type: 'attachment', id: newId(), kind: 'text', name, mime, size: text.length, text };
 }
 

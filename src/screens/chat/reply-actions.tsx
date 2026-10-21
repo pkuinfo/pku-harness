@@ -8,11 +8,12 @@ import { Button, IconButton } from '@/components/button';
 import { Text } from '@/components/text';
 import type { ChatMessage, TurnMeta } from '@/core/agent/session/chat-store';
 import { turnCaption } from '@/core/agent/session/session-utils';
+import { useT } from '@/i18n';
 import { haptics } from '@/utils/haptics';
 
 import { modelLabel } from './composer/models';
 
-const ENDED: Record<NonNullable<TurnMeta['ended']>, string> = { stopped: '已停止', error: '出错了', interrupted: '已中断' };
+const ENDED = { stopped: 'chat.reply.stopped', error: 'chat.reply.error', interrupted: 'chat.reply.cutOff' } as const satisfies Record<NonNullable<TurnMeta['ended']>, string>;
 
 /**
  * Quiet row under a finished reply (Claude app style): copy on every reply; on the latest one
@@ -20,6 +21,7 @@ const ENDED: Record<NonNullable<TurnMeta['ended']>, string> = { stopped: '已停
  * cut short says so (已停止 / 已中断). Muted icons only, so it never competes with the answer.
  */
 export function ReplyActions({ message, last, onRegenerate }: { message: ChatMessage; last: boolean; onRegenerate?: () => void }) {
+  const t = useT();
   const text = message.parts
     .map((p) => (p.type === 'text' ? p.text.trim() : ''))
     .filter(Boolean)
@@ -33,10 +35,10 @@ export function ReplyActions({ message, last, onRegenerate }: { message: ChatMes
   }, [copied]);
 
   const meta = message.meta;
-  const ended = meta?.ended ? ENDED[meta.ended] : null;
+  const ended = meta?.ended ? t(ENDED[meta.ended]) : null;
   if (!text && !last && !ended) return null;
   const hasStats = !!meta && (meta.durationMs != null || meta.inputTokens != null);
-  const caption = hasStats ? turnCaption(meta, meta.providerId && meta.model ? safeLabel(meta.providerId, meta.model) : undefined) : '';
+  const caption = hasStats ? turnCaption(meta, meta.providerId && meta.model ? safeLabel(meta.providerId, meta.model) : undefined, t) : '';
   return (
     <View className="gap-1">
       <View className="-ml-2 flex-row items-center gap-1">
@@ -50,7 +52,7 @@ export function ReplyActions({ message, last, onRegenerate }: { message: ChatMes
             }}
             hitSlop={8}
             accessibilityRole="button"
-            accessibilityLabel={stats ? '隐藏回复统计' : '显示回复统计'}
+            accessibilityLabel={t(stats ? 'chat.reply.hideStats' : 'chat.reply.showStats')}
             className="w-8 items-center">
             <AgentOrbit state="rest" size={18} />
           </Pressable>
@@ -58,7 +60,7 @@ export function ReplyActions({ message, last, onRegenerate }: { message: ChatMes
         {text ? (
           <IconButton
             icon={copied ? 'check' : 'copy'}
-            label={copied ? '已复制' : '复制回答'}
+            label={t(copied ? 'core.common.copied' : 'chat.reply.copy')}
             variant="ghost"
             size={32}
             onPress={() => {
@@ -70,13 +72,13 @@ export function ReplyActions({ message, last, onRegenerate }: { message: ChatMes
         ) : null}
         {/* A finished reply offers a quiet ↻; one cut short says what happened and offers a
             labelled 重试, which is easier to find when something went wrong. */}
-        {last && onRegenerate && !ended ? <IconButton icon="refresh" label="重新生成" variant="ghost" size={32} onPress={onRegenerate} /> : null}
+        {last && onRegenerate && !ended ? <IconButton icon="refresh" label={t('chat.reply.regenerate')} variant="ghost" size={32} onPress={onRegenerate} /> : null}
         {ended ? (
           <Text variant="caption" tone={meta?.ended === 'error' ? 'down' : 'faint'} className="ml-1">
             {ended}
           </Text>
         ) : null}
-        {ended && last && onRegenerate ? <Button title="重试" size="sm" variant="secondary" icon="refresh" onPress={onRegenerate} style={{ marginLeft: 'auto' }} /> : null}
+        {ended && last && onRegenerate ? <Button title={t('core.common.retry')} size="sm" variant="secondary" icon="refresh" onPress={onRegenerate} style={{ marginLeft: 'auto' }} /> : null}
       </View>
       {stats && caption ? (
         <Animated.View entering={FadeIn.duration(140)} exiting={FadeOut.duration(100)}>

@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 
 import { secrets } from '@/core/store/secrets';
+import { t } from '@/i18n';
 
 import { credentials } from './credentials';
 import { campusFetch, form, FORM, resetSession } from './http';
@@ -117,7 +118,7 @@ function json<T>(body: string, step: string): T {
   try {
     return JSON.parse(body) as T;
   } catch {
-    throw new Error(`${step}：IAAA 返回了无法解析的内容（可能需要校园网或服务暂时不可用）`);
+    throw new Error(t('app.campus.errors.badResponse', { step }));
   }
 }
 
@@ -138,11 +139,11 @@ export async function bindStart(): Promise<{ sentTo: string | null }> {
     body: form({ userName: username, password, randCode: '' }),
   });
   const a = json<{ success?: boolean; errors?: { msg?: string } }>(auth.body, '验证身份');
-  if (!a.success) throw new Error(`身份验证失败：${a.errors?.msg || '未知错误'}`);
+  if (!a.success) throw new Error(t('app.campus.otp.authFailed', { reason: a.errors?.msg || t('app.campus.otp.unknownError') }));
 
   const sms = await campusFetch(BIND_SESSION, { url: `${OTP_BASE}/sendSMSCodeBind.do?_rand=${Math.random()}` });
   const s = json<{ success?: boolean; mobileMask?: string; errMsg?: string }>(sms.body, '发送短信');
-  if (!s.success) throw new Error(`发送短信失败：${s.errMsg || '未知错误'}`);
+  if (!s.success) throw new Error(t('app.campus.otp.smsFailed', { reason: s.errMsg || t('app.campus.otp.unknownError') }));
 
   pendingUser = username;
   emit();
@@ -157,9 +158,9 @@ export async function bindStart(): Promise<{ sentTo: string | null }> {
  */
 export async function bindFinish(smsCode: string): Promise<OtpStatus> {
   const code = smsCode.trim();
-  if (!/^\d{4,8}$/.test(code)) throw new Error('请输入短信里的数字验证码');
+  if (!/^\d{4,8}$/.test(code)) throw new Error(t('app.campus.otp.enterCode'));
   const username = pendingUser;
-  if (!username) throw new Error('还没有发送绑定短信，请先点「发送验证码」');
+  if (!username) throw new Error(t('app.campus.otp.sendFirst'));
 
   const check = await campusFetch(BIND_SESSION, {
     url: `${OTP_BASE}/checkSms.do`,
@@ -168,12 +169,12 @@ export async function bindFinish(smsCode: string): Promise<OtpStatus> {
     body: form({ userId: username, smsCode: code }),
   });
   const c = json<{ success?: boolean; message?: string }>(check.body, '验证短信码');
-  if (!c.success) throw new Error(`短信验证失败：${c.message || '验证码错误'}`);
+  if (!c.success) throw new Error(t('app.campus.otp.smsCheckFailed', { reason: c.message || t('app.campus.otp.wrongCode') }));
 
   const gen = await campusFetch(BIND_SESSION, { url: `${OTP_BASE}/genOtpKey.do?_rand=${Math.random()}` });
   const g = json<{ success?: boolean; personId?: string; personName?: string; secKey?: string; errMsg?: string }>(gen.body, '获取令牌密钥');
-  if (!g.success) throw new Error(`获取令牌密钥失败：${g.errMsg || '会话过期，请重新发送验证码'}`);
-  if (!g.personId || !g.secKey) throw new Error('获取令牌密钥失败：响应缺少 personId / secKey');
+  if (!g.success) throw new Error(t('app.campus.otp.keyFailed', { reason: g.errMsg || t('app.campus.otp.sessionExpired') }));
+  if (!g.personId || !g.secKey) throw new Error(t('app.campus.otp.keyFailed', { reason: 'personId / secKey' }));
 
   const next: Saved = { secret: g.secKey, userId: g.personId, userName: g.personName ?? '', username, boundAt: Date.now() };
   // Validates the key (Base32) before anything is stored.
@@ -194,7 +195,7 @@ export async function bindFinish(smsCode: string): Promise<OtpStatus> {
       body: form({ userId: next.userId, otpCode: otp.code }),
     });
     const b = json<{ success?: boolean; errMsg?: string }>(bind.body, '完成绑定');
-    if (!b.success) throw new Error(`手机令牌绑定失败：${b.errMsg || '绑定失败'}`);
+    if (!b.success) throw new Error(t('app.campus.otp.bindFailed', { reason: b.errMsg || t('app.campus.otp.unknownError') }));
   } catch (e) {
     if (previous) await secrets.set('campus.otpSecret', JSON.stringify(previous));
     else await secrets.delete('campus.otpSecret');

@@ -4,6 +4,7 @@ import { useSyncExternalStore } from 'react';
 import { createJob, deleteJob, updateJob } from '@/core/scheduler/engine';
 import { jobStore } from '@/core/scheduler/store';
 import { kv } from '@/core/store/kv';
+import { t } from '@/i18n';
 
 import { courseReminderTrigger, type Course, type Semester } from './model';
 
@@ -91,12 +92,12 @@ export async function syncClassReminders() {
     const trigger = courseReminderTrigger(c, reminderMinutes!, semester);
     const action = {
       type: 'notify' as const,
-      title: `${c.name} · ${c.start} 上课`,
+      title: t('app.schedule.classTitle', { name: c.name, start: c.start }),
       body: [c.location, c.teacher].filter(Boolean).join(' · ') || undefined,
       url: '/schedule',
     };
     const job = existing.find((j) => j.meta!.courseId === c.id);
-    const title = `上课提醒：${c.name}`;
+    const title = t('app.schedule.classJob', { name: c.name });
     if (!job) await createJob({ title, trigger, action, source: 'plugin', meta: { courseId: c.id } });
     else if (!sameTrigger(job.trigger, trigger, !semester) || JSON.stringify(job.action) !== JSON.stringify(action)) {
       await updateJob(job.id, { title, trigger, action });

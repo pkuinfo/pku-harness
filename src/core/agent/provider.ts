@@ -3,8 +3,10 @@ import { fetch as expoFetch } from 'expo/fetch';
 import { useSyncExternalStore } from 'react';
 
 import { pluginSettings } from '@/core/runtime/plugin-settings';
+import { pluginName } from '@/core/runtime/localize';
 import { registry, type ProviderEntry } from '@/core/runtime/registry';
 import { kv } from '@/core/store/kv';
+import { t } from '@/i18n';
 import { secrets, type SecretKey } from '@/core/store/secrets';
 
 /**
@@ -123,14 +125,17 @@ export function useAIConfig() {
 /** Language model of a provider (default: the active one). Throws with a readable reason. */
 export async function getModel(providerId = saved.active): Promise<LanguageModel> {
   const entry = registry.provider(providerId);
-  if (!entry) throw new Error(`没有找到 AI 服务「${providerId}」，可能对应的插件已被移除`);
-  if (!pluginSettings.get(entry.pluginId).enabled) throw new Error(`AI 服务插件「${registry.get(entry.pluginId)?.name}」已关闭（设置 → 插件）`);
+  if (!entry) throw new Error(t('chat.agent.providerMissing', { id: providerId }));
+  if (!pluginSettings.get(entry.pluginId).enabled) {
+    const plugin = registry.get(entry.pluginId);
+    throw new Error(t('chat.agent.providerDisabled', { name: plugin ? pluginName(plugin) : entry.pluginId }));
+  }
   const s = settingsFor(entry, providerId);
-  if (!s.model) throw new Error('还没有选择模型（设置 → AI 服务）');
+  if (!s.model) throw new Error(t('chat.agent.noModel'));
   const credential = (await secrets.get(keyOf(providerId))) ?? undefined;
   if (entry.def.auth === 'apiKey' && !credential && !entry.def.editableBaseURL) {
-    throw new Error('还没有设置 AI 服务的 API Key（设置 → AI 服务）');
+    throw new Error(t('chat.agent.noKey'));
   }
-  if (entry.def.auth === 'account' && !credential) throw new Error(`请先登录 ${entry.def.name}（设置 → AI 服务）`);
+  if (entry.def.auth === 'account' && !credential) throw new Error(t('chat.agent.signIn', { name: entry.def.name }));
   return entry.def.createModel({ ...s, credential, fetch: expoFetch as unknown as typeof fetch }) as LanguageModel;
 }

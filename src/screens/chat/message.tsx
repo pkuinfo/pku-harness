@@ -16,10 +16,13 @@ import { formatTokens, textOf } from '@/core/agent/session/session-utils';
 import { sessions } from '@/core/agent/session/sessions';
 import { GenUIView } from '@/genui/view';
 import { checkSpec } from '@/genui/check';
+import { useT } from '@/i18n';
 import { radius, springs, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
+import { isPastedText } from './composer/attachment-tray';
 import { composerDraft } from './composer/draft';
+import { formatCount } from './composer/logic';
 
 import { ReplyActions } from './reply-actions';
 import { ToolGroup } from './tool-chip';
@@ -150,7 +153,9 @@ function Notice({ part }: { part: Extract<ChatPart, { type: 'notice' }> }) {
 /** "已压缩 32 条消息 · 18.2k → 2.1k tokens"; tap shows the summary that replaced them. */
 function CompactionMarker({ part }: { part: Extract<ChatPart, { type: 'compaction' }> }) {
   const c = useTheme();
+  const t = useT();
   const [open, setOpen] = useState(false);
+  const count = part.compactedMessages;
   return (
     <View className="gap-2">
       <Pressable
@@ -160,11 +165,11 @@ function CompactionMarker({ part }: { part: Extract<ChatPart, { type: 'compactio
         }}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
-        accessibilityLabel={`已压缩 ${part.compactedMessages} 条消息，${open ? '收起' : '展开'}摘要`}
+        accessibilityLabel={t(open ? 'chat.message.compactedCollapse' : 'chat.message.compactedExpand', { count })}
         className="flex-row items-center gap-2 py-1">
         <View className="h-[0.5px] flex-1 bg-edge" />
         <Text variant="caption" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
-          已压缩 {part.compactedMessages} 条消息 · {formatTokens(part.tokensBefore)} → {formatTokens(part.tokensAfter)} tokens
+          {t('chat.message.compacted', { count, before: formatTokens(part.tokensBefore), after: formatTokens(part.tokensAfter) })}
         </Text>
         <Icon name={open ? 'chevronDown' : 'chevronRight'} size={14} color={c.textFaint} />
         <View className="h-[0.5px] flex-1 bg-edge" />
@@ -182,6 +187,7 @@ function CompactionMarker({ part }: { part: Extract<ChatPart, { type: 'compactio
 
 /** The user's message: attachments above the text; long-press for 编辑 / 复制. */
 function UserBubble({ message }: { message: ChatMessage }) {
+  const t = useT();
   const [menu, setMenu] = useState(false);
   const text = textOf(message);
   const attachments = message.parts.filter((p): p is AttachmentPart => p.type === 'attachment');
@@ -205,15 +211,15 @@ function UserBubble({ message }: { message: ChatMessage }) {
               setMenu((m) => !m);
             }}
             delayLongPress={350}
-            accessibilityHint="长按编辑或复制"
+            accessibilityHint={t('chat.message.longPressHint')}
             className="rounded-lg rounded-br-sm border-[0.5px] border-edge bg-accent-muted px-4 py-3"
             style={{ borderCurve: 'continuous' }}>
             <Text variant="body">{text}</Text>
           </Pressable>
         ) : (
-          <Pressable onLongPress={() => setMenu((m) => !m)} accessibilityLabel="附件消息，长按编辑" className="px-1">
+          <Pressable onLongPress={() => setMenu((m) => !m)} accessibilityLabel={t('chat.message.attachmentOnlyA11y')} className="px-1">
             <Text variant="caption" tone="faint">
-              长按编辑
+              {t('chat.message.longPressEdit')}
             </Text>
           </Pressable>
         )}
@@ -221,7 +227,7 @@ function UserBubble({ message }: { message: ChatMessage }) {
       {menu ? (
         <Animated.View entering={Appear.duration(140)} exiting={FadeOut.duration(100)} className="flex-row gap-2">
           <Button
-            title="编辑"
+            title={t('core.common.edit')}
             icon="edit"
             size="sm"
             variant="secondary"
@@ -233,7 +239,7 @@ function UserBubble({ message }: { message: ChatMessage }) {
           />
           {text ? (
             <Button
-              title="复制"
+              title={t('core.common.copy')}
               icon="copy"
               size="sm"
               variant="secondary"
@@ -281,12 +287,15 @@ function ImageGrid({ images }: { images: AttachmentPart[] }) {
 
 function AttachmentChip({ attachment: a }: { attachment: AttachmentPart }) {
   const c = useTheme();
-  const size = a.kind === 'text' ? `${a.size.toLocaleString('en-US')} 字` : `${Math.max(1, Math.round(a.size / 1024))} KB`;
+  const t = useT();
+  const size = a.kind === 'text' ? t('chat.count.chars', { count: a.size, n: formatCount(a.size) }) : `${Math.max(1, Math.round(a.size / 1024))} KB`;
+  // Pasted text is named in the language it was pasted in; show it in the current one.
+  const name = a.kind === 'text' && isPastedText(a.name) ? t('chat.attach.pasted') : a.name;
   return (
     <View className="max-w-60 flex-row items-center gap-1.5 rounded-sm border-[0.5px] border-edge bg-surface-2 px-2 py-1" style={{ borderCurve: 'continuous' }}>
       <Icon name={a.kind === 'text' ? 'book' : 'puzzle'} size={14} color={c.textMuted} />
       <Text variant="caption" numberOfLines={1} className="shrink">
-        {a.name}
+        {name}
       </Text>
       <Text variant="caption" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
         {size}

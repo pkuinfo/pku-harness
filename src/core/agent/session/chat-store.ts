@@ -5,6 +5,7 @@ import { AppState } from 'react-native';
 
 import { getDb } from '@/core/store/db';
 import { kv } from '@/core/store/kv';
+import { t } from '@/i18n';
 
 import {
   countMessages,
@@ -296,7 +297,7 @@ async function ensure(id: string): Promise<ChatState> {
   if (again) return again;
   let s: ChatState = { ...EMPTY };
   if (saved) {
-    const { messages } = markInterrupted(saved.messages ?? [], saved.running);
+    const { messages } = markInterrupted(saved.messages ?? [], saved.running, t('chat.reply.cutOff'));
     s = {
       messages,
       history: saved.history ?? [],

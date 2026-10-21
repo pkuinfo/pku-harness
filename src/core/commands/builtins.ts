@@ -10,6 +10,8 @@ import { compactNow } from '@/core/agent/context/compaction';
 import { regenerateLast } from '@/core/agent/run';
 import { sessions } from '@/core/agent/session/sessions';
 import { registry } from '@/core/runtime/registry';
+import { toolTitle } from '@/core/runtime/localize';
+import { getLocale, t } from '@/i18n';
 
 import { formatTokens, lastReplyText, sessionMarkdown } from './format';
 import type { Command, CommandResult } from './types';
@@ -26,48 +28,58 @@ function messagesOf(_sessionId: string) {
   return chatStore.get().messages;
 }
 
-/** Built-ins in menu order; `listCommands` appends plugin commands. `/help` reads the full list lazily. */
+/**
+ * English aliases go first in English, so the menu chip and /help show them; both languages'
+ * aliases always parse. Ascii aliases are the English ones.
+ */
+export const isAsciiAlias = (a: string) => /^[\x21-\x7e]+$/.test(a);
+const aliases = (...list: string[]) => (getLocale() === 'en' ? [...list.filter(isAsciiAlias), ...list.filter((a) => !isAsciiAlias(a))] : list);
+
+/**
+ * Built-ins in menu order; `listCommands` appends plugin commands. `/help` reads the full list
+ * lazily. Strings are read in the current language, so call this again after a language change.
+ */
 export function builtinCommands(all: () => Command[]): Command[] {
   return [
-    // 会话
+    // Chat
     {
       name: 'new',
       icon: 'plus',
-      aliases: ['新对话'],
-      description: '开始新对话',
+      aliases: aliases('新对话'),
+      description: t('chat.commands.new'),
       group: 'session',
       run: async () => {
         await sessions.create();
         return done();
       },
     },
-    { name: 'sessions', icon: 'chat', aliases: ['会话', '历史'], description: '查看全部对话', group: 'session', run: go('/sessions') },
+    { name: 'sessions', icon: 'chat', aliases: aliases('会话', '历史', 'history', 'chats'), description: t('chat.commands.sessions'), group: 'session', run: go('/sessions') },
     {
       name: 'rename',
       icon: 'edit',
-      aliases: ['重命名'],
-      description: '重命名当前对话',
-      argHint: '新标题',
+      aliases: aliases('重命名', 'title'),
+      description: t('chat.commands.rename'),
+      argHint: t('chat.commands.renameArg'),
       group: 'session',
       run: async (input, ctx) => {
         const title = input.split('\n')[0].trim().slice(0, 40);
         if (!title) {
           ctx.setDraft('/rename ');
-          return done('在 /rename 后输入新标题，或点顶部标题重命名');
+          return done(t('chat.commands.renameHint'));
         }
         await sessions.rename(ctx.sessionId, title);
-        return done(`已重命名为「${title}」`, 'success');
+        return done(t('chat.commands.renamed', { title }), 'success');
       },
     },
     {
       name: 'retry',
       icon: 'refresh',
-      aliases: ['重新生成'],
-      description: '重新生成上一条回复',
+      aliases: aliases('重新生成', 'regenerate'),
+      description: t('chat.commands.retry'),
       group: 'session',
       idleOnly: true,
       run: (_input, ctx) => {
-        if (!messagesOf(ctx.sessionId).some((m) => m.role === 'user')) return done('还没有可以重新生成的回复');
+        if (!messagesOf(ctx.sessionId).some((m) => m.role === 'user')) return done(t('chat.commands.nothingToRetry'));
         // Streams for a while; the reply itself is the feedback.
         void regenerateLast();
         return done();
@@ -76,67 +88,83 @@ export function builtinCommands(all: () => Command[]): Command[] {
     {
       name: 'copy',
       icon: 'copy',
-      aliases: ['复制'],
-      description: '复制上一条回复',
+      aliases: aliases('复制'),
+      description: t('chat.commands.copy'),
       group: 'session',
       run: async (_input, ctx) => {
         const text = lastReplyText(messagesOf(ctx.sessionId));
-        if (!text) return done('还没有可以复制的回复');
+        if (!text) return done(t('chat.commands.nothingToCopy'));
         await Clipboard.setStringAsync(text);
-        return done('已复制', 'success');
+        return done(t('core.common.copied'), 'success');
       },
     },
     {
       name: 'export',
       icon: 'share',
-      aliases: ['导出'],
-      description: '把对话导出为 Markdown 分享',
+      aliases: aliases('导出', 'share'),
+      description: t('chat.commands.export'),
       group: 'session',
       run: async (_input, ctx) => {
         const messages = messagesOf(ctx.sessionId);
-        if (!messages.some((m) => m.role !== 'event')) return done('这个对话还是空的');
+        if (!messages.some((m) => m.role !== 'event')) return done(t('chat.commands.exportEmpty'));
         const meta = sessions.get(ctx.sessionId);
-        const title = meta?.title || meta?.preview || '对话';
-        const toolTitle = (id: string) => registry.tool(id)?.def.title ?? id;
-        const markdown = sessionMarkdown(title, messages, toolTitle);
+        const title = meta?.title || meta?.preview || t('chat.commands.untitled');
+        const titleOf = (id: string) => {
+          const entry = registry.tool(id);
+          return entry ? toolTitle(registry.get(entry.pluginId), entry.name, entry.def.title) : id;
+        };
+        const markdown = sessionMarkdown(title, messages, titleOf, {
+          you: t('chat.commands.mdYou'),
+          assistant: t('chat.commands.mdAssistant'),
+          tool: (name, failed) => t(failed ? 'chat.commands.mdToolFailed' : 'chat.commands.mdTool', { title: name }),
+          attachment: (name) => t('chat.commands.mdAttachment', { name }),
+        });
         try {
-          await Share.share({ title, message: markdown }, { dialogTitle: '导出对话', subject: title });
+          await Share.share({ title, message: markdown }, { dialogTitle: t('chat.commands.exportTitle'), subject: title });
           return done();
         } catch (e) {
-          return done(`导出失败：${e instanceof Error ? e.message : String(e)}`, 'error');
+          return done(t('chat.commands.exportFailed', { error: e instanceof Error ? e.message : String(e) }), 'error');
         }
       },
     },
 
-    // 上下文
+    // Context
     {
       name: 'compact',
       icon: 'compress',
-      aliases: ['压缩'],
-      description: '压缩较早的对话，腾出上下文',
+      aliases: aliases('压缩', 'compress'),
+      description: t('chat.commands.compact'),
       group: 'context',
       idleOnly: true,
       run: async (_input, ctx) => {
         const r = await compactNow(ctx.sessionId);
-        if (!r) return done('还没有可以压缩的内容');
-        return done(`已压缩 ${r.compactedMessages} 条消息 · ${formatTokens(r.tokensBefore)} → ${formatTokens(r.tokensAfter)} tokens`, 'success');
+        if (!r) return done(t('chat.context.nothingToCompact'));
+        return done(t('chat.message.compacted', { count: r.compactedMessages, before: formatTokens(r.tokensBefore), after: formatTokens(r.tokensAfter) }), 'success');
       },
     },
-    { name: 'context', icon: 'gauge', aliases: ['上下文'], description: '查看上下文占用', group: 'context', run: go('/context') },
-    { name: 'model', icon: 'sparkles', aliases: ['模型'], description: '切换模型', group: 'context', run: go('/model-picker') },
-    { name: 'memory', icon: 'bolt', aliases: ['记忆'], description: '查看 AI 记住了什么', group: 'context', run: go('/p/memory/memory') },
+    { name: 'context', icon: 'gauge', aliases: aliases('上下文'), description: t('chat.commands.context'), group: 'context', run: go('/context') },
+    { name: 'model', icon: 'sparkles', aliases: aliases('模型'), description: t('chat.commands.model'), group: 'context', run: go('/model-picker') },
+    { name: 'memory', icon: 'bolt', aliases: aliases('记忆'), description: t('chat.commands.memory'), group: 'context', run: go('/p/memory/memory') },
 
-    // 应用
-    { name: 'usage', icon: 'chart', aliases: ['用量', '统计'], description: '查看 token 用量', group: 'app', run: go('/usage') },
-    { name: 'tasks', icon: 'alarm', aliases: ['任务', '提醒'], description: '查看定时任务和提醒', group: 'app', run: go('/schedule') },
-    { name: 'plugins', icon: 'puzzle', aliases: ['插件'], description: '管理插件', group: 'app', run: go('/plugins') },
+    // App
+    { name: 'usage', icon: 'chart', aliases: aliases('用量', '统计', 'stats'), description: t('chat.commands.usage'), group: 'app', run: go('/usage') },
+    { name: 'tasks', icon: 'alarm', aliases: aliases('任务', '提醒', 'reminders', 'schedule'), description: t('chat.commands.tasks'), group: 'app', run: go('/schedule') },
+    { name: 'plugins', icon: 'puzzle', aliases: aliases('插件'), description: t('chat.commands.plugins'), group: 'app', run: go('/plugins') },
     {
       name: 'help',
       icon: 'help',
-      aliases: ['帮助'],
-      description: '列出所有命令',
+      aliases: aliases('帮助', 'commands'),
+      description: t('chat.commands.help'),
       group: 'app',
-      run: () => done(['可用命令：', ...all().map((c) => `/${c.name}${c.aliases[0] ? `（${c.aliases[0]}）` : ''} · ${c.description}`)].join('\n')),
+      run: () => {
+        const en = getLocale() === 'en';
+        const alias = (c: Command) => (en ? c.aliases.find(isAsciiAlias) : c.aliases[0]);
+        const line = (c: Command) => {
+          const a = alias(c);
+          return `/${c.name}${a ? (en ? ` (/${a})` : `（${a}）`) : ''} · ${c.description}`;
+        };
+        return done([t('chat.commands.helpTitle'), ...all().map(line)].join('\n'));
+      },
     },
   ];
 }

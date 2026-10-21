@@ -1,5 +1,7 @@
 import { kv } from '@/core/store/kv';
+import { t } from '@/i18n';
 
+import { pluginName, toolTitle } from './localize';
 import { pluginSettings } from './plugin-settings';
 import { registry, type ToolEntry } from './registry';
 import type { Actor, HostServices } from './types';
@@ -41,22 +43,24 @@ export async function invokeTool(
   opts: { actor: Actor; signal?: AbortSignal },
 ): Promise<unknown> {
   const entry = registry.tool(id);
-  if (!entry) throw new ToolError(`没有这个工具：${id}`, 'not_found');
+  if (!entry) throw new ToolError(t('app.plugins.runtime.noTool', { id }), 'not_found');
 
   const why = registry.unavailable(entry.pluginId);
   if (why) throw new ToolError(why, 'disabled');
   const settings = pluginSettings.get(entry.pluginId);
-  if (!settings.enabled) throw new ToolError(`插件「${registry.get(entry.pluginId)?.name ?? entry.pluginId}」已关闭`, 'disabled');
+  const plugin = registry.get(entry.pluginId);
+  if (!settings.enabled) throw new ToolError(t('app.plugins.runtime.pluginOff', { name: plugin ? pluginName(plugin) : entry.pluginId }), 'disabled');
 
   const parsed = entry.def.input.safeParse(rawInput ?? {});
   if (!parsed.success) throw new ToolError(parsed.error.message, 'invalid_input');
 
   const mode = settings.modes[entry.def.effect];
-  if (mode === 'off') throw new ToolError(`「${entry.def.title}」在设置中被禁止`, 'disabled');
+  const title = toolTitle(plugin, entry.name, entry.def.title);
+  if (mode === 'off') throw new ToolError(t('app.plugins.runtime.toolBlocked', { title }), 'disabled');
   // A user tapping a button has already expressed intent; only agent/scheduler calls prompt.
   if (mode === 'ask' && opts.actor !== 'user') {
     const ok = askHandler ? await askHandler(entry, parsed.data) : false;
-    if (!ok) throw new ToolError(`用户拒绝了「${entry.def.title}」`, 'declined');
+    if (!ok) throw new ToolError(t('app.plugins.runtime.declined', { title }), 'declined');
   }
 
   try {

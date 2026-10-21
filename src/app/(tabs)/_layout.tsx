@@ -11,6 +11,7 @@ import { isOnboarded } from '@/core/boot';
 import { BackdropProvided } from '@/hooks/use-backdrop';
 import { TabsBlurTarget, useFloatingOverlay } from '@/hooks/use-floating-overlay';
 import { TabBarInset } from '@/hooks/use-tab-bar-inset';
+import { useT } from '@/i18n';
 import { glassMaterial, spacing, useTheme, useThemeName } from '@/theme';
 
 /**
@@ -22,13 +23,14 @@ const TABS = ['/', '/dashboard', '/schedule', '/settings'];
 
 export default function TabsLayout() {
   const c = useTheme();
+  const t = useT();
   const name = useThemeName();
   const m = glassMaterial[name];
   const insets = useSafeAreaInsets();
   const target = useRef<ComponentRef<typeof View> | null>(null);
   const [bar, setBar] = useState({ width: 0, height: 0 });
   const path = usePathname();
-  const active = TABS.indexOf(path === '/' ? '/' : (TABS.find((t) => t !== '/' && path.startsWith(t)) ?? ''));
+  const active = TABS.indexOf(path === '/' ? '/' : (TABS.find((tab) => tab !== '/' && path.startsWith(tab)) ?? ''));
   if (!isOnboarded()) return <Redirect href="/welcome" />;
   return (
     <Tabs style={{ flex: 1, backgroundColor: c.bg }}>
@@ -56,16 +58,16 @@ export default function TabsLayout() {
           <View pointerEvents="none" style={StyleSheet.flatten([styles.light, { backgroundImage: m.topLight }])} />
           <TabIndicator index={active} count={TABS.length} width={bar.width} />
           <TabTrigger name="chat" href="/" asChild>
-            <TabButton icon="chat" label="对话" />
+            <TabButton icon="chat" label={t('app.tabs.chat')} />
           </TabTrigger>
           <TabTrigger name="dashboard" href="/dashboard" asChild>
-            <TabButton icon="dashboard" label="看板" />
+            <TabButton icon="dashboard" label={t('app.tabs.dashboard')} />
           </TabTrigger>
           <TabTrigger name="schedule" href="/schedule" asChild>
-            <TabButton icon="schedule" label="日程" />
+            <TabButton icon="schedule" label={t('app.tabs.schedule')} />
           </TabTrigger>
           <TabTrigger name="settings" href="/settings" asChild>
-            <TabButton icon="settings" label="设置" />
+            <TabButton icon="settings" label={t('app.tabs.settings')} />
           </TabTrigger>
         </View>
       </TabList>

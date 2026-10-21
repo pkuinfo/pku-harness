@@ -7,6 +7,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import { useChat } from '@/core/agent/session/chat-store';
 import { useTabsBlurTarget } from '@/hooks/use-floating-overlay';
+import { useLocale, useT } from '@/i18n';
 import { shadows, springs, useTheme, useThemeName } from '@/theme';
 
 import { AgentOrbit } from '@/components/agent-orbit';
@@ -15,7 +16,8 @@ import { phaseOf } from './agent-status';
 
 /**
  * Floating "back to latest" pill, shown only while the reader has scrolled away from the end.
- * While the agent works it carries the live status (agent orbit + phase, e.g. 正在调用 树洞 · 读树洞帖子),
+ * While the agent works it carries the live status (agent orbit + phase, e.g. 正在调用 树洞 · 读树洞帖子 /
+ * Using Treehole · Read posts),
  * so the reader knows what's happening below without being dragged there; after a reply lands
  * it says 新回复; otherwise it's just the arrow. One tap returns to the end and follows again.
  */
@@ -28,9 +30,11 @@ export function JumpToLatest({ unread, onPress }: { unread: boolean; onPress: ()
   const theme = useThemeName();
   const blurTarget = useTabsBlurTarget();
   const reduced = useReducedMotion();
+  const t = useT();
+  const locale = useLocale();
 
-  const phase = busy ? phaseOf(reply) : null;
-  const label = phase ? `${phase.verb}${phase.detail ? ` ${phase.detail}` : ''}` : unread ? '新回复' : null;
+  const phase = busy ? phaseOf(reply, locale) : null;
+  const label = phase ? `${phase.verb}${phase.detail ? ` ${phase.detail}` : ''}` : unread ? t('chat.jump.newReply') : null;
   const enter = reduced ? FadeIn : ZoomIn.springify().damping(springs.snappy.damping).stiffness(springs.snappy.stiffness).mass(springs.snappy.mass);
   const exit = reduced ? FadeOut : ZoomOut.duration(140);
 
@@ -42,7 +46,7 @@ export function JumpToLatest({ unread, onPress }: { unread: boolean; onPress: ()
         onPress={onPress}
         scaleTo={0.94}
         accessibilityRole="button"
-        accessibilityLabel={label ? `回到最新：${label}` : '回到最新'}
+        accessibilityLabel={label ? t('chat.jump.toLatestWith', { label }) : t('chat.jump.toLatest')}
         style={{ maxWidth: 300, borderRadius: 999, borderCurve: 'continuous', boxShadow: shadows.float }}>
         <View
           style={{

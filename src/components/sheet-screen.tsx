@@ -4,6 +4,7 @@ import { KeyboardAvoidingView, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { MAX_CONTENT_WIDTH } from '@/hooks/use-layout';
+import { useT } from '@/i18n';
 import { spacing } from '@/theme';
 
 import { Aurora } from './aurora';
@@ -40,6 +41,7 @@ export function SheetScreen({
   secondary?: string;
   onSecondary?: () => void;
 }) {
+  const t = useT();
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView className="flex-1 bg-bg" behavior="padding">
@@ -48,7 +50,7 @@ export function SheetScreen({
         <Text variant="headline" className="flex-1">
           {title}
         </Text>
-        <IconButton icon="close" label="关闭" variant="ghost" onPress={() => dismiss()} />
+        <IconButton icon="close" label={t('core.common.close')} variant="ghost" onPress={() => dismiss()} />
       </View>
       <ScrollView contentContainerClassName="w-full self-center gap-4 p-4 pb-8" contentContainerStyle={{ maxWidth: MAX_CONTENT_WIDTH }} keyboardShouldPersistTaps="handled">
         {children}

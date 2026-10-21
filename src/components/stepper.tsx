@@ -1,5 +1,6 @@
 import { View } from 'react-native';
 
+import { useT } from '@/i18n';
 import { haptics } from '@/utils/haptics';
 
 import { IconButton } from './button';
@@ -21,14 +22,15 @@ export function Stepper({
   suffix?: string;
   label: string;
 }) {
+  const t = useT();
   const set = (n: number) => {
     const v = Math.max(min, Math.min(max, n));
     if (v !== value) haptics.select();
     onChange(v);
   };
   return (
-    <View className="flex-row items-center self-start rounded-md border-[0.5px] border-edge bg-surface-2 px-0.5" style={{ borderCurve: 'continuous' }} accessibilityLabel={`${label}：${value}${suffix ?? ''}`}>
-      <IconButton icon="minus" label={`减少${label}`} variant="ghost" size={36} disabled={value <= min} onPress={() => set(value - 1)} />
+    <View className="flex-row items-center self-start rounded-md border-[0.5px] border-edge bg-surface-2 px-0.5" style={{ borderCurve: 'continuous' }} accessibilityLabel={t('app.ui.fieldValue', { label, value: `${value}${suffix ?? ''}` })}>
+      <IconButton icon="minus" label={t('app.ui.decrease', { label })} variant="ghost" size={36} disabled={value <= min} onPress={() => set(value - 1)} />
       <Text variant="bodyStrong" className="min-w-14 text-center" style={{ fontVariant: ['tabular-nums'] }}>
         {value}
         {suffix ? (
@@ -37,7 +39,7 @@ export function Stepper({
           </Text>
         ) : null}
       </Text>
-      <IconButton icon="plus" label={`增加${label}`} variant="ghost" size={36} disabled={value >= max} onPress={() => set(value + 1)} />
+      <IconButton icon="plus" label={t('app.ui.increase', { label })} variant="ghost" size={36} disabled={value >= max} onPress={() => set(value + 1)} />
     </View>
   );
 }

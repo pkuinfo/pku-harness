@@ -1,4 +1,6 @@
-import { credentials, registerCampusService } from '../account';
+import { t } from '@/i18n';
+
+import { credentials, registerCampusService, serviceName } from '../account';
 import { campusFetch, resetSession, type CampusResponse, type RequestOptions } from '../http';
 import { iaaaSignIn, type IaaaApp } from '../iaaa';
 
@@ -46,12 +48,12 @@ let signingIn: Promise<void> | null = null;
 async function login() {
   const { username, password } = await credentials();
   await resetSession('iaaa');
-  const token = await iaaaSignIn(BDKJ_APP, username, password, '北大空间');
+  const token = await iaaaSignIn(BDKJ_APP, username, password, serviceName('bdkj'));
   await resetSession(SESSION);
   // Same shape as IAAA's own redirect: /login/oauth?_rand=…&token=… → 302 → /home.
   const cb = await bdkjFetch({ url: `${BDKJ_BASE}/login/oauth?_rand=${Math.random()}&token=${encodeURIComponent(token)}` });
-  if (cb.status >= 400) throw new Error(`北大空间登录失败（HTTP ${cb.status}）`);
-  if (loggedOut(cb)) throw new Error('北大空间拒绝了统一认证登录，请稍后再试');
+  if (cb.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('bdkj'), status: cb.status }));
+  if (loggedOut(cb)) throw new Error(t('app.campus.errors.rejected', { service: serviceName('bdkj') }));
   if (__DEV__) console.log('[bdkj] signed in →', cb.url.split('?')[0]);
 }
 
@@ -87,7 +89,7 @@ async function request(req: RequestOptions, retried = false): Promise<CampusResp
     await signIn();
     return request(req, true);
   }
-  if (retried && loggedOut(res)) throw new Error('北大空间登录状态丢失，请稍后再试');
+  if (retried && loggedOut(res)) throw new Error(t('app.campus.errors.sessionLost', { service: serviceName('bdkj') }));
   return res;
 }
 

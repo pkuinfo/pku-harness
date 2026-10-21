@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 
+import { useT } from '@/i18n';
 import { typography, useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 
@@ -55,6 +56,7 @@ export function Field({
 
 /** A secret (password, API key): masked by default, with a show/hide eye. */
 export function SecretField(props: Omit<TextInputProps, 'secureTextEntry'> & { label?: string; hint?: string; error?: string }) {
+  const t = useT();
   const [shown, setShown] = useState(false);
   return (
     <Field
@@ -62,7 +64,7 @@ export function SecretField(props: Omit<TextInputProps, 'secureTextEntry'> & { l
       secureTextEntry={!shown}
       autoCapitalize="none"
       autoCorrect={false}
-      trailing={<IconButton icon={shown ? 'eyeOff' : 'eye'} label={shown ? '隐藏' : '显示'} variant="ghost" size={40} onPress={() => setShown((s) => !s)} />}
+      trailing={<IconButton icon={shown ? 'eyeOff' : 'eye'} label={shown ? t('app.ui.hide') : t('app.ui.show')} variant="ghost" size={40} onPress={() => setShown((s) => !s)} />}
     />
   );
 }

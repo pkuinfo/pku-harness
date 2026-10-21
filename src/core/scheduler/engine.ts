@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import { live } from '@/core/dashboard/live-store';
 import { cancelNotification, listScheduledNotifications, notifyAt, notifyNow } from '@/core/notify';
 import { invokeTool } from '@/core/runtime/invoke';
+import { t } from '@/i18n';
 import { registry } from '@/core/runtime/registry';
 
 import { evaluate, fillTemplate, getPath } from './check';
@@ -68,7 +69,7 @@ export async function updateJob(
   patch: JobPatch,
 ): Promise<Job> {
   const cur = jobStore.get(id);
-  if (!cur) throw new Error(`没有这个任务：${id}`);
+  if (!cur) throw new Error(t('app.schedule.noJob', { id }));
   const now = Date.now();
   const next: Job = {
     ...cur,
@@ -96,7 +97,7 @@ export async function deleteJob(id: string) {
 
 /** Run one check job now and record the result. Returns whether it notified. */
 export async function runCheck(job: Job, now = Date.now()): Promise<{ notified: boolean; value?: unknown; error?: string }> {
-  if (job.action.type !== 'check') throw new Error('不是检查任务');
+  if (job.action.type !== 'check') throw new Error(t('app.schedule.notCheck'));
   const a = job.action;
   try {
     const result = await invokeTool(a.tool, a.args ?? {}, { actor: 'scheduler' });
@@ -152,7 +153,7 @@ async function syncNow() {
     const d = derive(job, now);
     if (d.nextRunAt !== job.nextRunAt || d.runs !== job.runs) await jobStore.put(d);
   }
-  const desired = planNotifications(jobStore.list(), now);
+  const desired = planNotifications(jobStore.list(), now, (n, total) => t('app.schedule.progress', { n, total }));
   const scheduled = (await listScheduledNotifications()).map((n) => n.identifier);
   const { cancel, schedule } = diffArmed(desired, scheduled);
   for (const id of cancel) await cancelNotification(id);

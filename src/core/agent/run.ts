@@ -6,6 +6,7 @@ import { AppState } from 'react-native';
 import { notifyNow } from '@/core/notify';
 import { registry } from '@/core/runtime/registry';
 import { recordStep, type ToolCallUsage } from '@/core/usage';
+import { t as tr } from '@/i18n';
 
 import { installRunHooks, newId, sessionStore, type AttachmentPart, type ChatMessage, type ChatPart, type ChatState, type TurnMeta } from '@/core/agent/session/chat-store';
 import { capToolResultOutput, compactForOverflow, isContextOverflowError, maybeCompact } from '@/core/agent/context/compaction';
@@ -275,7 +276,7 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     if (startedSteps <= finishedSteps) partial = '';
     if (!signal.aborted && finishedSteps >= STEP_LIMIT) {
       const last = produced.at(-1);
-      if (last?.role === 'tool') sessions.notice('已达到单次回复的步骤上限，可以说“继续”接着做', 'warn', { sessionId: sid });
+      if (last?.role === 'tool') sessions.notice(tr('chat.agent.stepLimit'), 'warn', { sessionId: sid });
     }
   };
 
@@ -338,7 +339,7 @@ function finishTurn(
   if (AppState.currentState !== 'active') {
     const reply = textOf(sessionStore.get(sid)?.messages.find((m) => m.id === assistantId));
     notifyNow({
-      title: `${meta?.title ?? '对话'} · ${t.ended === 'error' ? '回复出错了' : '回复好了'}`,
+      title: tr(t.ended === 'error' ? 'chat.agent.notifyError' : 'chat.agent.notifyDone', { title: meta?.title ?? tr('chat.agent.untitled') }),
       body: t.error ?? (clip(reply.replace(/\s+/g, ' ').trim(), 80) || undefined),
       url: `/?session=${encodeURIComponent(sid)}`,
       channel: 'alerts',

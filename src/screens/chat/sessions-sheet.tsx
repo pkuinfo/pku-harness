@@ -28,13 +28,14 @@ import {
   useSessions,
   type SessionMeta,
 } from "@/core/agent/session/sessions";
+import { useT } from "@/i18n";
 import { shadows, spacing, typography, useTheme } from "@/theme";
 import { cx } from "@/utils/cx";
 import { haptics } from "@/utils/haptics";
 
 const UNDO_MS = 5000;
 
-const titleOf = (s: SessionMeta) => s.title || s.preview || "新对话";
+const titleOf = (s: SessionMeta, untitled: string) => s.title || s.preview || untitled;
 
 function close() {
   if (router.canGoBack()) router.back();
@@ -47,6 +48,8 @@ function close() {
  */
 export function SessionsSheet() {
   const c = useTheme();
+  const t = useT();
+  const untitled = t("chat.header.newChat");
   const insets = useSafeAreaInsets();
   const list = useSessions();
   const activeId = useActiveSessionId();
@@ -66,8 +69,8 @@ export function SessionsSheet() {
   useEffect(() => {
     const live = timers.current;
     return () => {
-      for (const [id, t] of live) {
-        clearTimeout(t);
+      for (const [id, timer] of live) {
+        clearTimeout(timer);
         void sessions.remove(id);
       }
       live.clear();
@@ -80,19 +83,19 @@ export function SessionsSheet() {
       setMenuFor(null);
       setPending((p) => [
         ...p.filter((x) => x.id !== s.id),
-        { id: s.id, title: titleOf(s) },
+        { id: s.id, title: titleOf(s, untitled) },
       ]);
       timers.current.set(
         s.id,
         setTimeout(() => commit(s.id), UNDO_MS),
       );
     },
-    [commit],
+    [commit, untitled],
   );
 
   const undo = useCallback((id: string) => {
-    const t = timers.current.get(id);
-    if (t) clearTimeout(t);
+    const timer = timers.current.get(id);
+    if (timer) clearTimeout(timer);
     timers.current.delete(id);
     setPending((p) => p.filter((x) => x.id !== id));
     haptics.tap();
@@ -104,8 +107,8 @@ export function SessionsSheet() {
       groupSessions(
         list.filter((s) => !hidden.has(s.id)),
         query,
-      ).map((g) => ({ title: g.section, data: g.items })),
-    [list, hidden, query],
+      ).map((g) => ({ title: t(`chat.sessions.sections.${g.section}`), data: g.items })),
+    [list, hidden, query, t],
   );
 
   const open = useCallback(async (id: string) => {
@@ -124,18 +127,18 @@ export function SessionsSheet() {
     <View className="flex-1 bg-elevated">
       <View className="flex-row items-center gap-2 px-4 pt-4 pb-2">
         <Text variant="headline" className="flex-1">
-          对话
+          {t("chat.sessions.title")}
         </Text>
         <IconButton
           icon="plus"
-          label="新对话"
+          label={t("chat.header.newChat")}
           variant="secondary"
           size={36}
           onPress={() => void newChat()}
         />
         <IconButton
           icon="close"
-          label="关闭"
+          label={t("core.common.close")}
           variant="ghost"
           size={36}
           onPress={close}
@@ -149,19 +152,19 @@ export function SessionsSheet() {
         <TextInput
           value={query}
           onChangeText={setQuery}
-          placeholder="搜索对话"
+          placeholder={t("chat.sessions.search")}
           placeholderTextColor={c.textFaint}
           selectionColor={c.accent}
           returnKeyType="search"
           autoCorrect={false}
-          accessibilityLabel="搜索对话"
+          accessibilityLabel={t("chat.sessions.search")}
           className="flex-1 py-2"
           style={[typography.body, { color: c.text }]}
         />
         {query ? (
           <IconButton
             icon="close"
-            label="清除搜索"
+            label={t("chat.sessions.clearSearch")}
             variant="ghost"
             size={28}
             onPress={() => setQuery("")}
@@ -210,7 +213,7 @@ export function SessionsSheet() {
               color={c.textFaint}
             />
             <Text variant="callout" tone="muted" align="center">
-              {query ? "没有找到相关对话" : "还没有对话"}
+              {t(query ? "chat.sessions.noResults" : "chat.sessions.empty")}
             </Text>
           </View>
         }
@@ -229,10 +232,10 @@ export function SessionsSheet() {
           }}
         >
           <Text variant="callout" numberOfLines={1} className="flex-1">
-            已删除「{lastPending.title}」
+            {t("chat.sessions.deleted", { title: lastPending.title })}
           </Text>
           <Button
-            title="撤销"
+            title={t("chat.sessions.undo")}
             size="sm"
             variant="secondary"
             onPress={() => undo(lastPending.id)}
@@ -265,7 +268,9 @@ const SessionRow = memo(function SessionRow({
   onRemove: (s: SessionMeta) => void;
 }) {
   const reduced = useReducedMotion();
+  const t = useT();
   const swipe = useRef<SwipeableMethods>(null);
+  const title = titleOf(s, t("chat.header.newChat"));
 
   return (
     <Animated.View
@@ -281,7 +286,7 @@ const SessionRow = memo(function SessionRow({
         renderRightActions={() => (
           <View className="justify-center pl-2">
             <Button
-              title="删除"
+              title={t("core.common.delete")}
               icon="trash"
               size="sm"
               variant="danger"
@@ -300,8 +305,8 @@ const SessionRow = memo(function SessionRow({
           onLongPress={() => onMenu(s.id)}
           delayLongPress={350}
           accessibilityRole="button"
-          accessibilityLabel={`${titleOf(s)}${s.unread ? "，有新回复" : ""}`}
-          accessibilityHint="长按显示更多操作"
+          accessibilityLabel={s.unread ? t("chat.sessions.unreadA11y", { title }) : title}
+          accessibilityHint={t("chat.sessions.moreHint")}
         >
           {/* Opaque base: the swipe's delete action sits behind the row and must not show through
               (surface-2 is translucent); the active tint is layered on top of it. */}
@@ -321,10 +326,10 @@ const SessionRow = memo(function SessionRow({
                   <RenameInput session={s} onEnd={onRenameEnd} />
                 ) : (
                   <Text variant="bodyStrong" numberOfLines={1}>
-                    {titleOf(s)}
+                    {title}
                   </Text>
                 )}
-                {s.preview && s.preview !== titleOf(s) ? (
+                {s.preview && s.preview !== title ? (
                   <Text variant="caption" tone="muted" numberOfLines={1}>
                     {s.preview}
                   </Text>
@@ -335,7 +340,7 @@ const SessionRow = memo(function SessionRow({
                   <AgentOrbit state="writing" size={16} />
                 ) : (
                   <Text variant="caption" tone="faint">
-                    {relativeTime(s.updatedAt)}
+                    {relativeTime(s.updatedAt, t)}
                   </Text>
                 )}
                 {s.unread ? (
@@ -356,14 +361,14 @@ const SessionRow = memo(function SessionRow({
           className="flex-row gap-2 px-3 pt-1 pb-2"
         >
           <Button
-            title="重命名"
+            title={t("chat.sessions.rename")}
             icon="edit"
             size="sm"
             variant="secondary"
             onPress={() => onRename(s.id)}
           />
           <Button
-            title={s.pinned ? "取消置顶" : "置顶"}
+            title={t(s.pinned ? "chat.sessions.unpin" : "chat.sessions.pin")}
             size="sm"
             variant="secondary"
             onPress={() => {
@@ -373,7 +378,7 @@ const SessionRow = memo(function SessionRow({
             }}
           />
           <Button
-            title="删除"
+            title={t("core.common.delete")}
             icon="trash"
             size="sm"
             variant="danger"
@@ -394,10 +399,11 @@ function RenameInput({
   onEnd: () => void;
 }) {
   const c = useTheme();
+  const t = useT();
   const [draft, setDraft] = useState(s.title ?? "");
   const save = () => {
-    const t = draft.trim();
-    if (t && t !== s.title) void sessions.rename(s.id, t);
+    const next = draft.trim();
+    if (next && next !== s.title) void sessions.rename(s.id, next);
     onEnd();
   };
   return (
@@ -409,10 +415,10 @@ function RenameInput({
       returnKeyType="done"
       onSubmitEditing={save}
       onBlur={onEnd}
-      placeholder="对话标题"
+      placeholder={t("chat.header.titlePlaceholder")}
       placeholderTextColor={c.textFaint}
       selectionColor={c.accent}
-      accessibilityLabel="重命名对话"
+      accessibilityLabel={t("chat.header.rename")}
       className="border-b-[0.5px] border-accent p-0"
       style={[typography.bodyStrong, { color: c.text }]}
     />

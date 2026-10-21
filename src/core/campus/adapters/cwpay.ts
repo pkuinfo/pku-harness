@@ -1,4 +1,6 @@
-import { credentials, registerCampusService } from '../account';
+import { t } from '@/i18n';
+
+import { credentials, registerCampusService, serviceName } from '../account';
 import { campusFetch, resetSession, type CampusResponse, type RequestOptions } from '../http';
 import { iaaaSignIn, type IaaaApp } from '../iaaa';
 import { decodeCwpayBody, envelopeState, parseDealcasLocation, parseEnvelope } from './cwpay-crypto';
@@ -59,14 +61,14 @@ async function login() {
   await resetSession('iaaa');
   await resetSession('cwpay');
   const app = await iaaaApp();
-  const iaaaToken = await iaaaSignIn(app, username, password, '收费平台');
+  const iaaaToken = await iaaaSignIn(app, username, password, serviceName('cwpay'));
 
   // http://…/dealcas → https://…/dealcas → https://…/dealcas/ → /#/middle_page…
   let url = `${app.redirectUrl}?_rand=${Math.random()}&token=${encodeURIComponent(iaaaToken)}`.replace(/^http:\/\//i, 'https://');
   for (let hop = 0; hop < 6; hop++) {
     const res = await campusFetch('cwpay', { url, followRedirects: false, headers: { ...HEADERS, accept: 'text/html,*/*' } });
     const loc = res.location;
-    if (!loc || res.status < 300 || res.status >= 400) throw new Error(`收费平台登录失败（HTTP ${res.status}）`);
+    if (!loc || res.status < 300 || res.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('cwpay'), status: res.status }));
     const abs = /^https?:\/\//i.test(loc) ? loc : `${CWPAY_BASE}${loc.startsWith('/') ? '' : '/'}${loc}`;
     const result = parseDealcasLocation(abs);
     if (result?.ok) {
@@ -75,10 +77,10 @@ async function login() {
       if (__DEV__) console.log('[cwpay] signed in');
       return;
     }
-    if (result && !result.ok) throw new Error(`收费平台登录失败：${result.error}`);
+    if (result && !result.ok) throw new Error(t('app.campus.errors.signInReason', { service: serviceName('cwpay'), reason: result.error }));
     url = abs.replace(/^http:\/\//i, 'https://');
   }
-  throw new Error('收费平台登录跳转过多');
+  throw new Error(t('app.campus.errors.tooManyRedirects', { service: serviceName('cwpay') }));
 }
 
 function ensureLogin() {

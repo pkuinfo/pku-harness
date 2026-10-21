@@ -1,29 +1,33 @@
 import { kv } from '@/core/store/kv';
+import { t } from '@/i18n';
 
 import { widgetStore } from './store';
 import type { Widget } from './types';
 
 const n = null;
 
-/** First-run widgets that work without a campus login; the agent replaces them freely. */
-const STARTERS: Omit<Widget, 'position' | 'createdAt' | 'updatedAt'>[] = [
+/**
+ * First-run widgets that work without a campus login; the agent replaces them freely. Written
+ * once, in the app language at first launch (the agent rewrites them in whatever language later).
+ */
+const starters = (): Omit<Widget, 'position' | 'createdAt' | 'updatedAt'>[] => [
   {
     id: 'today',
-    title: '今天',
+    title: t('app.starter.today'),
     size: 'lg',
     spec: {
       root: 'col',
       elements: {
         col: { type: 'Column', props: { gap: 'sm' }, children: ['date', 'week', 'hint'] },
-        date: { type: 'Heading', props: { text: { $template: '${/today/month}月${/today/day}日 · ${/today/weekday}' }, size: 'lg' } },
+        date: { type: 'Heading', props: { text: { $template: t('app.starter.date') }, size: 'lg' } },
         week: {
           type: 'Text',
-          props: { text: { $template: '第 ${/today/semester/week} 周 · 距学期结束 ${/today/semester/daysLeft} 天' }, tone: 'muted', size: n },
+          props: { text: { $template: t('app.starter.weekLine') }, tone: 'muted', size: n },
           visible: { $state: '/today/semester' },
         },
         hint: {
           type: 'Text',
-          props: { text: '告诉 AI 开学日期，这里会显示教学周', tone: 'faint', size: 'small' },
+          props: { text: t('app.starter.hint'), tone: 'faint', size: 'small' },
           visible: { $state: '/today/semester', not: true },
         },
       },
@@ -32,14 +36,14 @@ const STARTERS: Omit<Widget, 'position' | 'createdAt' | 'updatedAt'>[] = [
   },
   {
     id: 'reminders',
-    title: '提醒',
+    title: t('app.starter.reminders'),
     size: 'sm',
     spec: {
       root: 'stat',
       elements: {
         stat: {
           type: 'Stat',
-          props: { label: '待触发提醒', value: { $state: '/jobs' }, prefix: n, suffix: ' 个', decimals: 0, delta: n, deltaTone: n, caption: n, icon: 'bell', size: 'lg' },
+          props: { label: t('app.starter.pending'), value: { $state: '/jobs' }, prefix: n, suffix: t('app.starter.pendingSuffix') || n, decimals: 0, delta: n, deltaTone: n, caption: n, icon: 'bell', size: 'lg' },
         },
       },
     },
@@ -47,14 +51,14 @@ const STARTERS: Omit<Widget, 'position' | 'createdAt' | 'updatedAt'>[] = [
   },
   {
     id: 'week',
-    title: '教学周',
+    title: t('app.starter.week'),
     size: 'sm',
     spec: {
       root: 'stat',
       elements: {
         stat: {
           type: 'Stat',
-          props: { label: '教学周', value: { $state: '/week' }, prefix: '第 ', suffix: ' 周', decimals: 0, delta: n, deltaTone: n, caption: n, icon: 'schedule', size: 'lg' },
+          props: { label: t('app.starter.week'), value: { $state: '/week' }, prefix: t('app.starter.weekPrefix') || n, suffix: t('app.starter.weekSuffix') || n, decimals: 0, delta: n, deltaTone: n, caption: n, icon: 'schedule', size: 'lg' },
         },
       },
     },
@@ -67,7 +71,7 @@ export async function seedStarterWidgets() {
   const prefs = kv('prefs');
   if (await prefs.get<boolean>('dashboard.seeded')) return;
   const now = Date.now();
-  for (const [i, w] of STARTERS.entries()) {
+  for (const [i, w] of starters().entries()) {
     await widgetStore.put({ ...w, position: i, createdAt: now, updatedAt: now });
   }
   await prefs.set('dashboard.seeded', true);

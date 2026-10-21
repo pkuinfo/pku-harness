@@ -1,6 +1,8 @@
 import { Platform } from 'react-native';
 import notifee, { AlarmType, AndroidImportance, AndroidVisibility, EventType, TriggerType, type Event } from 'react-native-notify-kit';
 
+import { t } from '@/i18n';
+
 import type { Job } from './types';
 
 /**
@@ -25,8 +27,8 @@ let channelReady: Promise<string> | null = null;
 function ensureChannel() {
   channelReady ??= notifee.createChannel({
     id: CHANNEL,
-    name: '后台检查',
-    description: '定时检查数据时短暂出现，检查完会自动消失',
+    name: t('app.notifications.channels.checks'),
+    description: t('app.notifications.channels.checksDescription'),
     importance: AndroidImportance.MIN,
     visibility: AndroidVisibility.SECRET,
     sound: undefined,
@@ -48,7 +50,7 @@ export async function syncWakeups(jobs: Job[]) {
     await notifee.createTriggerNotification(
       {
         id,
-        title: '正在检查…',
+        title: t('app.notifications.channels.checking'),
         body: job.title,
         data: { jobId: job.id },
         android: { channelId: CHANNEL, importance: AndroidImportance.MIN, autoCancel: true, onlyAlertOnce: true },

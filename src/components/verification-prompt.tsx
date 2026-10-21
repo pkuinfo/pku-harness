@@ -5,6 +5,7 @@ import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown, useAnimatedStyle 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { installVerificationPrompt, useVerificationRequest, verification, type VerificationRequest } from '@/core/campus/verify';
+import { useT } from '@/i18n';
 import { shadows, spacing, springs, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
@@ -13,7 +14,7 @@ import { Field } from './field';
 import { Icon } from './icon';
 import { Text } from './text';
 
-const TITLE: Record<VerificationRequest['mode'], string> = { sms: '短信验证码', email: '邮件验证码', otp: '手机令牌验证码' };
+const TITLE = { sms: 'chat.verification.titleSms', email: 'chat.verification.titleEmail', otp: 'chat.verification.titleOtp' } as const satisfies Record<VerificationRequest['mode'], string>;
 
 /**
  * Asks for the second-factor code IAAA wants (any campus login, including background session
@@ -27,6 +28,7 @@ export function VerificationPrompt() {
 
 function Card({ req }: { req: VerificationRequest }) {
   const c = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const [code, setCode] = useState('');
   const [sentTo, setSentTo] = useState(req.sentTo);
@@ -38,8 +40,8 @@ function Card({ req }: { req: VerificationRequest }) {
 
   useEffect(() => {
     if (wait <= 0) return;
-    const t = setTimeout(() => setWait((w) => w - 1), 1000);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setWait((w) => w - 1), 1000);
+    return () => clearTimeout(timer);
   }, [wait]);
 
   const resend = async () => {
@@ -71,22 +73,22 @@ function Card({ req }: { req: VerificationRequest }) {
           </View>
           <View className="flex-1 gap-0.5">
             <Text variant="micro" tone="faint">
-              {`${req.service} · 统一身份认证`}
+              {t('chat.verification.eyebrow', { service: req.service })}
             </Text>
-            <Text variant="headline">{`需要${TITLE[req.mode]}`}</Text>
+            <Text variant="headline">{t(TITLE[req.mode])}</Text>
           </View>
         </View>
         <Text variant="callout" tone="muted">
-          {req.mode === 'otp' ? '打开手机令牌 App，输入当前显示的 6 位数字。' : sentTo ? `验证码已发送至 ${sentTo}。` : '验证码已发送到账号绑定的手机。'}
+          {req.mode === 'otp' ? t('chat.verification.otpHint') : sentTo ? t('chat.verification.sentTo', { to: sentTo }) : t('chat.verification.sentToPhone')}
         </Text>
-        <Field value={code} onChangeText={setCode} keyboardType="number-pad" placeholder={req.mode === 'otp' ? '6 位数字' : '验证码'} autoFocus textContentType="oneTimeCode" autoComplete="sms-otp" error={error ?? undefined} />
+        <Field value={code} onChangeText={setCode} keyboardType="number-pad" placeholder={t(req.mode === 'otp' ? 'chat.verification.otpPlaceholder' : 'chat.verification.codePlaceholder')} autoFocus textContentType="oneTimeCode" autoComplete="sms-otp" error={error ?? undefined} />
         {req.resend ? (
-          <Button title={wait > 0 ? `${wait} 秒后可重新发送` : '重新发送验证码'} size="sm" variant="ghost" disabled={wait > 0} onPress={() => void resend()} className="self-start" />
+          <Button title={wait > 0 ? t('chat.verification.resendIn', { count: wait }) : t('chat.verification.resend')} size="sm" variant="ghost" disabled={wait > 0} onPress={() => void resend()} className="self-start" />
         ) : null}
         <View className="flex-row gap-2">
-          <Button title="取消" variant="secondary" onPress={() => verification.answer(req.id, null)} className="flex-1" />
+          <Button title={t('core.common.cancel')} variant="secondary" onPress={() => verification.answer(req.id, null)} className="flex-1" />
           <Button
-            title="验证"
+            title={t('chat.verification.verify')}
             disabled={!valid}
             onPress={() => {
               haptics.success();

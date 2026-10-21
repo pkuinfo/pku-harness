@@ -10,12 +10,14 @@ import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import type { McpServerInfo, McpTool } from '@/core/mcp/client';
 import { effectOf, probeRemote, remotePlugins } from '@/core/runtime/remote';
+import { useT } from '@/i18n';
 import { haptics } from '@/utils/haptics';
 
-import { EFFECTS } from './effects';
+import { effectInfo } from './effects';
 
 /** Settings → 插件 → 添加远程插件: connect to an MCP endpoint, review its tools, install. */
 export function AddRemotePlugin({ initialUrl = '', initialName = '' }: { initialUrl?: string; initialName?: string }) {
+  const t = useT();
   const [url, setUrl] = useState(initialUrl);
   const [token, setToken] = useState('');
   const [name, setName] = useState(initialName);
@@ -54,16 +56,16 @@ export function AddRemotePlugin({ initialUrl = '', initialName = '' }: { initial
 
   return (
     <SheetScreen
-      title="添加远程插件"
-      primary={probe ? '安装' : '连接'}
+      title={t('app.plugins.addRemote.title')}
+      primary={probe ? t('app.plugins.addRemote.install') : t('app.plugins.addRemote.connect')}
       onPrimary={probe ? install : connect}
       primaryDisabled={!/^https?:\/\/.+/.test(url.trim())}
       loading={busy}>
       <Text variant="callout" tone="muted">
-        远程插件是第三方通过 MCP 协议提供的服务。它只能收到你授权给它的输入，拿不到校园密码；除读取外的操作默认每次询问你。
+        {t('app.plugins.addRemote.intro')}
       </Text>
       <Field
-        label="MCP 地址"
+        label={t('app.plugins.addRemote.url')}
         value={url}
         onChangeText={(v) => {
           setUrl(v);
@@ -74,7 +76,7 @@ export function AddRemotePlugin({ initialUrl = '', initialName = '' }: { initial
         autoCorrect={false}
         keyboardType="url"
       />
-      <Field label="访问令牌（可选）" value={token} onChangeText={setToken} placeholder="Bearer token" secureTextEntry autoCapitalize="none" />
+      <Field label={t('app.plugins.addRemote.token')} value={token} onChangeText={setToken} placeholder="Bearer token" secureTextEntry autoCapitalize="none" />
       {error ? (
         <Surface level={2}>
           <Text variant="callout" tone="down">
@@ -84,16 +86,16 @@ export function AddRemotePlugin({ initialUrl = '', initialName = '' }: { initial
       ) : null}
       {probe ? (
         <View className="gap-4">
-          <Field label="名称" value={name} onChangeText={setName} />
-          <ListGroup title={`${probe.server?.name ?? '服务'} · ${probe.tools.length} 个能力`}>
-            {probe.tools.map((t) => {
-              const e = effectOf(t);
+          <Field label={t('app.plugins.addRemote.name')} value={name} onChangeText={setName} />
+          <ListGroup title={t('app.plugins.addRemote.tools', { server: probe.server?.name ?? t('app.plugins.addRemote.server'), count: probe.tools.length })}>
+            {probe.tools.map((tool) => {
+              const e = effectOf(tool);
               return (
                 <ListRow
-                  key={t.name}
-                  title={t.title ?? t.annotations?.title ?? t.name}
-                  subtitle={t.description}
-                  accessory={<Chip label={EFFECTS[e].label} tone={EFFECTS[e].tone} />}
+                  key={tool.name}
+                  title={tool.title ?? tool.annotations?.title ?? tool.name}
+                  subtitle={tool.description}
+                  accessory={<Chip label={effectInfo(e, t).label} tone={effectInfo(e, t).tone} />}
                 />
               );
             })}

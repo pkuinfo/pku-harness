@@ -2,20 +2,26 @@ import type { ChipTone } from '@/components/chip';
 import type { IconName } from '@/components/icon';
 import type { EffectMode } from '@/core/runtime/plugin-settings';
 import type { PluginDef, ToolEffect } from '@/core/runtime/types';
+import type { useT } from '@/i18n';
 
-export const EFFECTS: Record<ToolEffect, { label: string; hint: string; tone: ChipTone }> = {
-  read: { label: '读取', hint: '查询余额、课表、公告等', tone: 'info' },
-  write: { label: '修改', hint: '创建提醒、改设置、提交表单', tone: 'warn' },
-  money: { label: '资金', hint: '充值、缴费、付款码', tone: 'down' },
-  public: { label: '公开', hint: '发帖、评论等他人可见的操作', tone: 'accent' },
-};
+/** The translate function from `useT()`, so labels follow the app language on re-render. */
+type Translate = ReturnType<typeof useT>;
+
+const TONE: Record<ToolEffect, ChipTone> = { read: 'info', write: 'warn', money: 'down', public: 'accent' };
+
+/** Label, hint and chip tone for one tool effect. */
+export const effectInfo = (e: ToolEffect, t: Translate) => ({
+  label: t(`app.plugins.effects.${e}`),
+  hint: t(`app.plugins.effects.${e}Hint`),
+  tone: TONE[e],
+});
 
 export const EFFECT_ORDER: ToolEffect[] = ['read', 'write', 'money', 'public'];
 
-export const MODE_OPTIONS: { label: string; value: EffectMode }[] = [
-  { label: '直接执行', value: 'auto' },
-  { label: '每次询问', value: 'ask' },
-  { label: '禁止', value: 'off' },
+export const modeOptions = (t: Translate): { label: string; value: EffectMode }[] => [
+  { label: t('app.plugins.modes.auto'), value: 'auto' },
+  { label: t('app.plugins.modes.ask'), value: 'ask' },
+  { label: t('app.plugins.modes.off'), value: 'off' },
 ];
 
 /** Effects a plugin actually uses, in display order. */

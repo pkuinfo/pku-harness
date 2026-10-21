@@ -4,6 +4,8 @@
  */
 import type { ModelMessage } from 'ai';
 
+import type { MessageKey, Params } from '@/i18n';
+
 import type { AttachmentPart, ChatMessage, ChatPart } from './chat-store';
 
 /** Plain text a message shows (text parts only). */
@@ -43,8 +45,16 @@ export function cleanTitle(raw: string): string | null {
   t = t.replace(/^["'“”‘’「」《》【】\s]+|["'“”‘’「」《》【】\s。．.，,！!？?；;：:]+$/g, '');
   if (!t) return null;
   const chars = [...t];
-  return chars.length > 20 ? chars.slice(0, 20).join('') : t;
+  // Chinese titles are ≤ 12 characters by request; English ones are ≤ 5 words, cut on a word.
+  if (/[\u3400-\u9fff]/.test(t)) return chars.length > 20 ? chars.slice(0, 20).join('') : t;
+  if (chars.length <= 48) return t;
+  const head = chars.slice(0, 48).join('');
+  const space = head.lastIndexOf(' ');
+  return (space > 0 ? head.slice(0, space) : head).replace(/[\s,.;:-]+$/, '');
 }
+
+/** A translator: `t` from '@/i18n' or the function `useT()` returns (keeps this module pure). */
+export type Tr = (key: MessageKey, params?: Params) => string;
 
 /** Messages that count (notices and compaction markers don't). */
 export const countMessages = (messages: ChatMessage[]) => messages.filter((m) => m.role !== 'event').length;
@@ -54,12 +64,12 @@ export const countMessages = (messages: ChatMessage[]) => messages.filter((m) =>
  * still `running` become errors, and the reply that was streaming (`runningId`) is marked
  * interrupted so the UI offers 重试 instead of spinning forever.
  */
-export function markInterrupted(messages: ChatMessage[], runningId?: string): { messages: ChatMessage[]; changed: boolean } {
+export function markInterrupted(messages: ChatMessage[], runningId?: string, label = '已中断'): { messages: ChatMessage[]; changed: boolean } {
   let changed = false;
   const out = messages.map((m) => {
     let parts = m.parts;
     if (m.parts.some((p) => p.type === 'tool' && p.status === 'running')) {
-      parts = m.parts.map((p): ChatPart => (p.type === 'tool' && p.status === 'running' ? { ...p, status: 'error', error: '已中断' } : p));
+      parts = m.parts.map((p): ChatPart => (p.type === 'tool' && p.status === 'running' ? { ...p, status: 'error', error: label } : p));
     }
     const interrupted = m.role === 'assistant' && m.id === runningId && !m.meta?.ended;
     if (parts === m.parts && !interrupted) return m;
@@ -100,8 +110,9 @@ export function userText(text: string, attachments: AttachmentPart[] = []): stri
   return [text, ...inline].filter(Boolean).join('\n\n');
 }
 
-export type Section = '置顶' | '今天' | '昨天' | '7 天内' | '更早';
-export const SECTIONS: Section[] = ['置顶', '今天', '昨天', '7 天内', '更早'];
+/** Sessions sheet sections; titles are `chat.sessions.sections.<id>` (置顶/今天/昨天/7 天内/更早). */
+export type Section = 'pinned' | 'today' | 'yesterday' | 'week' | 'earlier';
+export const SECTIONS: Section[] = ['pinned', 'today', 'yesterday', 'week', 'earlier'];
 
 const startOfDay = (t: number) => {
   const d = new Date(t);
@@ -110,29 +121,33 @@ const startOfDay = (t: number) => {
 };
 const DAY = 86_400_000;
 
-export function sectionOf(ts: number, now = Date.now()): Exclude<Section, '置顶'> {
+export function sectionOf(ts: number, now = Date.now()): Exclude<Section, 'pinned'> {
   const today = startOfDay(now);
-  if (ts >= today) return '今天';
-  if (ts >= today - DAY) return '昨天';
-  if (ts >= today - 6 * DAY) return '7 天内';
-  return '更早';
+  if (ts >= today) return 'today';
+  if (ts >= today - DAY) return 'yesterday';
+  if (ts >= today - 6 * DAY) return 'week';
+  return 'earlier';
 }
 
 const pad = (n: number) => String(n).padStart(2, '0');
 
-/** Short relative time for list rows: 刚刚, 5 分钟前, 14:20, 昨天, 周二, 10月3日, 2025/10/3. */
-export function relativeTime(ts: number, now = Date.now()): string {
+/**
+ * Short relative time for list rows, in the language of `tr`: 刚刚, 5 分钟前, 14:20, 昨天, 周二,
+ * 10月3日, 2025/10/3 / Just now, 5 min ago, 14:20, Yesterday, Tue, Oct 3, Oct 3, 2025.
+ */
+export function relativeTime(ts: number, tr: Tr, now = Date.now()): string {
   const diff = now - ts;
-  if (diff < 60_000) return '刚刚';
+  if (diff < 60_000) return tr('chat.time.justNow');
   const d = new Date(ts);
   if (ts >= startOfDay(now)) {
-    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
+    if (diff < 3_600_000) return tr('chat.time.minutesAgo', { count: Math.floor(diff / 60_000) });
     return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
-  if (ts >= startOfDay(now) - DAY) return '昨天';
-  if (ts >= startOfDay(now) - 6 * DAY) return `周${'日一二三四五六'[d.getDay()]}`;
-  if (d.getFullYear() === new Date(now).getFullYear()) return `${d.getMonth() + 1}月${d.getDate()}日`;
-  return `${d.getFullYear()}/${d.getMonth() + 1}/${d.getDate()}`;
+  if (ts >= startOfDay(now) - DAY) return tr('chat.time.yesterday');
+  if (ts >= startOfDay(now) - 6 * DAY) return tr('chat.time.weekdays').split(',')[d.getDay()];
+  const date = { month: tr('chat.time.months').split(',')[d.getMonth()], monthNum: d.getMonth() + 1, day: d.getDate(), year: d.getFullYear() };
+  if (d.getFullYear() === new Date(now).getFullYear()) return tr('chat.time.monthDay', date);
+  return tr('chat.time.fullDate', date);
 }
 
 type Listable = { id: string; title: string | null; preview: string; pinned: boolean; updatedAt: number };
@@ -144,7 +159,7 @@ export function groupSessions<T extends Listable>(list: T[], query = '', now = D
   const sorted = [...hits].sort((a, b) => b.updatedAt - a.updatedAt);
   const by = new Map<Section, T[]>();
   for (const s of sorted) {
-    const key = s.pinned ? '置顶' : sectionOf(s.updatedAt, now);
+    const key: Section = s.pinned ? 'pinned' : sectionOf(s.updatedAt, now);
     by.set(key, [...(by.get(key) ?? []), s]);
   }
   return SECTIONS.filter((s) => by.has(s)).map((section) => ({ section, items: by.get(section)! }));
@@ -162,17 +177,26 @@ export function formatTokens(n: number): string {
   return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
 }
 
-/** Reply footer caption (§6.5): `Flash · 9.2s · 输入 12.4k（缓存 86%）· 输出 860`. */
-export function turnCaption(meta: { model?: string; durationMs?: number; inputTokens?: number; cachedInputTokens?: number; outputTokens?: number }, modelLabel?: string): string {
+/**
+ * Reply footer caption (§6.5), in the language of `tr`: `Flash · 9.2s · 输入 12.4k（缓存 86%）· 输出 860`
+ * / `Flash · 9.2s · In 12.4k (86% cached) · Out 860`.
+ */
+export function turnCaption(
+  meta: { model?: string; durationMs?: number; inputTokens?: number; cachedInputTokens?: number; outputTokens?: number },
+  modelLabel: string | undefined,
+  tr: Tr,
+): string {
   const parts: string[] = [];
   const name = modelLabel ?? meta.model;
   if (name) parts.push(name);
   if (meta.durationMs != null) parts.push(`${(meta.durationMs / 1000).toFixed(1)}s`);
   if (meta.inputTokens != null) {
-    const cache = meta.inputTokens > 0 && meta.cachedInputTokens ? `（缓存 ${Math.round((meta.cachedInputTokens / meta.inputTokens) * 100)}%）` : '';
-    parts.push(`输入 ${formatTokens(meta.inputTokens)}${cache}`);
+    const value = formatTokens(meta.inputTokens);
+    const cached = meta.inputTokens > 0 && meta.cachedInputTokens ? Math.round((meta.cachedInputTokens / meta.inputTokens) * 100) : 0;
+    parts.push(cached ? tr('chat.caption.inputCached', { value, pct: cached }) : tr('chat.caption.input', { value }));
   }
-  if (meta.outputTokens != null) parts.push(`输出 ${formatTokens(meta.outputTokens)}`);
+  if (meta.outputTokens != null) parts.push(tr('chat.caption.output', { value: formatTokens(meta.outputTokens) }));
+  // A full-width bracket already spaces itself: '…（缓存 86%）· 输出'.
   return parts.join(' · ').replace('） · ', '）· ');
 }
 

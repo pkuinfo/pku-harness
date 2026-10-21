@@ -3,7 +3,9 @@ import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-nati
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { approvals, useApproval } from '@/core/runtime/approvals';
+import { pluginName, toolTitle } from '@/core/runtime/localize';
 import { registry } from '@/core/runtime/registry';
+import { useT } from '@/i18n';
 import { shadows, spacing, springs, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
@@ -15,12 +17,12 @@ import { Text } from './text';
 
 const CURVE = { borderCurve: 'continuous' } as const;
 
-const EFFECT: Record<string, { label: string; tone: ChipTone }> = {
-  read: { label: '读取', tone: 'info' },
-  write: { label: '修改', tone: 'warn' },
-  money: { label: '资金', tone: 'down' },
-  public: { label: '公开', tone: 'accent' },
-};
+const EFFECT = {
+  read: { label: 'chat.approval.read', tone: 'info' },
+  write: { label: 'chat.approval.write', tone: 'warn' },
+  money: { label: 'chat.approval.money', tone: 'down' },
+  public: { label: 'chat.approval.public', tone: 'accent' },
+} as const satisfies Record<string, { label: string; tone: ChipTone }>;
 
 /** Compact, readable preview of tool input (top-level fields only). */
 function preview(input: unknown): [string, string][] {
@@ -37,11 +39,13 @@ function preview(input: unknown): [string, string][] {
  */
 export function ApprovalPrompt() {
   const c = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const req = useApproval();
   if (!req) return null;
   const plugin = registry.get(req.entry.pluginId);
-  const effect = EFFECT[req.entry.def.effect];
+  const effect = EFFECT[req.entry.def.effect as keyof typeof EFFECT];
+  const from = { plugin: plugin ? pluginName(plugin) : req.entry.pluginId };
   const fields = preview(req.input);
 
   const answer = (ok: boolean, always = false) => {
@@ -66,14 +70,14 @@ export function ApprovalPrompt() {
           </View>
           <View className="flex-1 gap-0.5">
             <Text variant="micro" tone="faint">
-              AI 请求执行
+              {t('chat.approval.eyebrow')}
             </Text>
-            <Text variant="headline">{req.entry.def.title}</Text>
+            <Text variant="headline">{toolTitle(plugin, req.entry.name, req.entry.def.title)}</Text>
           </View>
-          <Chip label={effect.label} tone={effect.tone} />
+          {effect ? <Chip label={t(effect.label)} tone={effect.tone} /> : null}
         </View>
         <Text variant="callout" tone="muted">
-          来自「{plugin?.name ?? req.entry.pluginId}」{plugin?.remote ? ' · 第三方远程插件' : ''}。你设置了这类操作需要确认。
+          {t(plugin?.remote ? 'chat.approval.fromRemote' : 'chat.approval.from', from)}
         </Text>
         {fields.length ? (
           <View className="gap-1 rounded-md bg-surface-2 p-3" style={CURVE}>
@@ -90,12 +94,12 @@ export function ApprovalPrompt() {
           </View>
         ) : null}
         <View className="flex-row gap-2">
-          <Button title="拒绝" variant="secondary" onPress={() => answer(false)} className="flex-1" />
-          <Button title="允许" onPress={() => answer(true)} className="flex-[2]" />
+          <Button title={t('chat.approval.deny')} variant="secondary" onPress={() => answer(false)} className="flex-1" />
+          <Button title={t('chat.approval.allow')} onPress={() => answer(true)} className="flex-[2]" />
         </View>
-        <PressableScale accessibilityRole="button" accessibilityLabel="允许并以后不再询问" haptic={false} onPress={() => answer(true, true)} className="self-center py-1">
+        <PressableScale accessibilityRole="button" accessibilityLabel={t('chat.approval.alwaysA11y')} haptic={false} onPress={() => answer(true, true)} className="self-center py-1">
           <Text variant="caption" tone="muted">
-            允许，以后同类操作不再询问
+            {t('chat.approval.always')}
           </Text>
         </PressableScale>
       </Animated.View>

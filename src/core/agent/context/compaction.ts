@@ -6,6 +6,7 @@
 import { generateText, type ModelMessage } from 'ai';
 
 import { recordStep } from '@/core/usage';
+import { t } from '@/i18n';
 
 import { chatStore, newId, type ChatMessage } from '@/core/agent/session/chat-store';
 import {
@@ -13,6 +14,7 @@ import {
   runCompaction,
   type CompactionMode,
   type CompactionOutcome,
+  type RejectReason,
   type SessionData,
 } from './compaction-core';
 import { getModel } from '@/core/agent/provider';
@@ -107,7 +109,7 @@ async function summarize(sessionId: string, messages: ModelMessage[]): Promise<s
     tools: [],
     purpose: 'compaction',
   });
-  if (r.finishReason === 'length') throw new CompactionRejected('摘要被截断，已放弃压缩');
+  if (r.finishReason === 'length') throw new CompactionRejected('truncated');
   return r.text;
 }
 
@@ -166,8 +168,15 @@ async function compact(sessionId: string, mode: CompactionMode): Promise<Compact
  * summary, model error) so the command can show it.
  */
 export async function compactNow(sessionId?: string): Promise<CompactionResult | null> {
-  return compact(sessionId ?? sessions.activeId(), 'manual');
+  try {
+    return await compact(sessionId ?? sessions.activeId(), 'manual');
+  } catch (e) {
+    if (e instanceof CompactionRejected) throw new CompactionRejected(e.reason, t(REJECTED[e.reason]));
+    throw e;
+  }
 }
+
+const REJECTED = { empty: 'chat.agent.compactEmpty', notShorter: 'chat.agent.compactNotShorter', truncated: 'chat.agent.compactTruncated' } as const satisfies Record<RejectReason, string>;
 
 /**
  * Called by the run loop before each model request; compacts when over the session's budget.

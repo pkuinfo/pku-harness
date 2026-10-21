@@ -1,11 +1,11 @@
 import { generateText, type LanguageModel } from 'ai';
 
 import { recordStep } from '@/core/usage';
+import { t } from '@/i18n';
 
 import { sessionStore } from './chat-store';
 import { cleanTitle, textOf } from './session-utils';
 
-const PROMPT = '用不超过 12 个汉字概括这段对话的主题，只输出标题，不要标点和引号';
 
 /**
  * Auto title (§2): after the first assistant reply, one cheap request on the session's own model
@@ -18,7 +18,7 @@ export async function autoTitle(sessionId: string, model: LanguageModel, ids: { 
   const user = s.messages.find((m) => m.role === 'user');
   const reply = s.messages.find((m) => m.role === 'assistant' && textOf(m).trim());
   if (!user || !reply) return;
-  const clip = (t: string, n: number) => ([...t].length > n ? [...t].slice(0, n).join('') + '…' : t);
+  const clip = (s: string, n: number) => ([...s].length > n ? [...s].slice(0, n).join('') + '…' : s);
   const started = Date.now();
   try {
     const result = await generateText({
@@ -29,7 +29,8 @@ export async function autoTitle(sessionId: string, model: LanguageModel, ids: { 
       messages: [
         { role: 'user', content: clip(textOf(user), 600) },
         { role: 'assistant', content: clip(textOf(reply), 600) },
-        { role: 'user', content: PROMPT },
+        // In the app language, so the title matches the UI around it.
+        { role: 'user', content: t('chat.agent.titlePrompt') },
       ],
     });
     const u = result.usage;

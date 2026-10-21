@@ -9,6 +9,7 @@ import { bindFinish, bindStart, currentCodeAsync, otpStatus, unbindLocal } from 
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';
 import { services } from '@/core/runtime/invoke';
+import { pluginName, toolTitle, widgetText } from '@/core/runtime/localize';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { effectOf, remotePlugins } from '@/core/runtime/remote';
 import { registry } from '@/core/runtime/registry';
@@ -19,6 +20,7 @@ import { timetable } from '@/core/timetable/store';
 import { addTodo, deleteTodo, setTodoDone, todoStore, updateTodo } from '@/core/todo';
 import { describeCatalog } from '@/genui/catalog';
 import { checkSpec } from '@/genui/check';
+import { t } from '@/i18n';
 
 /**
  * The harness side of the plugin contract: every service a plugin may use, implemented on the
@@ -58,16 +60,16 @@ const host: HostServices = {
         const s = pluginSettings.get(p.id);
         return {
           id: p.id,
-          name: p.name,
+          name: pluginName(p),
           kind: p.core ? 'system' : p.remote ? 'remote' : 'builtin',
           enabled: s.enabled && !registry.unavailable(p.id),
           modes: s.modes,
-          tools: Object.entries(p.tools).map(([name, t]) => ({ id: `${p.id}.${name}`, title: t.title, effect: t.effect })),
+          tools: Object.entries(p.tools).map(([name, tool]) => ({ id: `${p.id}.${name}`, title: toolTitle(p, name, tool.title), effect: tool.effect })),
         };
       }),
     tool: (id) => {
       const e = registry.tool(id);
-      return e ? { id: e.id, pluginId: e.pluginId, title: e.def.title, effect: e.def.effect } : undefined;
+      return e ? { id: e.id, pluginId: e.pluginId, title: toolTitle(registry.get(e.pluginId), e.name, e.def.title), effect: e.def.effect } : undefined;
     },
   },
   remote: {
@@ -87,7 +89,7 @@ const host: HostServices = {
     list: () => jobStore.list(),
     runCheck: async (id) => {
       const job = jobStore.get(id);
-      if (!job) throw new Error(`没有这个任务：${id}`);
+      if (!job) throw new Error(t('app.schedule.noJob', { id }));
       return runCheck(job);
     },
   },
@@ -105,12 +107,13 @@ const host: HostServices = {
         if (!pluginSettings.get(p.id).enabled || registry.unavailable(p.id)) return [];
         return Object.entries(p.contributes?.widgets ?? {}).map(([widget, c]) => {
           const sizes = c.sizes?.length ? c.sizes : (['sm', 'md', 'lg'] as const).slice();
+          const text = widgetText(p, widget, c);
           return {
             plugin: p.id,
-            pluginName: p.name,
+            pluginName: pluginName(p),
             widget,
-            title: c.title,
-            description: c.description,
+            title: text.title,
+            description: text.description ?? c.description,
             sizes,
             defaultSize: c.defaultSize ?? sizes[0],
             config: c.configSchema ? (z.toJSONSchema(c.configSchema) as Record<string, unknown>) : undefined,
@@ -132,7 +135,7 @@ const host: HostServices = {
       return { signedIn: s.signedIn, username: s.username, name: s.name ?? null };
     },
     request: async (service, req) => {
-      if (!campusAccount.get().signedIn) throw new Error('还没有登录校园账号（设置 → 校园账号）');
+      if (!campusAccount.get().signedIn) throw new Error(t('app.campus.errors.notSignedIn'));
       const res = await pluginCampusRequest(service, req);
       return { status: res.status, url: res.url, headers: res.headers, body: res.body };
     },
@@ -147,13 +150,13 @@ const host: HostServices = {
     },
     otpStatus,
     otpBindStart: async () => {
-      if (!campusAccount.get().signedIn) throw new Error('还没有登录校园账号（设置 → 校园账号）');
+      if (!campusAccount.get().signedIn) throw new Error(t('app.campus.errors.notSignedIn'));
       return bindStart();
     },
     otpBindFinish: (smsCode) => bindFinish(smsCode),
     otpUnbindLocal: unbindLocal,
     openSignedIn: async (service) => {
-      if (!campusAccount.get().signedIn) throw new Error('还没有登录校园账号（设置 → 校园账号）');
+      if (!campusAccount.get().signedIn) throw new Error(t('app.campus.errors.notSignedIn'));
       const url = await campusHandoff(service);
       if (!/^https:\/\//i.test(url)) throw new Error('无法打开该校园服务');
       await WebBrowser.openBrowserAsync(url, { showTitle: true, enableBarCollapsing: true, createTask: false });

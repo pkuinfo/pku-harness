@@ -307,3 +307,29 @@ their files (others may be mid-edit), do not commit, do not use the emulator.
 
 Stage 2 (lead): wire everything in `run.ts`/`index.tsx`, native rebuild for new packages,
 device verification in both themes, docs/PLAN.md.
+
+## 8. Languages (i18n)
+
+- **Locales**: Simplified Chinese (`zh-Hans`, source) and English (`en`). Preference
+  跟随系统 / 简体中文 / English in Settings (next to 外观), persisted like the theme; 跟随系统
+  follows the device's language list (any Chinese → zh-Hans, English → en, else zh-Hans) and is
+  re-read when the app returns to the foreground. Android/iOS per-app language lists both
+  (expo-localization config plugin).
+- **App strings**: `src/i18n` — `useT()` in components, `t()` elsewhere (notices,
+  notifications, errors shown to the user). Dictionaries in `src/i18n/messages/<locale>/<area>.ts`
+  (core, chat, app, welcome); `en` must match `zh-Hans` key for key (type-checked). Keys are
+  `area.group.name`; `{name}` placeholders; English singular via a sibling `<key>_one` when
+  `count === 1`. Never concatenate translated fragments into sentences; pass params.
+- **Dates/numbers**: `src/utils/date.ts` (`formatDate`, `formatDateTime`, `formatWeekday`,
+  locale-aware, hand-formatted because Hermes ignores Intl locales). The model-facing timestamp
+  (`formatFull`, prompt time line) stays fixed.
+- **Plugins**: manifest strings get an English overlay in `definePlugin({ i18n: { en: {...} } })`
+  (name, description, tool titles, widgets, screens, settings rows, commands, data sources); the
+  host shows them through `src/core/runtime/localize.ts`. Plugin screens/widgets read
+  `host.useLocale()` and keep their own small per-locale string tables. Tool descriptions and
+  `instructions` are for the model and are not translated.
+- **The agent** replies in the app language (system prompt rule) unless the user writes in
+  another one; campus names (树洞, 教学网) stay recognisable with an English gloss.
+- **English copy**: sentence case, short, no exclamation marks, curly apostrophes (’), campus
+  proper nouns in pinyin/official English where one exists (Peking University, Treehole (树洞),
+  Course (教学网 / Blackboard), Campus Card).

@@ -2,7 +2,9 @@ import { DatePickerDialog, TimePickerDialog } from '@expo/ui/jetpack-compose';
 import { useState } from 'react';
 import { Platform, View } from 'react-native';
 
+import { useLocale, useT } from '@/i18n';
 import { useTheme, type ThemeColors } from '@/theme';
+import { formatDateWeekday } from '@/utils/date';
 
 import { Icon } from './icon';
 import { NativeHost } from './native-host';
@@ -40,9 +42,6 @@ export function pickerColors(c: ThemeColors) {
 
 const CURVE = { borderCurve: 'continuous' } as const;
 const pad = (n: number) => String(n).padStart(2, '0');
-const WEEKDAY = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-
-export const formatDate = (d: Date) => `${d.getMonth() + 1}月${d.getDate()}日 ${WEEKDAY[d.getDay()]}`;
 export const formatClock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
 /**
@@ -54,7 +53,7 @@ export function DateTimeField({
   value,
   onChange,
   mode = 'datetime',
-  placeholder = '未设置',
+  placeholder,
   onClear,
 }: {
   label: string;
@@ -65,6 +64,8 @@ export function DateTimeField({
   onClear?: () => void;
 }) {
   const c = useTheme();
+  const t = useT();
+  const locale = useLocale();
   const [step, setStep] = useState<'none' | 'date' | 'time'>('none');
   const base = value ?? defaultValue();
 
@@ -84,13 +85,16 @@ export function DateTimeField({
     setStep('none');
   };
 
+  const date = value ? formatDateWeekday(value, new Date(), locale) : '';
   const text = value
     ? mode === 'date'
-      ? formatDate(value)
+      ? date
       : mode === 'time'
         ? formatClock(value)
-        : `${formatDate(value)} ${formatClock(value)}`
-    : placeholder;
+        : locale === 'en'
+          ? `${date}, ${formatClock(value)}`
+          : `${date} ${formatClock(value)}`
+    : (placeholder ?? t('app.ui.notSet'));
 
   return (
     <View className="gap-1">
@@ -100,7 +104,7 @@ export function DateTimeField({
       <View className="flex-row items-center gap-2">
         <PressableScale
           accessibilityRole="button"
-          accessibilityLabel={`${label}：${text}`}
+          accessibilityLabel={t('app.ui.fieldValue', { label, value: text })}
           onPress={() => setStep(mode === 'time' ? 'time' : 'date')}
           scaleTo={0.98}
           className="min-h-12 flex-1 flex-row items-center gap-2 rounded-md border border-edge bg-surface-2 px-3"
@@ -111,7 +115,7 @@ export function DateTimeField({
           </Text>
         </PressableScale>
         {value && onClear ? (
-          <PressableScale accessibilityRole="button" accessibilityLabel={`清除${label}`} onPress={onClear} className="size-10 items-center justify-center">
+          <PressableScale accessibilityRole="button" accessibilityLabel={t('app.ui.clear', { label })} onPress={onClear} className="size-10 items-center justify-center">
             <Icon name="close" size={18} color={c.textFaint} />
           </PressableScale>
         ) : null}
@@ -120,8 +124,8 @@ export function DateTimeField({
         <NativeHost>
           <DatePickerDialog
             initialDate={new Date(Date.UTC(base.getFullYear(), base.getMonth(), base.getDate())).toISOString()}
-            confirmButtonLabel="确定"
-            dismissButtonLabel="取消"
+            confirmButtonLabel={t('app.ui.ok')}
+            dismissButtonLabel={t('core.common.cancel')}
             color={c.accent}
             elementColors={pickerColors(c)}
             onDateSelected={pickedDate}
@@ -134,8 +138,8 @@ export function DateTimeField({
           <TimePickerDialog
             initialDate={base.toISOString()}
             is24Hour
-            confirmButtonLabel="确定"
-            dismissButtonLabel="取消"
+            confirmButtonLabel={t('app.ui.ok')}
+            dismissButtonLabel={t('core.common.cancel')}
             color={c.accent}
             elementColors={pickerColors(c)}
             onDateSelected={pickedTime}

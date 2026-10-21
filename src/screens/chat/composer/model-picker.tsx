@@ -13,6 +13,7 @@ import { useAIConfig } from '@/core/agent/provider';
 import { sessions } from '@/core/agent/session/sessions';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import type { ProviderModel } from '@/core/runtime/types';
+import { useT } from '@/i18n';
 import { spacing, useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
@@ -34,6 +35,7 @@ function close() {
  */
 export function ModelPicker() {
   const c = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   useAIConfig();
   useSyncExternalStore(pluginSettings.subscribe, pluginSettings.snapshot);
@@ -48,7 +50,7 @@ export function ModelPicker() {
     }
     haptics.select();
     await applyModel(providerId, model.id);
-    if (busy) sessions.notice(`下一条消息起使用 ${shortModelName(model.id, model.name)}`, 'info', { command: '/model' });
+    if (busy) sessions.notice(t('chat.model.nextMessage', { model: shortModelName(model.id, model.name) || model.id }), 'info', { command: '/model' });
     close();
   };
 
@@ -57,20 +59,20 @@ export function ModelPicker() {
     <View className="bg-elevated">
       <View className="flex-row items-start gap-3 pb-3 pl-5 pr-3 pt-5">
         <View className="flex-1 gap-0.5">
-          <Text variant="headline">选择模型</Text>
+          <Text variant="headline">{t('chat.model.title')}</Text>
           <Text variant="caption" tone="muted">
-            从下一条消息起用于这个对话，也会作为新对话的默认模型
+            {t('chat.model.subtitle')}
           </Text>
         </View>
-        <IconButton icon="close" label="关闭" variant="ghost" size={36} onPress={() => router.back()} />
+        <IconButton icon="close" label={t('core.common.close')} variant="ghost" size={36} onPress={() => router.back()} />
       </View>
       <ScrollView style={{ flexGrow: 0 }} nestedScrollEnabled contentContainerClassName="gap-5 px-3" contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.lg }}>
         {groups.length === 0 ? (
           <View className="items-center gap-3 px-4 py-8">
             <Text variant="callout" tone="muted" align="center">
-              还没有可用的 AI 服务插件
+              {t('chat.model.noProviders')}
             </Text>
-            <Button title="去设置" variant="secondary" size="sm" onPress={() => router.replace('/ai-settings')} />
+            <Button title={t('chat.model.setup')} variant="secondary" size="sm" onPress={() => router.replace('/ai-settings')} />
           </View>
         ) : null}
         {groups.map(({ entry, ready }, gi) => {
@@ -83,9 +85,9 @@ export function ModelPicker() {
                     {entry.def.name}
                   </Text>
                   {ready ? null : (
-                    <PressableScale accessibilityRole="button" accessibilityLabel={`去设置 ${entry.def.name}`} onPress={() => router.replace('/ai-settings')} hitSlop={8} className="flex-row items-center gap-0.5">
+                    <PressableScale accessibilityRole="button" accessibilityLabel={t('chat.model.setupFor', { name: entry.def.name })} onPress={() => router.replace('/ai-settings')} hitSlop={8} className="flex-row items-center gap-0.5">
                       <Text variant="caption" tone="accent">
-                        去设置
+                        {t('chat.model.setup')}
                       </Text>
                       <Icon name="chevronRight" size={12} color={c.accent} />
                     </PressableScale>
@@ -93,7 +95,7 @@ export function ModelPicker() {
                 </View>
                 {models.length === 0 ? (
                   <Text variant="caption" tone="faint" className="px-2 pb-2">
-                    在 AI 服务设置里填写模型名称
+                    {t('chat.model.enterModel')}
                   </Text>
                 ) : null}
                 {models.map((m) => {
@@ -105,7 +107,7 @@ export function ModelPicker() {
                       key={m.id}
                       accessibilityRole="radio"
                       accessibilityState={{ selected, disabled: !ready }}
-                      accessibilityLabel={`${m.name ?? m.id}${m.description ? `，${m.description}` : ''}${window ? `，上下文 ${window}` : ''}${images ? '，支持图片' : ''}`}
+                      accessibilityLabel={[m.name ?? m.id, m.description, window ? t('chat.model.contextA11y', { window }) : '', images ? t('chat.model.imagesA11y') : ''].filter(Boolean).join(t('chat.model.a11ySep'))}
                       disabled={!ready}
                       haptic={false}
                       onPress={() => void select(entry.id, m)}
@@ -117,7 +119,7 @@ export function ModelPicker() {
                             {m.name ?? m.id}
                           </Text>
                           {window ? <Chip label={window} /> : null}
-                          {images ? <Chip label="图片" tone="info" icon="image" /> : null}
+                          {images ? <Chip label={t('chat.model.images')} tone="info" icon="image" /> : null}
                         </View>
                         {m.description ? (
                           <Text variant="caption" tone="muted" numberOfLines={2}>

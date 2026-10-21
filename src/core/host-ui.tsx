@@ -37,6 +37,7 @@ import { formatAgo, refreshAll, useBindings, useToolData, useWidgetData } from '
 import { widgetStore } from '@/core/dashboard/store';
 import { usePlugin } from '@/core/runtime/hooks';
 import { invokeTool, services } from '@/core/runtime/invoke';
+import { pluginName } from '@/core/runtime/localize';
 import { usePluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import type { HostComponents, HostTheme, HostUI, WidgetSize } from '@/core/runtime/types';
@@ -47,6 +48,7 @@ import { todoStore } from '@/core/todo/store';
 import { GenUIView } from '@/genui/view';
 import { useLayout } from '@/hooks/use-layout';
 import { useNow } from '@/hooks/use-now';
+import { useLocale, useT } from '@/i18n';
 import { useSecureDisplay } from '@/hooks/use-secure-display';
 import { courseColors, glassMaterial, radius, spacing, typography, useTheme, useThemeName } from '@/theme';
 import { haptics } from '@/utils/haptics';
@@ -85,15 +87,17 @@ function WidgetNotice({ icon, text }: { icon: string; text: string }) {
 
 /** A plugin's native dashboard widget, with its store and tool access, isolated by an error boundary. */
 function PluginWidget({ source, size }: { source: { plugin: string; widget: string; config?: Record<string, unknown> }; size: WidgetSize }) {
+  const t = useT();
+  const locale = useLocale();
   const plugin = usePlugin(source.plugin);
   const settings = usePluginSettings(source.plugin);
   const store = useMemo(() => kv(`plugin:${source.plugin}`), [source.plugin]);
   const contribution = plugin?.contributes?.widgets?.[source.widget];
-  if (!plugin || !contribution) return <WidgetNotice icon="puzzle" text={`找不到组件 ${source.plugin}/${source.widget}，插件可能已卸载`} />;
-  if (!settings.enabled || registry.unavailable(plugin.id)) return <WidgetNotice icon="puzzle" text={`「${plugin.name}」已关闭或在此设备不可用`} />;
+  if (!plugin || !contribution) return <WidgetNotice icon="puzzle" text={t('app.widgets.notFound', { id: `${source.plugin}/${source.widget}` })} />;
+  if (!settings.enabled || registry.unavailable(plugin.id)) return <WidgetNotice icon="puzzle" text={t('app.widgets.unavailable', { name: pluginName(plugin, locale) })} />;
   const Widget = contribution.component;
   return (
-    <ErrorBoundary fallback={(e) => <WidgetNotice icon="warning" text={`组件出错：${e.message}`} />}>
+    <ErrorBoundary fallback={(e) => <WidgetNotice icon="warning" text={t('app.widgets.crashed', { message: e.message })} />}>
       <Widget
         host={hostUI}
         services={services}
@@ -192,6 +196,7 @@ export const hostUI: HostUI = {
   useStoreVersion: () => useSyncExternalStore(subscribe, () => version),
   useTheme: useHostTheme,
   useNow,
+  useLocale,
   dismiss: (fallback) => dismiss((fallback ?? '/schedule') as '/schedule'),
   ask: (text) => {
     router.navigate('/');

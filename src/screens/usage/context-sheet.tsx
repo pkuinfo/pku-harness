@@ -11,8 +11,9 @@ import { Text } from '@/components/text';
 import { useChatSelector } from '@/core/agent/session/chat-store';
 import { compactNow } from '@/core/agent/context/compaction';
 import { sessions, useActiveSessionId } from '@/core/agent/session/sessions';
-import { formatCompact, formatInt, formatPercent } from '@/core/usage/format';
+import { formatCompact, formatPercent } from '@/core/usage/format';
 import { useContextBreakdown } from '@/core/usage/hooks';
+import { useT } from '@/i18n';
 import { spacing } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
@@ -20,6 +21,7 @@ type Outcome = { tone: 'muted' | 'up' | 'down'; text: string } | null;
 
 /** Context sheet (docs/AGENT-HARNESS.md §6.3): what fills the active session's context. */
 export function ContextSheet() {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const sid = useActiveSessionId();
   const b = useContextBreakdown(sid);
@@ -28,7 +30,7 @@ export function ContextSheet() {
   const [outcome, setOutcome] = useState<Outcome>(null);
 
   const values = [b.systemTokens, b.toolsTokens, b.contextTokens, b.conversationTokens, b.toolResultTokens];
-  const labels = ['系统提示', '工具定义', '插件上下文', '对话', '工具结果'];
+  const labels = [t('chat.context.system'), t('chat.context.tools'), t('chat.context.plugins'), t('chat.context.conversation'), t('chat.context.toolResults')];
   const ratio = b.budget > 0 ? b.total / b.budget : 0;
   const tone = ratio >= 0.85 ? 'down' : ratio >= 0.6 ? 'warn' : 'default';
 
@@ -39,8 +41,8 @@ export function ContextSheet() {
       const r = await compactNow(sid);
       if (r) {
         haptics.success();
-        setOutcome({ tone: 'up', text: `已压缩 ${formatInt(r.compactedMessages)} 条消息 · ${formatCompact(r.tokensBefore)} → ${formatCompact(r.tokensAfter)} tokens` });
-      } else setOutcome({ tone: 'muted', text: '还没有可以压缩的内容' });
+        setOutcome({ tone: 'up', text: t('chat.message.compacted', { count: r.compactedMessages, before: formatCompact(r.tokensBefore), after: formatCompact(r.tokensAfter) }) });
+      } else setOutcome({ tone: 'muted', text: t('chat.context.nothingToCompact') });
     } catch (e) {
       haptics.warning();
       setOutcome({ tone: 'down', text: e instanceof Error ? e.message : String(e) });
@@ -53,13 +55,13 @@ export function ContextSheet() {
     <View className="gap-5 px-4 pt-4" style={{ paddingBottom: Math.max(insets.bottom, spacing.lg) }}>
       <View className="flex-row items-center">
         <Text variant="headline" className="flex-1">
-          上下文
+          {t('chat.context.title')}
         </Text>
-        <IconButton icon="close" label="关闭" variant="ghost" size={36} onPress={() => dismiss('/')} />
+        <IconButton icon="close" label={t('core.common.close')} variant="ghost" size={36} onPress={() => dismiss('/')} />
       </View>
 
       <View className="gap-1">
-        <View className="flex-row items-baseline gap-1.5" accessible accessibilityLabel={`已用 ${formatCompact(b.total)}，预算 ${formatCompact(b.budget)}，${formatPercent(ratio)}`}>
+        <View className="flex-row items-baseline gap-1.5" accessible accessibilityLabel={t('chat.context.usedA11y', { used: formatCompact(b.total), budget: formatCompact(b.budget), pct: formatPercent(ratio) })}>
           <Text variant="numberXL" tone={tone}>
             {formatCompact(b.total)}
           </Text>
@@ -68,16 +70,15 @@ export function ContextSheet() {
           </Text>
         </View>
         <Text variant="caption" tone="muted">
-          {`模型上下文 ${formatCompact(b.window)} · 超过预算会自动压缩较早的对话`}
+          {t('chat.context.window', { window: formatCompact(b.window) })}
         </Text>
       </View>
 
       <View className="gap-3">
-        <StackedBar values={values} colors={CONTEXT_SERIES} capacity={b.budget} accessibilityLabel={`上下文占预算 ${formatPercent(ratio)}`} />
+        <StackedBar values={values} colors={CONTEXT_SERIES} capacity={b.budget} accessibilityLabel={t('chat.context.barA11y', { pct: formatPercent(ratio) })} />
         <Legend columns items={labels.map((label, i) => ({ label, color: CONTEXT_SERIES[i], value: formatCompact(values[i]) }))} />
         <Text variant="caption" tone="faint">
-          {b.compactions > 0 ? `已压缩 ${b.compactions} 次` : '还没有压缩过'}
-          {b.reportedInputTokens ? ' · 按服务商上次报告的用量校准' : ' · 估算值'}
+          {`${b.compactions > 0 ? t('chat.context.compactedTimes', { count: b.compactions }) : t('chat.context.neverCompacted')} · ${t(b.reportedInputTokens ? 'chat.context.calibrated' : 'chat.context.estimated')}`}
         </Text>
       </View>
 
@@ -89,7 +90,7 @@ export function ContextSheet() {
 
       <View className="gap-2">
         <Button
-          title="压缩上下文"
+          title={t('chat.context.compact')}
           variant="secondary"
           icon="refresh"
           loading={busy}
@@ -98,11 +99,11 @@ export function ContextSheet() {
         />
         {streaming ? (
           <Text variant="caption" tone="faint" align="center">
-            回复结束后可用
+            {t('chat.context.afterReply')}
           </Text>
         ) : null}
         <Button
-          title="新对话"
+          title={t('chat.header.newChat')}
           variant="ghost"
           icon="plus"
           onPress={async () => {

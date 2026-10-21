@@ -281,7 +281,17 @@ export type CompactionOutcome = {
   part?: CompactionPart;
 };
 
-export class CompactionRejected extends Error {}
+/** Why a summary was refused; compaction.ts turns it into a message in the app language. */
+export type RejectReason = 'empty' | 'notShorter' | 'truncated';
+
+export class CompactionRejected extends Error {
+  constructor(
+    readonly reason: RejectReason,
+    message: string = reason,
+  ) {
+    super(message);
+  }
+}
 
 export type CompactionDeps = {
   estimate: Estimate;
@@ -327,9 +337,9 @@ export async function runCompaction(data: SessionData, mode: CompactionMode, dep
 
   const replaced = pruned.slice(0, cut);
   const summary = cleanSummary(await deps.summarize(buildSummaryMessages(replaced)));
-  if (!summary) throw new CompactionRejected('模型没有返回摘要');
+  if (!summary) throw new CompactionRejected('empty', '模型没有返回摘要');
   const checkpoint = checkpointMessage(summary);
-  if (estimate([checkpoint]) >= estimate(replaced)) throw new CompactionRejected('摘要没有比原对话更短，已放弃压缩');
+  if (estimate([checkpoint]) >= estimate(replaced)) throw new CompactionRejected('notShorter', '摘要没有比原对话更短，已放弃压缩');
 
   const history = [checkpoint, ...pruned.slice(cut)];
   const tokensAfter = overhead + estimate(history);

@@ -3,10 +3,16 @@ import { useSyncExternalStore } from 'react';
 
 import { kv } from '@/core/store/kv';
 import { secrets } from '@/core/store/secrets';
+import { t } from '@/i18n';
+import type { Messages } from '@/i18n/messages/zh-Hans';
 
 import { APP_HEADERS, campusFetch, cookieValue, FORM, form, resetSession, type CampusResponse, type MultipartOptions, type RequestOptions } from './http';
 import { credentials } from './credentials';
 import { iaaaSignIn, PORTAL_APP, type IaaaApp } from './iaaa';
+
+type ServiceName = keyof Messages['app']['campus']['service'];
+/** A campus service's display name in the app language (sign-in errors, the verification prompt). */
+export const serviceName = (name: ServiceName) => t(`app.campus.service.${name}`);
 
 /**
  * The campus account (docs/ARCHITECTURE.md §9). Credentials live only in SecureStore; the
@@ -56,7 +62,7 @@ export { credentials } from './credentials';
 export async function signIn(username: string, password: string) {
   const id = username.trim();
   await resetSession('iaaa');
-  const token = await iaaaSignIn(PORTAL_APP, id, password, '校园账号');
+  const token = await iaaaSignIn(PORTAL_APP, id, password, serviceName('account'));
   await secrets.set('campus.username', id);
   await secrets.set('campus.password', password);
   await setState({ signedIn: true, username: id, signedInAt: Date.now(), name: null });
@@ -107,12 +113,12 @@ const CARD_JWT_TTL = 23 * 3600_000; // pkucli assumes 24 h
 async function cardFromIaaaToken(iaaaToken: string): Promise<string> {
   await resetSession('card');
   const sso = await campusFetch('card', { url: `${PORTAL_APP.redirectUrl}?_rand=${Math.random()}&token=${encodeURIComponent(iaaaToken)}`, headers: APP_HEADERS });
-  if (sso.status >= 400) throw new Error(`门户登录失败（HTTP ${sso.status}）`);
+  if (sso.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('portal'), status: sso.status }));
   const toCard = await campusFetch('card', { url: `${PORTAL_BASE}/util/redirectToCard.do`, headers: APP_HEADERS });
-  if (!toCard.location) throw new Error(`获取校园卡授权失败（HTTP ${toCard.status}）`);
+  if (!toCard.location) throw new Error(t('app.campus.errors.cardAuth', { status: toCard.status }));
   const auth = await campusFetch('card', { url: toCard.location, headers: APP_HEADERS });
   const jwt = auth.location ? /[?&]synjones-auth=([^&#]+)/.exec(auth.location)?.[1] : undefined;
-  if (!jwt) throw new Error('校园卡登录失败：未拿到凭证');
+  if (!jwt) throw new Error(t('app.campus.errors.noCredential', { service: serviceName('card') }));
   const value = decodeURIComponent(jwt);
   await secrets.set('campus.card.jwt', JSON.stringify({ jwt: value, exp: Date.now() + CARD_JWT_TTL }));
   return value;
@@ -128,7 +134,7 @@ async function cardJwt(force = false): Promise<string> {
   }
   const { username, password } = await credentials();
   await resetSession('iaaa');
-  return cardFromIaaaToken(await iaaaSignIn(PORTAL_APP, username, password, '校园卡'));
+  return cardFromIaaaToken(await iaaaSignIn(PORTAL_APP, username, password, serviceName('card')));
 }
 
 async function cardRequest(req: RequestOptions, retried = false): Promise<CampusResponse> {
@@ -167,7 +173,7 @@ async function itsLogin() {
   });
   if (res.body.includes('alert(') && res.body.includes('history.back')) {
     const msg = /alert\("([^"]+)"\)/.exec(res.body)?.[1];
-    throw new Error(`网络账号登录失败：${msg ?? '未知原因'}`);
+    throw new Error(t('app.campus.errors.netAccount', { reason: msg ?? t('app.campus.errors.unknownReason') }));
   }
   itsReady = true;
   return res;
@@ -213,7 +219,7 @@ async function treeholeLogin(): Promise<TreeholeSession> {
   // The short device id is kept across logins (login.rs get_device_uuid: last 12 hex chars).
   const device = saved ? (JSON.parse(saved) as TreeholeSession).device : Crypto.randomUUID().replace(/-/g, '').slice(20);
   await resetSession('iaaa');
-  const token = await iaaaSignIn(treeholeApp(device), username, password, '树洞');
+  const token = await iaaaSignIn(treeholeApp(device), username, password, serviceName('treehole'));
   await resetSession('treehole');
   const cb = await campusFetch('treehole', {
     url: `${treeholeApp(device).redirectUrl}&_rand=${Math.random()}&token=${encodeURIComponent(token)}`,
@@ -221,7 +227,7 @@ async function treeholeLogin(): Promise<TreeholeSession> {
   });
   const jwt = cb.location ? queryParam(cb.location, 'token') : cookieValue('treehole', TREEHOLE_BASE, 'pku_token');
   const expires = Number((cb.location ? queryParam(cb.location, 'expires_in') : cookieValue('treehole', TREEHOLE_BASE, 'pku_expires_in')) ?? 0);
-  if (!jwt) throw new Error(`树洞登录失败：未拿到凭证（HTTP ${cb.status}）`);
+  if (!jwt) throw new Error(`${t('app.campus.errors.noCredential', { service: serviceName('treehole') })} (HTTP ${cb.status})`);
   const session: TreeholeSession = {
     jwt,
     // expires_in is a unix timestamp in seconds (login.rs format_timestamp); keep a margin.
@@ -301,10 +307,10 @@ async function bbFetch(req: RequestOptions): Promise<CampusResponse> {
 async function bbLogin() {
   const { username, password } = await credentials();
   await resetSession('iaaa');
-  const token = await iaaaSignIn(BB_APP, username, password, '教学网');
+  const token = await iaaaSignIn(BB_APP, username, password, serviceName('course'));
   await resetSession('blackboard');
   const sso = await bbFetch({ url: `${BB_BASE}/webapps/bb-sso-BBLEARN/execute/authValidate/campusLogin?_rand=${Math.random()}&token=${encodeURIComponent(token)}` });
-  if (sso.status >= 400) throw new Error(`教学网登录失败（HTTP ${sso.status}）`);
+  if (sso.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('course'), status: sso.status }));
   bbReady = true;
 }
 
@@ -332,7 +338,7 @@ export function campusRequest(service: CampusService, req: RequestOptions): Prom
   if (service === 'blackboard') return bbRequest(req);
   if (service === 'its') return itsRequest(req);
   const adapter = adapters.get(service);
-  if (!adapter) throw new Error(`没有这个校园服务：${service}`);
+  if (!adapter) throw new Error(t('app.campus.errors.noService', { service }));
   return adapter.request(req);
 }
 
@@ -373,7 +379,7 @@ export async function pluginCampusRequest(service: CampusService, req: PluginCam
 export function toMultipart(m: NonNullable<PluginCampusRequest['multipart']>): MultipartOptions {
   const pairs = Array.isArray(m.fields) ? m.fields : Object.entries(m.fields);
   for (const f of m.files) {
-    if (!/^(content|file):\/\//i.test(f.uri)) throw new Error(`只能上传本机选择的文件（${f.name}）`);
+    if (!/^(content|file):\/\//i.test(f.uri)) throw new Error(t('app.campus.errors.localFilesOnly', { name: f.name }));
   }
   return { fields: pairs.map(([name, value]) => ({ name, value: String(value) })), files: m.files.map(({ field, name, mime, uri }) => ({ field, name, mime, uri })) };
 }

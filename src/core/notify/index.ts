@@ -2,15 +2,18 @@ import * as Notifications from 'expo-notifications';
 import { AndroidImportance } from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { t, type MessageKey } from '@/i18n';
+
 /**
  * Local notifications (docs/ARCHITECTURE.md §8). Everything that shows a notification goes
  * through here so channels, permissions and the foreground handler stay in one place.
  */
 
-export const CHANNELS = {
-  reminders: { id: 'reminders', name: '提醒', description: '日程、待办与定时提醒' },
-  alerts: { id: 'alerts', name: '检查结果', description: '余额等后台检查触发的通知' },
-} as const;
+/** Channel names show in Android's notification settings; they are (re)registered in the app language at startup. */
+export const CHANNELS: Record<'reminders' | 'alerts', { id: string; name: MessageKey; description: MessageKey }> = {
+  reminders: { id: 'reminders', name: 'app.notifications.channels.reminders', description: 'app.notifications.channels.remindersDescription' },
+  alerts: { id: 'alerts', name: 'app.notifications.channels.alerts', description: 'app.notifications.channels.alertsDescription' },
+};
 
 export type ChannelId = keyof typeof CHANNELS;
 
@@ -33,8 +36,8 @@ export async function initNotifications() {
   if (Platform.OS === 'android') {
     for (const ch of Object.values(CHANNELS)) {
       await Notifications.setNotificationChannelAsync(ch.id, {
-        name: ch.name,
-        description: ch.description,
+        name: t(ch.name),
+        description: t(ch.description),
         importance: AndroidImportance.HIGH,
       });
     }

@@ -18,6 +18,7 @@ import { useAIConfig } from '@/core/agent/provider';
 import { interruptedTurn, regenerateLast, retryLast, sendMessage } from '@/core/agent/run';
 import { sessions, useActiveSessionId, useEditing, useRenameRequest, useSessionMeta, useSessions } from '@/core/agent/session/sessions';
 import { registry } from '@/core/runtime/registry';
+import { t as translateNow, useT } from '@/i18n';
 import { radius, spacing, typography, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 import { floatingOverlay } from '@/hooks/use-floating-overlay';
@@ -39,10 +40,12 @@ const hasReplyContent = (messages: { role: string; parts: unknown[] }[]) => {
 /** Within this many px of the end counts as "at the latest" (and re-pins following). */
 const NEAR_END = 72;
 
-const SUGGESTIONS = ['校园卡还剩多少钱？', '帮我把余额和网费放到看板上', '每天早上 8 点检查余额，低于 100 元提醒我', '今天有什么课？'];
+/** Starter prompts on the empty chat, in the app language (they're sent as typed). */
+const SUGGESTIONS = ['chat.empty.suggestBalance', 'chat.empty.suggestDashboard', 'chat.empty.suggestReminder', 'chat.empty.suggestClasses'] as const;
 
 /** Chat tab: the agent conversation (docs/ARCHITECTURE.md §5–6). */
 export function Chat() {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const bar = useTabBarInset();
   const enter = useFocusEnter();
@@ -191,7 +194,7 @@ export function Chat() {
       <View className="flex-row items-center gap-2 px-4 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
         <SessionsButton />
         <ChatTitle fallbackName={config.name} fallbackModel={config.model} connected={hasKey} />
-        {!empty ? <IconButton icon="plus" label="新对话" variant="ghost" onPress={() => void sessions.create()} /> : null}
+        {!empty ? <IconButton icon="plus" label={t('chat.header.newChat')} variant="ghost" onPress={() => void sessions.create()} /> : null}
       </View>
 
       <Animated.View className="flex-1" style={enter}>
@@ -219,18 +222,18 @@ export function Chat() {
             <Glass radius={radius.xl} style={styles.hero}>
               <Logo size={84} intro orbiting />
               <Text variant="title" align="center">
-                今天想让我做什么？
+                {t('chat.empty.title')}
               </Text>
               {!hasKey ? (
                 <FadeIn index={1} style={{ alignItems: 'center', gap: spacing.md }}>
                   <Text variant="callout" tone="muted" align="center">
-                    先连接一个 AI 服务（默认 DeepSeek），我就能开始工作。
+                    {t('chat.empty.connectHint')}
                   </Text>
-                  <Button title="连接 AI 服务" icon="key" onPress={() => router.push('/ai-settings')} />
+                  <Button title={t('chat.empty.connect')} icon="key" onPress={() => router.push('/ai-settings')} />
                 </FadeIn>
               ) : (
                 <View className="flex-row flex-wrap justify-center gap-2">
-                  {SUGGESTIONS.map((s, i) => (
+                  {SUGGESTIONS.map((key) => t(key)).map((s, i) => (
                     <FadeIn key={s} index={i + 1}>
                       <Glass radius={radius.md} onPress={() => sendMessage(s)} accessibilityLabel={s} style={styles.suggestion}>
                         <Text variant="callout">{s}</Text>
@@ -265,13 +268,14 @@ function submitForm(callId: string, form: Record<string, unknown>, label?: strin
       }));
     }
   }
-  sendMessage(`${label ?? '提交'}：${JSON.stringify(form)}`);
+  sendMessage(translateNow('chat.form.submitted', { label: label ?? translateNow('chat.form.submit'), data: JSON.stringify(form) }));
 }
 
 const regenerate = () => void regenerateLast();
 
 /** The conversation: the only part of the screen that re-renders while a reply streams in. */
 function Messages() {
+  const t = useT();
   const chat = useChat();
   const busy = chat.status === 'streaming';
   // The reply started when the last user message was sent.
@@ -297,9 +301,9 @@ function Messages() {
       {!busy && interruptedTurn(chat) && !hasReplyContent(chat.messages) ? (
         <View className="flex-row items-center gap-3">
           <Text variant="callout" tone="muted" className="flex-1">
-            回复中断了
+            {t('chat.reply.interrupted')}
           </Text>
-          <Button title="重试" size="sm" variant="secondary" icon="refresh" onPress={() => void retryLast()} />
+          <Button title={t('core.common.retry')} size="sm" variant="secondary" icon="refresh" onPress={() => void retryLast()} />
         </View>
       ) : null}
       {chat.error ? (
@@ -315,13 +319,14 @@ function Messages() {
 
 /** Header left: opens the sessions sheet; an orbit while another session replies, a dot when one is unread. */
 function SessionsButton() {
+  const t = useT();
   const list = useSessions();
   const active = useActiveSessionId();
   const othersBusy = list.some((m) => m.id !== active && m.status === 'streaming');
   const othersUnread = list.some((m) => m.id !== active && m.unread);
   return (
     <View>
-      <IconButton icon="drag" label={othersUnread ? '对话列表，有新回复' : '对话列表'} variant="ghost" onPress={() => router.push('/sessions')} />
+      <IconButton icon="drag" label={t(othersUnread ? 'chat.header.sessionsUnread' : 'chat.header.sessions')} variant="ghost" onPress={() => router.push('/sessions')} />
       {othersBusy ? (
         <View pointerEvents="none" className="absolute -top-0.5 -right-0.5 rounded-full bg-elevated p-px">
           <AgentOrbit state="writing" size={14} />
@@ -336,10 +341,11 @@ function SessionsButton() {
 /** Session title (tap to rename inline) over `provider · model`. */
 function ChatTitle({ fallbackName, fallbackModel, connected }: { fallbackName: string; fallbackModel: string; connected: boolean }) {
   const c = useTheme();
+  const t = useT();
   const meta = useSessionMeta();
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState('');
-  const title = meta?.title || '新对话';
+  const title = meta?.title || t('chat.header.newChat');
   const providerName = meta?.providerId ? (registry.provider(meta.providerId)?.def.name ?? meta.providerId) : fallbackName;
   const model = meta?.model ?? fallbackModel;
   const canRename = !!meta && meta.messageCount > 0;
@@ -372,22 +378,22 @@ function ChatTitle({ fallbackName, fallbackModel, connected }: { fallbackName: s
           returnKeyType="done"
           onSubmitEditing={save}
           onBlur={() => setRenaming(false)}
-          placeholder="对话标题"
+          placeholder={t('chat.header.titlePlaceholder')}
           placeholderTextColor={c.textFaint}
           selectionColor={c.accent}
-          accessibilityLabel="重命名对话"
+          accessibilityLabel={t('chat.header.rename')}
           className="border-b-[0.5px] border-accent p-0"
           style={[typography.headline, { color: c.text }]}
         />
       ) : (
-        <PressableScale haptic={false} disabled={!canRename} onPress={start} accessibilityRole="button" accessibilityLabel={`${title}，点按重命名`}>
+        <PressableScale haptic={false} disabled={!canRename} onPress={start} accessibilityRole="button" accessibilityLabel={t('chat.header.titleA11y', { title })}>
           <Text variant="headline" numberOfLines={1}>
             {title}
           </Text>
         </PressableScale>
       )}
       <Text variant="caption" tone="faint" numberOfLines={1}>
-        {connected || meta?.providerId ? `${providerName} · ${model}` : '未连接 AI 服务'}
+        {connected || meta?.providerId ? `${providerName} · ${model}` : t('chat.header.notConnected')}
       </Text>
     </View>
   );
@@ -395,16 +401,17 @@ function ChatTitle({ fallbackName, fallbackModel, connected }: { fallbackName: s
 
 /** 编辑消息 ✕: the next send replaces that message and everything after it. */
 function EditBanner() {
+  const t = useT();
   const editing = useEditing();
   if (!editing) return null;
   return (
     <View className="mx-4 mb-1 flex-row items-center gap-2 rounded-md bg-surface-2 py-1 pr-1 pl-3" style={{ borderCurve: 'continuous' }}>
       <Text variant="caption" tone="muted" className="flex-1">
-        编辑消息 · 发送后将替换这条及之后的内容
+        {t('chat.edit.banner')}
       </Text>
       <IconButton
         icon="close"
-        label="取消编辑"
+        label={t('chat.edit.cancel')}
         variant="ghost"
         size={28}
         onPress={() => {

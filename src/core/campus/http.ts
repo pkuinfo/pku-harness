@@ -1,6 +1,7 @@
 import CampusHttp, { type CampusResponse, type MultipartOptions, type RequestOptions, type StoredCookie } from '../../../modules/campus-http';
 
 import { secrets } from '@/core/store/secrets';
+import { t } from '@/i18n';
 
 /**
  * Named campus HTTP sessions over the native module (modules/campus-http): own cookie jar,
@@ -63,7 +64,7 @@ function networkError(url: string, e: unknown) {
   const raw = e instanceof Error ? e.message : String(e);
   const cause = /Caused by:\s*(.+)$/s.exec(raw)?.[1]?.trim() || raw;
   const host = /^https?:\/\/([^/:?#]+)/i.exec(url)?.[1] ?? url;
-  return new Error(`无法连接 ${host}（${cause}）：网站可能在维护或暂未开放，部分服务也只能在校园网内访问`);
+  return new Error(t('app.campus.errors.unreachable', { host, cause }));
 }
 
 export const form = (fields: Record<string, string>) =>

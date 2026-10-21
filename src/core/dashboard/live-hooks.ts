@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 
 import type { LiveData } from '@/core/runtime/types';
 import { getPath } from '@/core/scheduler/check';
+import { formatAgo as formatAgoIn } from '@/utils/date';
 
 import { queryKey } from './live';
 import { live } from './live-store';
@@ -93,17 +94,5 @@ function fill(base: Record<string, unknown> | undefined, pointers: string, value
 /** Pull-to-refresh: force every query on screen. */
 export const refreshAll = () => live.revalidateActive(true);
 
-const pad = (n: number) => String(n).padStart(2, '0');
-
-export function formatAgo(ms: number, now = Date.now()): string {
-  const diff = now - ms;
-  if (diff < 60_000) return '刚刚';
-  if (diff < 3600_000) return `${Math.floor(diff / 60_000)} 分钟前`;
-  const d = new Date(ms);
-  const today = new Date(now);
-  const hm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  if (d.toDateString() === today.toDateString()) return hm;
-  const y = new Date(now - 86400_000);
-  if (d.toDateString() === y.toDateString()) return `昨天 ${hm}`;
-  return `${d.getMonth() + 1}月${d.getDate()}日 ${hm}`;
-}
+/** `host.formatAgo`: "刚刚" / "Just now", "3 分钟前" / "3 min ago", "昨天 08:00" / "Yesterday 08:00", in the app language. */
+export const formatAgo = (ms: number, now = Date.now()): string => formatAgoIn(ms, now);

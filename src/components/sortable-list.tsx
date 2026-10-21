@@ -4,6 +4,7 @@ import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
 import Animated, { FadeIn, FadeOut, useAnimatedReaction, useAnimatedStyle, useSharedValue, withSpring, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
+import { useT } from '@/i18n';
 import { shadows, spacing, springs, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
@@ -35,6 +36,7 @@ function Row({
   renderRow: (id: string, handle: ReactNode) => ReactNode;
 }) {
   const c = useTheme();
+  const t = useT();
   const top = useSharedValue(index * step);
   const startTop = useSharedValue(0);
   const active = useSharedValue(false);
@@ -82,7 +84,7 @@ function Row({
 
   const handle = (
     <GestureDetector gesture={pan}>
-      <View className="w-12 items-center justify-center" style={{ height }} accessibilityRole="adjustable" accessibilityLabel="拖动调整位置">
+      <View className="w-12 items-center justify-center" style={{ height }} accessibilityRole="adjustable" accessibilityLabel={t('app.ui.reorder')}>
         <Icon name="drag" size={20} color={c.textFaint} />
       </View>
     </GestureDetector>

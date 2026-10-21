@@ -9,6 +9,7 @@ import { FadeIn } from '@/components/fade-in';
 import { ListGroup, ListRow } from '@/components/list-group';
 import { Screen } from '@/components/screen';
 import { Text } from '@/components/text';
+import { useT } from '@/i18n';
 import { formatClock } from '@/utils/date';
 import {
   getExactAlarmPermission,
@@ -40,6 +41,7 @@ async function readStatus(): Promise<Status> {
 
 /** Settings → 提醒与通知: what the scheduler needs from the OS, and a test button. */
 export function NotificationSettings() {
+  const t = useT();
   const [status, setStatus] = useState<Status | null>(null);
   const [testAt, setTestAt] = useState<number | null>(null);
 
@@ -65,7 +67,7 @@ export function NotificationSettings() {
       if (p !== 'granted') return refresh();
     }
     const at = new Date(Date.now() + 10_000);
-    await notifyAt(at, { title: '测试提醒', body: `计划于 ${formatClock(at, true)} 送达`, url: '/notifications' });
+    await notifyAt(at, { title: t('app.notifications.testTitle'), body: t('app.notifications.testBody', { time: formatClock(at, true) }), url: '/notifications' });
     setTestAt(at.getTime());
     haptics.success();
     refresh();
@@ -73,37 +75,37 @@ export function NotificationSettings() {
 
   const granted = status?.permission === 'granted';
   return (
-    <Screen title="提醒与通知" subtitle="Notifications" back>
+    <Screen title={t('app.notifications.title')} subtitle={t('app.notifications.eyebrow')} back>
       <FadeIn index={0}>
         <Text variant="callout" tone="muted">
-          提醒和定时检查在本机运行：到点由系统闹钟准时唤起通知，不经过任何服务器。
+          {t('app.notifications.intro')}
         </Text>
       </FadeIn>
       <FadeIn index={1}>
-        <ListGroup title="系统权限">
+        <ListGroup title={t('app.notifications.system')}>
           <ListRow
             icon="bell"
-            title="通知"
-            subtitle={granted ? '已允许' : status?.permission === 'denied' ? '已被拒绝，请在系统设置中开启' : '尚未允许'}
+            title={t('app.notifications.notifications')}
+            subtitle={granted ? t('app.notifications.granted') : status?.permission === 'denied' ? t('app.notifications.denied') : t('app.notifications.notGranted')}
             accessory={
               status == null ? null : granted ? (
-                <Chip label="已开启" tone="up" icon="check" />
+                <Chip label={t('app.ui.enabled')} tone="up" icon="check" />
               ) : (
-                <Button title={status.permission === 'denied' ? '去设置' : '允许'} size="sm" onPress={allow} />
+                <Button title={status.permission === 'denied' ? t('core.common.goSettings') : t('app.notifications.allow')} size="sm" onPress={allow} />
               )
             }
           />
           {Platform.OS === 'android' ? (
             <ListRow
               icon="alarm"
-              title="精确闹钟"
-              subtitle={status?.exact ? '提醒会准时送达' : '未开启时，系统可能延后几分钟送达'}
+              title={t('app.notifications.exact')}
+              subtitle={status?.exact ? t('app.notifications.exactOn') : t('app.notifications.exactOff')}
               accessory={
                 status == null ? null : status.exact ? (
-                  <Chip label="已开启" tone="up" icon="check" />
+                  <Chip label={t('app.ui.enabled')} tone="up" icon="check" />
                 ) : (
                   <Button
-                    title="开启"
+                    title={t('app.notifications.turnOn')}
                     size="sm"
                     onPress={async () => {
                       await requestExactAlarmPermission();
@@ -116,16 +118,16 @@ export function NotificationSettings() {
           ) : null}
           <ListRow
             icon="refresh"
-            title="后台检查"
-            subtitle="定期查询余额等数据，满足条件时通知你"
-            accessory={status == null ? null : <Chip label={status.background ? '可用' : '受限'} tone={status.background ? 'up' : 'warn'} />}
+            title={t('app.notifications.background')}
+            subtitle={t('app.notifications.backgroundSubtitle')}
+            accessory={status == null ? null : <Chip label={status.background ? t('app.notifications.available') : t('app.notifications.limited')} tone={status.background ? 'up' : 'warn'} />}
           />
         </ListGroup>
       </FadeIn>
       <FadeIn index={2}>
-        <ListGroup title="状态" footer={testAt ? '测试提醒已排定，10 秒后送达。可以退到桌面或锁屏观察。' : undefined}>
-          <ListRow icon="calendarClock" title="已排定的通知" value={status ? `${status.scheduled} 条` : '—'} />
-          <ListRow icon="send2" title="发送测试提醒" subtitle="10 秒后送达" onPress={test} />
+        <ListGroup title={t('app.notifications.status')} footer={testAt ? t('app.notifications.testFooter') : undefined}>
+          <ListRow icon="calendarClock" title={t('app.notifications.scheduled')} value={status ? t('app.notifications.scheduledCount', { count: status.scheduled }) : '—'} />
+          <ListRow icon="send2" title={t('app.notifications.test')} subtitle={t('app.notifications.testSubtitle')} onPress={test} />
         </ListGroup>
       </FadeIn>
     </Screen>

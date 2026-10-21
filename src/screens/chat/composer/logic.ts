@@ -1,7 +1,12 @@
 /**
  * Pure composer rules (docs/AGENT-HARNESS.md §4.3–4.5): paste detection, character counting,
- * limits and labels. No React / native imports (unit-tested with `bun test`).
+ * limits and labels. No React / native imports (unit-tested with `bun test`): labels take the
+ * translator (`t` / `useT()`) as an argument.
  */
+import type { MessageKey, Params } from '@/i18n';
+
+/** A translator: `t` from '@/i18n' or the function `useT()` returns. */
+export type Tr = (key: MessageKey, params?: Params) => string;
 
 /** A single change inserting more than this many characters becomes a text attachment. */
 export const PASTE_CHARS = 2_000;
@@ -67,9 +72,16 @@ export function detectPaste(prev: string, next: string): { pasted: string; rest:
   return { pasted: inserted, rest };
 }
 
-/** Chip label: "粘贴的文本 · 3,214 字 · 86 行". */
-export function pasteLabel(text: string): string {
-  return `粘贴的文本 · ${formatCount(countChars(text))} 字 · ${formatCount(countLines(text))} 行`;
+/** "3,214 字 · 86 行" / "3,214 chars · 86 lines". */
+export function textStats(text: string, tr: Tr): string {
+  const chars = countChars(text);
+  const lines = countLines(text);
+  return `${tr('chat.count.chars', { count: chars, n: formatCount(chars) })} · ${tr('chat.count.lines', { count: lines, n: formatCount(lines) })}`;
+}
+
+/** Chip label: "粘贴的文本 · 3,214 字 · 86 行" / "Pasted text · 3,214 chars · 86 lines". */
+export function pasteLabel(text: string, tr: Tr): string {
+  return tr('chat.attach.pastedLabel', { stats: textStats(text, tr) });
 }
 
 /** First non-empty line, for chip previews. */
@@ -85,7 +97,7 @@ export function counterState(chars: number): { show: boolean; over: boolean } {
 
 /**
  * Pill label (§4.5): the catalog name's last word when it reads like a tier (`DeepSeek-V4.1-Flash`
- * → `Flash`), else the model id, truncated.
+ * → `Flash`), else the model id, truncated. '' when there is no model (callers say 未选择 / None).
  */
 export function shortModelName(id: string, name?: string, max = 12): string {
   if (name) {
@@ -93,7 +105,7 @@ export function shortModelName(id: string, name?: string, max = 12): string {
     if (/^[A-Za-z][A-Za-z]{1,9}$/.test(last)) return last[0].toUpperCase() + last.slice(1);
   }
   const base = id.includes('/') ? id.slice(id.lastIndexOf('/') + 1) : id;
-  if (!base) return '未选择';
+  if (!base) return '';
   return base.length > max ? `${base.slice(0, max - 1)}…` : base;
 }
 

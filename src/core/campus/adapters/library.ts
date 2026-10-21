@@ -1,8 +1,9 @@
-import { credentials, registerCampusService } from '../account';
+import { credentials, registerCampusService, serviceName } from '../account';
 import { campusFetch, resetSession, type CampusResponse, type RequestOptions } from '../http';
 import { iaaaSignIn, type IaaaApp } from '../iaaa';
 
 import { secrets } from '@/core/store/secrets';
+import { t } from '@/i18n';
 
 /**
  * 北京大学图书馆 (lib.pku.edu.cn). Not covered by pkucli: both flows were captured from the live
@@ -98,8 +99,8 @@ async function libLogin(): Promise<string> {
   await resetSession('iaaa');
   await resetSession(LIB);
   const entry = await campusFetch(LIB, { url: AUTHORIZE, followRedirects: false, headers: LIB_HEADERS });
-  const app = iaaaAppFrom(entry.location, '图书馆');
-  const token = await iaaaSignIn(app, username, password, '图书馆');
+  const app = iaaaAppFrom(entry.location, serviceName('library'));
+  const token = await iaaaSignIn(app, username, password, serviceName('library'));
 
   // Follow the callback chain ourselves: the session is the `code` on the /portal/ landing URL.
   let url = withToken(app.redirectUrl, token);
@@ -107,11 +108,11 @@ async function libLogin(): Promise<string> {
   let session: string | null = null;
   for (let hop = 0; hop < 10; hop++) {
     const res = await campusFetch(LIB, { url, followRedirects: false, headers: LIB_HEADERS });
-    if (res.status >= 400) throw new Error(`图书馆登录失败（HTTP ${res.status}）`);
+    if (res.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('library'), status: res.status }));
     if (!(res.status >= 300 && res.status < 400 && res.location)) break;
     url = resolveUrl(res.location, url);
     if (__DEV__) console.log('[library] →', res.status, url.split('?')[0]);
-    if (url.includes('iaaa.pku.edu.cn')) throw new Error('图书馆拒绝了统一认证登录，请稍后再试');
+    if (url.includes('iaaa.pku.edu.cn')) throw new Error(t('app.campus.errors.rejected', { service: serviceName('library') }));
     const code = queryParam(url, 'code');
     if (code && /^https?:\/\/a\.lib\.pku\.edu\.cn(:443)?\/portal\//i.test(url)) {
       session = code;
@@ -134,7 +135,7 @@ async function libLogin(): Promise<string> {
     }
   }
   if (!session) throw new Error('图书馆登录没有拿到会话（个人中心登录流程可能改了）');
-  if (!(await libSessionValid(session))) throw new Error('图书馆登录后会话无效，请稍后再试');
+  if (!(await libSessionValid(session))) throw new Error(t('app.campus.errors.sessionInvalid', { service: serviceName('library') }));
   libSession = session;
   await secrets.set(LIB_SECRET, session).catch(() => {});
   return session;
@@ -170,7 +171,7 @@ async function libRequest(req: RequestOptions, retried = false): Promise<CampusR
     await libSignIn();
     return libRequest(req, true);
   }
-  if (lost) throw new Error('图书馆登录状态丢失，请稍后再试');
+  if (lost) throw new Error(t('app.campus.errors.sessionLost', { service: serviceName('library') }));
   // Never hand the session back in the URL.
   return { ...res, url: res.url.replace(session, '{session}') };
 }
@@ -236,22 +237,22 @@ async function spaceLogin() {
   } catch {
     // handled below
   }
-  if (!entry || !/^https?:\/\//.test(entry)) throw new Error('空间预约系统没有返回登录地址（kjyy.lib.pku.edu.cn 可能在维护）');
+  if (!entry || !/^https?:\/\//.test(entry)) throw new Error(t('app.campus.errors.spaceNoEntry'));
   const toIaaa = await campusFetch(SPACE, { url: entry, followRedirects: false, headers: SPACE_HEADERS });
-  const app = iaaaAppFrom(toIaaa.location, '图书馆空间预约');
-  const token = await iaaaSignIn(app, username, password, '图书馆空间预约');
+  const app = iaaaAppFrom(toIaaa.location, serviceName('librarySpace'));
+  const token = await iaaaSignIn(app, username, password, serviceName('librarySpace'));
 
   let url = withToken(app.redirectUrl, token);
   for (let hop = 0; hop < 10; hop++) {
     const res = await campusFetch(SPACE, { url, followRedirects: false, headers: SPACE_HEADERS });
-    if (res.status >= 400) throw new Error(`空间预约系统登录失败（HTTP ${res.status}）`);
+    if (res.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('librarySpace'), status: res.status }));
     if (!(res.status >= 300 && res.status < 400 && res.location)) break;
     url = resolveUrl(res.location, url);
     if (__DEV__) console.log('[library-space] →', res.status, url.split('?')[0]);
-    if (url.includes('iaaa.pku.edu.cn')) throw new Error('空间预约系统拒绝了统一认证登录，请稍后再试');
+    if (url.includes('iaaa.pku.edu.cn')) throw new Error(t('app.campus.errors.rejected', { service: serviceName('librarySpace') }));
     if (!url.startsWith(KJYY)) break;
   }
-  if (!(await fetchSpaceToken())) throw new Error('空间预约系统登录后仍显示未登录，请稍后再试');
+  if (!(await fetchSpaceToken())) throw new Error(t('app.campus.errors.spaceSignedOut'));
 }
 
 function spaceSignIn() {
@@ -290,7 +291,7 @@ async function spaceRequest(req: RequestOptions, retried = false): Promise<Campu
     await spaceSignIn();
     return spaceRequest(req, true);
   }
-  if (lost) throw new Error('空间预约系统登录状态丢失，请稍后再试');
+  if (lost) throw new Error(t('app.campus.errors.sessionLost', { service: serviceName('librarySpace') }));
   return /\/auth\/userInfo/.test(url) ? { ...res, body: scrubUserInfo(res.body) } : res;
 }
 

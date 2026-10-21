@@ -1,4 +1,6 @@
-import { credentials, registerCampusService } from '../account';
+import { t } from '@/i18n';
+
+import { credentials, registerCampusService, serviceName } from '../account';
 import { campusFetch, resetSession, type CampusResponse, type RequestOptions } from '../http';
 import { iaaaSignIn, type IaaaApp } from '../iaaa';
 
@@ -59,18 +61,18 @@ const sidaOf = (body: string) => /\?sida=(\S{32})&sttp=/.exec(body)?.[1] ?? null
 async function login(program: Program | undefined) {
   const { username, password } = await credentials();
   await resetSession('iaaa');
-  const token = await iaaaSignIn(APP, username, password, '选课网');
+  const token = await iaaaSignIn(APP, username, password, serviceName('elective'));
   await resetSession('elective');
   current = null;
   const sso = await electiveFetch({ url: `${SSO_LOGIN}?_rand=${Math.random()}&token=${encodeURIComponent(token)}` });
-  if (sso.status >= 400) throw new Error(`选课网登录失败（HTTP ${sso.status}）`);
+  if (sso.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('elective'), status: sso.status }));
   const sida = sso.status === 200 ? sidaOf(sso.body) : null;
   if (sida || (sso.status === 200 && sso.body.includes('div1') && sso.body.includes('div2'))) {
     // Dual degree: pkucli insists on --dual; here the plugin may choose, default 主修.
-    if (!sida) throw new Error('选课网登录失败：双学位选择页无法识别');
+    if (!sida) throw new Error(t('app.campus.errors.electiveDualDegree'));
     const pick = program ?? 'major';
     const chosen = await electiveFetch({ url: `${SSO_LOGIN}?sida=${sida}&sttp=${pick === 'major' ? 'bzx' : 'bfx'}` });
-    if (chosen.status >= 400) throw new Error(`选课网双学位选择失败（HTTP ${chosen.status}）`);
+    if (chosen.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('elective'), status: chosen.status }));
     current = pick;
   } else {
     current = 'single';
@@ -94,7 +96,7 @@ async function request(req: RequestOptions, retried = false): Promise<CampusResp
     current = null;
     return request(req, true);
   }
-  if (loggedOut(res)) throw new Error('选课网会话失效，重新登录后仍无法访问');
+  if (loggedOut(res)) throw new Error(t('app.campus.errors.electiveSession'));
   const { lost: _lost, ...out } = res;
   return { ...out, headers: { ...out.headers, [PROGRAM_HEADER]: current ?? 'single' } };
 }

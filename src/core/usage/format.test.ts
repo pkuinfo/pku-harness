@@ -1,7 +1,11 @@
 /// <reference types="bun" />
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, mock, test } from 'bun:test';
 
-import { formatCompact, formatDay, formatInt, formatPercent } from './format';
+// Day labels read the app language from src/i18n, which imports native modules; stub them.
+mock.module('expo-localization', () => ({ getLocales: () => [{ languageCode: 'en' }] }));
+mock.module('react-native', () => ({ AppState: { addEventListener: () => ({ remove() {} }) } }));
+
+const { formatCompact, formatDay, formatInt, formatPercent, formatShortDay } = await import('./format');
 
 describe('formatInt', () => {
   test('groups thousands', () => {
@@ -47,6 +51,11 @@ describe('formatPercent', () => {
 
 describe('formatDay', () => {
   test('month, day and weekday', () => {
-    expect(formatDay(new Date(2026, 9, 19))).toBe('10月19日 周一');
+    expect(formatDay(new Date(2026, 9, 19), 'zh-Hans')).toBe('10月19日 周一');
+    expect(formatDay(new Date(2026, 9, 19), 'en')).toBe('Mon, Oct 19');
+  });
+  test('short day', () => {
+    expect(formatShortDay(new Date(2026, 9, 19), 'zh-Hans')).toBe('10月19日');
+    expect(formatShortDay(new Date(2026, 9, 19), 'en')).toBe('Oct 19');
   });
 });

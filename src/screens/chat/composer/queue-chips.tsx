@@ -5,17 +5,18 @@ import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import type { QueuedMessage } from '@/core/agent/session/sessions';
+import { useT } from '@/i18n';
 import { springs, useTheme } from '@/theme';
 
-import { firstLine } from './logic';
+import { firstLine, type Tr } from './logic';
 
 const CURVE = { borderCurve: 'continuous' } as const;
 
-function preview(m: QueuedMessage): string {
+function preview(m: QueuedMessage, t: Tr): string {
   const text = firstLine(m.text, 60);
   if (text) return text;
   const n = m.attachments.length;
-  return n ? `${n} 个附件` : '（空）';
+  return n ? t('chat.queue.attachments', { count: n }) : t('chat.queue.empty');
 }
 
 /**
@@ -37,6 +38,7 @@ export function QueueChips({
   onResume: () => void;
 }) {
   const c = useTheme();
+  const t = useT();
   const reduced = useReducedMotion();
   if (!queue.length) return null;
   const enter = reduced ? FadeIn : FadeInDown.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness);
@@ -47,29 +49,29 @@ export function QueueChips({
         <Animated.View entering={FadeIn} exiting={FadeOut} className="flex-row items-center gap-2 px-1">
           <Icon name="pause" size={14} color={c.warn} />
           <Text variant="caption" tone="muted" className="flex-1">
-            回复中断，排队的消息已暂停
+            {t('chat.queue.pausedBanner')}
           </Text>
-          <Button title="继续发送" icon="play" size="sm" variant="secondary" onPress={onResume} />
+          <Button title={t('chat.queue.resume')} icon="play" size="sm" variant="secondary" onPress={onResume} />
         </Animated.View>
       ) : null}
       {queue.map((m) => (
         <Animated.View key={m.id} entering={enter} exiting={FadeOut} layout={layout}>
           <PressableScale
             accessibilityRole="button"
-            accessibilityLabel={`${paused ? '已暂停' : '排队中'}：${preview(m)}`}
-            accessibilityHint="点按放回输入框"
+            accessibilityLabel={t('chat.queue.itemA11y', { state: t(paused ? 'chat.queue.paused' : 'chat.queue.queued'), text: preview(m, t) })}
+            accessibilityHint={t('chat.queue.pullHint')}
             onPress={() => onPull(m)}
             className="flex-row items-center gap-2 rounded-md border-[0.5px] border-edge bg-elevated py-1 pl-3 pr-1"
             style={CURVE}>
             <Icon name={paused ? 'pause' : 'clock'} size={14} color={paused ? c.warn : c.textMuted} />
             <Text variant="caption" tone={paused ? 'warn' : 'muted'}>
-              {paused ? '已暂停 ·' : '排队中 ·'}
+              {`${t(paused ? 'chat.queue.paused' : 'chat.queue.queued')} ·`}
             </Text>
             <Text variant="callout" numberOfLines={1} className="flex-1">
-              {preview(m)}
+              {preview(m, t)}
             </Text>
             {m.attachments.length > 0 && m.text.trim() ? <Icon name="image" size={14} color={c.textFaint} /> : null}
-            <PressableScale accessibilityRole="button" accessibilityLabel="移出队列" onPress={() => onRemove(m)} hitSlop={6} scaleTo={0.85} className="size-8 items-center justify-center rounded-sm">
+            <PressableScale accessibilityRole="button" accessibilityLabel={t('chat.queue.remove')} onPress={() => onRemove(m)} hitSlop={6} scaleTo={0.85} className="size-8 items-center justify-center rounded-sm">
               <Icon name="close" size={14} color={c.textMuted} />
             </PressableScale>
           </PressableScale>

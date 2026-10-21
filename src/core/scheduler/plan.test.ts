@@ -30,6 +30,11 @@ describe('planNotifications', () => {
     expect(plan[0]).toMatchObject({ identifier: 'job:j1:1:0', at: at(2026, 10, 19, 8), body: '起来走走 · 第 1/16 次' });
   });
 
+  test('progress text follows the label the engine passes (app language)', () => {
+    const [first] = planNotifications([job({ action: { type: 'notify', title: 'Water', body: 'Stand up' } })], now, (n, total) => `${n} of ${total}`);
+    expect(first.body).toBe('Stand up · 1 of 16');
+  });
+
   test('skips disabled, finished and check jobs', () => {
     expect(planNotifications([job({ enabled: false })], now)).toEqual([]);
     expect(planNotifications([job({ trigger: { type: 'at', at: now - 1 } })], now)).toEqual([]);

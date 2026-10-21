@@ -2,6 +2,7 @@ import { registry as registrySchema, type Registry, type RegistryEntry } from '@
 import { fetch as expoFetch } from 'expo/fetch';
 
 import { kv } from '@/core/store/kv';
+import { t } from '@/i18n';
 
 /**
  * The marketplace index lives in pkuinfo/pku-harness-plugins (registry/registry.json). Fetched
@@ -19,13 +20,13 @@ export type MarketState = { registry: Registry; fetchedAt: number; stale: boolea
 
 async function fetchOne(url: string): Promise<Registry> {
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 8000);
+  const timer = setTimeout(() => controller.abort(), 8000);
   try {
     const res = await expoFetch(url, { signal: controller.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return registrySchema.parse(await res.json());
   } finally {
-    clearTimeout(t);
+    clearTimeout(timer);
   }
 }
 
@@ -43,7 +44,7 @@ export async function loadMarketplace(force = false): Promise<MarketState> {
     }
   }
   if (cached) return { ...cached, stale: true };
-  throw new Error('无法连接插件市场，请检查网络后重试');
+  throw new Error(t('app.plugins.marketplace.unreachable'));
 }
 
 export type { RegistryEntry };

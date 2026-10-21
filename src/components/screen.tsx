@@ -10,6 +10,7 @@ import { useFocusEnter } from '@/hooks/use-focus-enter';
 import { MAX_CONTENT_WIDTH } from '@/hooks/use-layout';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 import { glassMaterial, spacing, useTheme, useThemeName } from '@/theme';
+import { useT } from '@/i18n';
 import { cx } from '@/utils/cx';
 
 import { Aurora } from './aurora';
@@ -44,6 +45,7 @@ export function Screen({
   /** Pushed screens: show a back button that pops the stack. */
   back?: boolean;
 }) {
+  const t = useT();
   const m = glassMaterial[useThemeName()];
   const c = useTheme();
   const insets = useSafeAreaInsets();
@@ -76,7 +78,7 @@ export function Screen({
   const scrimStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.get(), [0, 24], [0, 0.95], Extrapolation.CLAMP) }));
   const compactTitle = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(y.get(), [COLLAPSE * 0.6, COLLAPSE], [6, 0], Extrapolation.CLAMP) }] }));
 
-  const backButton = back ? <IconButton icon="back" label="返回" variant="ghost" onPress={() => router.back()} className="-ml-2 mb-0.5" /> : null;
+  const backButton = back ? <IconButton icon="back" label={t('app.ui.back')} variant="ghost" onPress={() => router.back()} className="-ml-2 mb-0.5" /> : null;
   const header = (
     <Animated.View className="w-full flex-row items-end gap-3 self-center px-4 pb-3 pt-4" style={[HEADER, largeStyle]}>
       {backButton}

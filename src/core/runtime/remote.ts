@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { McpClient, type McpTool } from '@/core/mcp/client';
 import { kv } from '@/core/store/kv';
 import { secrets } from '@/core/store/secrets';
+import { t as tNow, translate } from '@/i18n';
 
 import { registry } from './registry';
 import type { PluginDef, ToolDef, ToolEffect } from './types';
@@ -81,16 +82,20 @@ export function toPluginDef(m: RemoteManifest): PluginDef {
           .filter((p) => p.type === 'text' && typeof p.text === 'string')
           .map((p) => p.text)
           .join('\n');
-        if (r.isError) throw new Error(text || '远程插件返回错误');
+        if (r.isError) throw new Error(text || tNow('app.plugins.runtime.remoteError'));
         // Third-party output is data, never instructions.
         return { source: m.name, data: r.structuredContent ?? tryJson(text) };
       },
     };
   }
+  // No description from the server: a generic line, shown in the app language.
+  const host = hostOf(m.url);
+  const generic = !m.description || m.description === translate('zh-Hans', 'app.plugins.runtime.remoteDescription', { host });
   return {
     id: m.id,
     name: m.name,
-    description: m.description,
+    description: generic ? translate('zh-Hans', 'app.plugins.runtime.remoteDescription', { host }) : m.description,
+    i18n: generic ? { en: { description: translate('en', 'app.plugins.runtime.remoteDescription', { host }) } } : undefined,
     version: m.serverVersion ?? '0.0.0',
     icon: 'globe',
     remote: { url: m.url, server: m.serverName },
@@ -138,7 +143,7 @@ export const remotePlugins = {
     const m: RemoteManifest = {
       id,
       name: input.name?.trim() || probe.server?.title || probe.server?.name || hostOf(input.url),
-      description: probe.instructions?.slice(0, 200) || `远程插件 · ${hostOf(input.url)}`,
+      description: probe.instructions?.slice(0, 200) || '',
       url: input.url.trim(),
       serverName: probe.server?.name ?? 'unknown',
       serverVersion: probe.server?.version,
@@ -158,7 +163,7 @@ export const remotePlugins = {
   /** Re-read the tool list from the server. */
   async refresh(id: string) {
     const m = manifests.find((x) => x.id === id);
-    if (!m) throw new Error(`没有这个远程插件：${id}`);
+    if (!m) throw new Error(tNow('app.plugins.runtime.noRemote', { id }));
     const client = await clientFor(m);
     const tools = await client.listTools();
     const next = { ...m, tools, updatedAt: Date.now() };

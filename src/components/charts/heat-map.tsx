@@ -5,7 +5,9 @@ import Svg, { Rect } from 'react-native-svg';
 
 import type { HeatCell, Heatmap } from '@/core/usage/aggregate';
 import { formatCompact, formatDay, formatInt } from '@/core/usage/format';
+import { useLocale, useT, type Locale } from '@/i18n';
 import { shadows, useTheme } from '@/theme';
+import { formatMonth, weekdayNarrow } from '@/utils/date';
 
 import { Text } from '../text';
 import { useHeatRamp } from './palette';
@@ -15,13 +17,20 @@ const GAP = 3;
 const STEP = CELL + GAP;
 const LABEL_W = 18;
 const MONTH_H = 16;
-const WEEKDAY_LABELS: [number, string][] = [
-  [0, '一'],
-  [2, '三'],
-  [4, '五'],
+/** Rows labelled Monday, Wednesday, Friday (row 0 = Monday; `Date.getDay()` numbering). */
+const WEEKDAY_ROWS: [number, number][] = [
+  [0, 1],
+  [2, 3],
+  [4, 5],
 ];
 
 type Pick = { col: number; row: number; cell: HeatCell };
+
+/** aggregate.ts labels months "10月"; re-label them in the app language. */
+const monthLabel = (label: string, locale: Locale) => {
+  const m = parseInt(label, 10);
+  return Number.isFinite(m) ? formatMonth(m - 1, locale) : label;
+};
 
 /**
  * GitHub-style activity grid: columns are weeks (oldest left), rows Monday → Sunday. Opens
@@ -29,6 +38,8 @@ type Pick = { col: number; row: number; cell: HeatCell };
  */
 export function HeatMap({ heat }: { heat: Heatmap }) {
   const c = useTheme();
+  const t = useT();
+  const locale = useLocale();
   const ramp = useHeatRamp();
   const reduced = useReducedMotion();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
@@ -69,7 +80,7 @@ export function HeatMap({ heat }: { heat: Heatmap }) {
         className="absolute rounded-md border-[0.5px] border-edge bg-elevated px-2.5 py-1.5"
         style={{ left, top, borderCurve: 'continuous', boxShadow: shadows.float, opacity: frame.tip ? 1 : 0 }}>
         <Text variant="caption" numberOfLines={1} style={{ fontVariant: ['tabular-nums'] }}>
-          {`${formatDay(new Date(pick.cell.date))} · ${formatInt(pick.cell.turns)} 轮 · ${formatCompact(pick.cell.tokens)} tokens`}
+          {t('app.usage.heatTip', { day: formatDay(new Date(pick.cell.date), locale), count: pick.cell.turns === 1 ? 1 : formatInt(pick.cell.turns), tokens: formatCompact(pick.cell.tokens) })}
         </Text>
       </Animated.View>
     );
@@ -80,13 +91,13 @@ export function HeatMap({ heat }: { heat: Heatmap }) {
       onLayout={(e) => setFrame((f) => ({ ...f, width: e.nativeEvent.layout.width }))}
       accessible
       accessibilityRole="image"
-      accessibilityLabel={`近 ${cols} 周共 ${heat.totalTurns} 轮对话，单日最多 ${heat.maxTurns} 轮`}>
+      accessibilityLabel={t('app.usage.heatA11y', { weeks: cols, total: heat.totalTurns, max: heat.maxTurns })}>
       <View className="flex-row">
         {/* Weekday labels stay put while the weeks scroll. */}
         <View style={{ width: LABEL_W, paddingTop: MONTH_H }}>
-          {WEEKDAY_LABELS.map(([row, label]) => (
+          {WEEKDAY_ROWS.map(([row, day]) => (
             <Text key={row} variant="micro" tone="faint" className="absolute" style={{ top: MONTH_H + row * STEP - 1, lineHeight: CELL + 2 }}>
-              {label}
+              {weekdayNarrow(day, locale)}
             </Text>
           ))}
         </View>
@@ -106,7 +117,7 @@ export function HeatMap({ heat }: { heat: Heatmap }) {
             <View style={{ height: MONTH_H, width: gridW }}>
               {heat.months.map((m) => (
                 <Text key={m.col} variant="micro" tone="faint" className="absolute" style={{ left: m.col * STEP }}>
-                  {m.label}
+                  {monthLabel(m.label, locale)}
                 </Text>
               ))}
             </View>
@@ -129,13 +140,13 @@ export function HeatMap({ heat }: { heat: Heatmap }) {
       </View>
       <View className="mt-3 flex-row items-center justify-end gap-1">
         <Text variant="micro" tone="faint" className="mr-1">
-          少
+          {t('app.usage.less')}
         </Text>
         {ramp.map((color, i) => (
           <View key={i} className="rounded-[3px]" style={{ width: CELL - 3, height: CELL - 3, backgroundColor: color }} />
         ))}
         <Text variant="micro" tone="faint" className="ml-1">
-          多
+          {t('app.usage.more')}
         </Text>
       </View>
       {tip}

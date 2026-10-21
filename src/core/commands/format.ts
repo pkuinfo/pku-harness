@@ -33,24 +33,44 @@ export function lastReplyText(messages: readonly ChatMessage[]): string | null {
   return null;
 }
 
+/** Labels for /export in the app language (builtins pass translated ones; tests use the defaults). */
+export type MarkdownLabels = {
+  you: string;
+  assistant: string;
+  tool: (title: string, failed: boolean) => string;
+  attachment: (name: string) => string;
+};
+
+const ZH_LABELS: MarkdownLabels = {
+  you: '我',
+  assistant: '助手',
+  tool: (title, failed) => `调用 ${title}${failed ? '（失败）' : ''}`,
+  attachment: (name) => `附件：${name}`,
+};
+
 /**
  * The session as Markdown for /export: user and assistant text, tool calls as list items,
  * attachments by name. UI-only events (notices, compaction markers) are skipped.
  */
-export function sessionMarkdown(title: string, messages: readonly ChatMessage[], toolTitle: (toolId: string) => string = (id) => id): string {
+export function sessionMarkdown(
+  title: string,
+  messages: readonly ChatMessage[],
+  toolTitle: (toolId: string) => string = (id) => id,
+  labels: MarkdownLabels = ZH_LABELS,
+): string {
   const out: string[] = [`# ${title}`];
   for (const m of messages) {
     if (m.role === 'event') continue;
     const lines: string[] = [];
     for (const p of m.parts) {
       if (p.type === 'text' && p.text.trim()) lines.push(p.text.trim());
-      else if (p.type === 'tool') lines.push(`- 调用 ${toolTitle(p.toolId)}${p.status === 'error' ? '（失败）' : ''}`);
-      else if (p.type === 'attachment') lines.push(`- 附件：${p.name}`);
+      else if (p.type === 'tool') lines.push(`- ${labels.tool(toolTitle(p.toolId), p.status === 'error')}`);
+      else if (p.type === 'attachment') lines.push(`- ${labels.attachment(p.name)}`);
     }
     if (!lines.length) continue;
     // Keep consecutive tool list items together, separate prose blocks with a blank line.
     const body = lines.reduce((acc, line, i) => (i === 0 ? line : `${acc}${line.startsWith('- ') && lines[i - 1].startsWith('- ') ? '\n' : '\n\n'}${line}`), '');
-    out.push(`## ${m.role === 'user' ? '我' : '助手'}\n\n${body}`);
+    out.push(`## ${m.role === 'user' ? labels.you : labels.assistant}\n\n${body}`);
   }
   return `${out.join('\n\n')}\n`;
 }

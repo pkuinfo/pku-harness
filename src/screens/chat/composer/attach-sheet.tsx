@@ -7,6 +7,7 @@ import { Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import { libraryPickLimit, MAX_ATTACHMENTS, remainingSlots } from '@/core/agent/attachments/attachment-rules';
+import { useT } from '@/i18n';
 import { spacing, useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 
@@ -64,37 +65,38 @@ export function AttachSheet({
   onSwitchModel: () => void;
 }) {
   const c = useTheme();
+  const t = useT();
   const insets = useSafeAreaInsets();
   const left = remainingSlots(count);
   const full = left === 0;
-  const fullDetail = `已达到 ${MAX_ATTACHMENTS} 个附件上限`;
-  const imageDetail = (ok: string) => (!images ? '当前模型不支持图片' : full ? fullDetail : ok);
+  const fullDetail = t('chat.attach.full', { max: MAX_ATTACHMENTS });
+  const imageDetail = (ok: string) => (!images ? t('chat.attach.noImages') : full ? fullDetail : ok);
   return (
     <BottomSheet isPresented={open} onDismiss={onClose} containerColor={c.elevated} contentPadding={{ left: 0, right: 0, top: 0, bottom: 0 }}>
       <RNHostView matchContents>
         <View className="gap-1 px-3 pt-1" style={{ paddingBottom: Math.max(insets.bottom, spacing.lg) }}>
           <Text variant="micro" tone="faint" className="px-2 pb-1">
-            添加到消息{count ? ` · 还能添加 ${left} 个` : ''}
+            {count ? t('chat.attach.sheetTitleLeft', { count: left }) : t('chat.attach.sheetTitle')}
           </Text>
           {!images ? (
             <View className="mx-2 mb-1 flex-row items-center gap-3 rounded-md bg-warn-muted px-3 py-2.5" style={CURVE}>
               <Icon name="image" size={16} color={c.warn} />
               <Text variant="caption" tone="warn" className="flex-1">
-                {suggestion ? `当前模型不支持图片（可切换到 ${suggestion}）` : '当前模型不支持图片'}
+                {suggestion ? t('chat.attach.noImagesSwitch', { model: suggestion }) : t('chat.attach.noImages')}
               </Text>
-              {suggestion ? <Button title="切换" size="sm" variant="secondary" onPress={onSwitchModel} /> : null}
+              {suggestion ? <Button title={t('chat.attach.switch')} size="sm" variant="secondary" onPress={onSwitchModel} /> : null}
             </View>
           ) : null}
-          <Row icon="camera" title="拍照" detail={imageDetail('用相机拍一张')} disabled={!images || full} onPress={() => onPick('camera')} />
+          <Row icon="camera" title={t('chat.attach.camera')} detail={imageDetail(t('chat.attach.cameraDetail'))} disabled={!images || full} onPress={() => onPick('camera')} />
           <Row
             icon="photos"
-            title="相册"
-            detail={imageDetail(`一次最多选 ${libraryPickLimit(count)} 张`)}
+            title={t('chat.attach.library')}
+            detail={imageDetail(t('chat.attach.libraryDetail', { count: libraryPickLimit(count) }))}
             disabled={!images || full}
             onPress={() => onPick('library')}
           />
-          <Row icon="file" title="文件" detail={full ? fullDetail : 'txt、md、csv、json、log，200 KB 以内'} disabled={full} onPress={() => onPick('files')} />
-          <Row icon="command" title="输入命令" detail="输入 / 打开命令菜单" onPress={() => onPick('command')} />
+          <Row icon="file" title={t('chat.attach.files')} detail={full ? fullDetail : t('chat.attach.filesDetail')} disabled={full} onPress={() => onPick('files')} />
+          <Row icon="command" title={t('chat.attach.command')} detail={t('chat.attach.commandDetail')} onPress={() => onPick('command')} />
         </View>
       </RNHostView>
     </BottomSheet>

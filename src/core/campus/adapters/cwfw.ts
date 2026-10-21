@@ -1,4 +1,6 @@
-import { credentials, registerCampusService } from '../account';
+import { t } from '@/i18n';
+
+import { credentials, registerCampusService, serviceName } from '../account';
 import { campusFetch, FORM, form, resetSession, type CampusResponse, type RequestOptions } from '../http';
 import { iaaaSignIn, type IaaaApp } from '../iaaa';
 
@@ -22,7 +24,6 @@ const HEADERS = {
   accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
   'accept-language': 'zh,zh-CN;q=0.9',
 };
-const OFF_CAMPUS = '财务门户（cwfw.pku.edu.cn）只能在校园网内访问：请连接校园网（PKU / PKU Secure）后再试，不要走代理或 VPN。';
 
 let ready = false;
 let signingIn: Promise<void> | null = null;
@@ -33,7 +34,7 @@ async function fetchCwfw(req: RequestOptions): Promise<CampusResponse> {
     return await campusFetch('cwfw', { ...req, headers: { ...HEADERS, ...req.headers } });
   } catch (e) {
     if (__DEV__) console.log('[cwfw] network error', e instanceof Error ? e.message : e);
-    throw new Error(OFF_CAMPUS);
+    throw new Error(t('app.campus.errors.offCampus'));
   }
 }
 
@@ -60,13 +61,13 @@ function resolveEntry(entry: string) {
 async function login() {
   const { username, password } = await credentials();
   await resetSession('iaaa');
-  const token = await iaaaSignIn(CWFW_APP, username, password, '财务门户');
+  const token = await iaaaSignIn(CWFW_APP, username, password, serviceName('cwfw'));
   await resetSession('cwfw');
 
   // 1. home2.jsp (redirects on to home3.jsp)
   const home = await fetchCwfw({ url: `${CWFW_APP.redirectUrl}?_rand=${Math.random()}&token=${encodeURIComponent(token)}`, followRedirects: true });
-  if (home.status >= 400) throw new Error(`财务门户登录失败（home2.jsp HTTP ${home.status}）`);
-  if (home.body.includes('iaaa.pku.edu.cn') && home.body.includes('oauth.jsp')) throw new Error('财务门户拒绝了统一认证，请检查账号状态');
+  if (home.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('cwfw'), status: `home2.jsp ${home.status}` }));
+  if (home.body.includes('iaaa.pku.edu.cn') && home.body.includes('oauth.jsp')) throw new Error(t('app.campus.errors.cwfwRejected'));
 
   // 2. findpages_postData.action must answer exactly "ok"
   const post = await fetchCwfw({
@@ -76,12 +77,12 @@ async function login() {
     headers: { 'x-requested-with': 'XMLHttpRequest' },
     body: form({ token, timeStamp: String(Date.now()) }),
   });
-  if (post.status >= 400) throw new Error(`财务门户登录失败（findpages_postData HTTP ${post.status}）`);
-  if (post.body.trim() !== 'ok') throw new Error('财务门户初始化失败，账号可能已停用');
+  if (post.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('cwfw'), status: `findpages_postData ${post.status}` }));
+  if (post.body.trim() !== 'ok') throw new Error(t('app.campus.errors.cwfwDisabled'));
 
   // 3. home3.jsp → WF_CWBS entry
   const home3 = await fetchCwfw({ url: `${CWFW_BASE}/WFManager/home3.jsp`, followRedirects: true });
-  if (home3.status >= 400) throw new Error(`财务门户登录失败（home3.jsp HTTP ${home3.status}）`);
+  if (home3.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('cwfw'), status: `home3.jsp ${home3.status}` }));
   const entry = wfCwbsEntry(home3.body);
   if (!entry) throw new Error('财务门户主页里没有找到“网上查询”(WF_CWBS) 入口');
 
@@ -91,8 +92,8 @@ async function login() {
     followRedirects: true,
     headers: { referer: `${CWFW_BASE}/WFManager/home3.jsp` },
   });
-  if (main.status >= 400) throw new Error(`进入财务查询系统失败（HTTP ${main.status}）`);
-  if (timedOut(main)) throw new Error('财务门户会话未能建立，请稍后再试');
+  if (main.status >= 400) throw new Error(t('app.campus.errors.signInHttp', { service: serviceName('cwfw'), status: main.status }));
+  if (timedOut(main)) throw new Error(t('app.campus.errors.cwfwSession'));
   ready = true;
 }
 

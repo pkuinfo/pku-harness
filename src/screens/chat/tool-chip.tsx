@@ -7,12 +7,13 @@ import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import type { ChatPart } from '@/core/agent/session/chat-store';
-import { registry } from '@/core/runtime/registry';
+import { useLocale, useT } from '@/i18n';
 import { springs, useTheme } from '@/theme';
+
+import { toolLabel } from './labels';
 
 type ToolPart = Extract<ChatPart, { type: 'tool' }>;
 
-const titleOf = (part: ToolPart) => registry.tool(part.toolId)?.def.title ?? part.toolId;
 
 function StatusIcon({ status }: { status: ToolPart['status'] }) {
   const c = useTheme();
@@ -22,12 +23,13 @@ function StatusIcon({ status }: { status: ToolPart['status'] }) {
 
 /** Compact line showing a tool the agent is running / ran. */
 export function ToolChip({ part }: { part: ToolPart }) {
-  const title = titleOf(part);
+  const t = useT();
+  const title = toolLabel(part.toolId, useLocale());
   return (
     <View className="max-w-full flex-row items-center self-start gap-2 rounded-sm border-[0.5px] border-edge bg-surface-2 px-3 py-1.5">
       <StatusIcon status={part.status} />
       <Text variant="caption" tone={part.status === 'error' ? 'down' : 'muted'} numberOfLines={2} className="shrink">
-        {part.status === 'error' ? `${title}：${part.error}` : title}
+        {part.status === 'error' ? t('chat.tools.error', { title, error: part.error ?? '' }) : title}
       </Text>
     </View>
   );
@@ -39,15 +41,18 @@ export function ToolChip({ part }: { part: ToolPart }) {
  */
 export function ToolGroup({ parts }: { parts: ToolPart[] }) {
   const c = useTheme();
+  const t = useT();
+  const locale = useLocale();
   const [open, setOpen] = useState(false);
   if (parts.length === 1) return <ToolChip part={parts[0]} />;
+  const titleOf = (p: ToolPart) => toolLabel(p.toolId, locale);
 
   const running = parts.find((p) => p.status === 'running');
   const failed = parts.filter((p) => p.status === 'error');
   const names = [...new Set(parts.map(titleOf))];
   const label = running
-    ? `${titleOf(running)}… · 第 ${parts.indexOf(running) + 1} 步`
-    : `用了 ${parts.length} 个工具 · ${names.slice(0, 3).join('、')}${names.length > 3 ? '…' : ''}`;
+    ? t('chat.tools.step', { title: titleOf(running), n: parts.indexOf(running) + 1 })
+    : t('chat.tools.used', { count: parts.length, names: `${names.slice(0, 3).join(t('chat.tools.listSep'))}${names.length > 3 ? '…' : ''}` });
 
   return (
     <Animated.View layout={LinearTransition.springify().damping(22)} className="max-w-full self-start gap-1.5">
@@ -71,7 +76,7 @@ export function ToolGroup({ parts }: { parts: ToolPart[] }) {
             <Animated.View key={p.callId} entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)} className="flex-row items-center gap-2">
               <StatusIcon status={p.status} />
               <Text variant="caption" tone={p.status === 'error' ? 'down' : 'muted'} numberOfLines={2} className="shrink">
-                {p.status === 'error' ? `${titleOf(p)}：${p.error}` : titleOf(p)}
+                {p.status === 'error' ? t('chat.tools.error', { title: titleOf(p), error: p.error ?? '' }) : titleOf(p)}
               </Text>
             </Animated.View>
           ))}

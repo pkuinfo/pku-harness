@@ -2,6 +2,7 @@ import type { Token, Tokens } from 'marked';
 import { memo, useMemo, useState, type ReactNode } from 'react';
 import { Linking, ScrollView, View } from 'react-native';
 
+import { useT } from '@/i18n';
 import { useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { lexMarkdown, streamLexer } from '@/utils/markdown-lex';
@@ -29,6 +30,7 @@ function openLink(href: string) {
 /** Inline tokens → nested Text spans. */
 function Inline({ tokens }: { tokens: Token[] | undefined }): ReactNode {
   const c = useTheme();
+  const tr = useT();
   return (tokens ?? []).map((t, i) => {
     switch (t.type) {
       case 'strong':
@@ -69,7 +71,7 @@ function Inline({ tokens }: { tokens: Token[] | undefined }): ReactNode {
         const img = t as Tokens.Image;
         return (
           <Text key={i} tone="accent" onPress={() => openLink(img.href)}>
-            {`[图片${img.text ? `：${img.text}` : ''}]`}
+            {img.text ? tr('app.ui.imageAlt', { alt: img.text }) : tr('app.ui.image')}
           </Text>
         );
       }

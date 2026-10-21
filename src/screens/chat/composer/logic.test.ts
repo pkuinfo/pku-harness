@@ -13,6 +13,7 @@ import {
   pasteLabel,
   shortModelName,
 } from './logic';
+import { makeTr } from '@/core/agent/session/testing-tr';
 
 describe('countChars', () => {
   test('counts code points, not UTF-16 units', () => {
@@ -76,7 +77,9 @@ describe('detectPaste', () => {
 describe('labels', () => {
   test('paste chip label', () => {
     const text = `${'字'.repeat(3214 - 85)}${'\n'.repeat(85)}`;
-    expect(pasteLabel(text)).toBe('粘贴的文本 · 3,214 字 · 86 行');
+    expect(pasteLabel(text, makeTr('zh-Hans'))).toBe('粘贴的文本 · 3,214 字 · 86 行');
+    expect(pasteLabel(text, makeTr('en'))).toBe('Pasted text · 3,214 chars · 86 lines');
+    expect(pasteLabel('a', makeTr('en'))).toBe('Pasted text · 1 char · 1 line');
   });
   test('first non-empty line, truncated', () => {
     expect(firstLine('\n\n  hello \nworld')).toBe('hello');
@@ -102,7 +105,7 @@ describe('shortModelName', () => {
     expect(shortModelName('gpt-4o')).toBe('gpt-4o');
     expect(shortModelName('qwen/qwen3-235b-a22b-instruct')).toBe('qwen3-235b-…');
     expect(shortModelName('m', 'Model 4')).toBe('m');
-    expect(shortModelName('')).toBe('未选择');
+    expect(shortModelName('')).toBe('');
   });
 });
 

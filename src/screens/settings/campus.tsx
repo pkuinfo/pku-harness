@@ -9,6 +9,7 @@ import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { signIn, signOut, useCampusAccount } from '@/core/campus/account';
 import { invokeTool } from '@/core/runtime/invoke';
+import { useT } from '@/i18n';
 import { formatDateTime } from '@/utils/date';
 import { haptics } from '@/utils/haptics';
 
@@ -17,6 +18,7 @@ import { haptics } from '@/utils/haptics';
  * device keystore and are only ever sent to PKU's own login endpoints.
  */
 export function CampusAccountScreen() {
+  const t = useT();
   const account = useCampusAccount();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -30,7 +32,7 @@ export function CampusAccountScreen() {
       await signIn(username, password);
       setPassword('');
       haptics.success();
-      setMessage({ tone: 'up', text: '登录成功' });
+      setMessage({ tone: 'up', text: t('app.campus.signInOk') });
     } catch (e) {
       haptics.warning();
       setMessage({ tone: 'down', text: e instanceof Error ? e.message : String(e), network: isNetworkError(e) });
@@ -44,7 +46,7 @@ export function CampusAccountScreen() {
     setMessage(null);
     try {
       const r = (await invokeTool('campus-card.getBalance', {}, { actor: 'user' })) as { balance: number | null };
-      setMessage({ tone: 'up', text: `连接正常，校园卡余额 ¥${r.balance?.toFixed(2) ?? '—'}` });
+      setMessage({ tone: 'up', text: t('app.campus.testOk', { balance: r.balance?.toFixed(2) ?? '—' }) });
       haptics.success();
     } catch (e) {
       setMessage({ tone: 'down', text: e instanceof Error ? e.message : String(e), network: isNetworkError(e) });
@@ -56,16 +58,16 @@ export function CampusAccountScreen() {
 
   if (account.signedIn) {
     return (
-      <SheetScreen title="校园账号" primary="测试连接" onPrimary={test} loading={busy} danger="退出登录" onDanger={async () => {
+      <SheetScreen title={t('app.campus.title')} primary={t('app.campus.test')} onPrimary={test} loading={busy} danger={t('app.campus.signOut')} onDanger={async () => {
         haptics.warning();
         await signOut();
         setMessage(null);
       }}>
         <ListGroup>
-          <ListRow icon="person" title={account.name ?? account.username ?? '已登录'} subtitle={[account.name ? account.username : null, account.signedInAt ? `登录于 ${formatDateTime(new Date(account.signedInAt))}` : null].filter(Boolean).join(' · ')} accessory={<Chip label="已登录" tone="up" icon="check" />} />
+          <ListRow icon="person" title={account.name ?? account.username ?? t('app.ui.signedIn')} subtitle={[account.name ? account.username : null, account.signedInAt ? t('app.campus.signedInAt', { time: formatDateTime(new Date(account.signedInAt)) }) : null].filter(Boolean).join(' · ')} accessory={<Chip label={t('app.ui.signedIn')} tone="up" icon="check" />} />
         </ListGroup>
         <Text variant="callout" tone="muted">
-          插件通过本机代为登录各个校园服务，拿不到你的密码。退出登录会删除本机保存的密码和所有会话。
+          {t('app.campus.signedInNote')}
         </Text>
         {message ? <Status message={message} /> : null}
       </SheetScreen>
@@ -73,14 +75,14 @@ export function CampusAccountScreen() {
   }
 
   return (
-    <SheetScreen title="登录校园账号" primary="登录" onPrimary={login} loading={busy} primaryDisabled={!username.trim() || !password} secondary="取消" onSecondary={() => dismiss('/settings')}>
+    <SheetScreen title={t('app.campus.signInTitle')} primary={t('app.campus.signIn')} onPrimary={login} loading={busy} primaryDisabled={!username.trim() || !password} secondary={t('core.common.cancel')} onSecondary={() => dismiss('/settings')}>
       <Text variant="callout" tone="muted">
-        使用 IAAA 统一身份认证（与门户相同的学号和密码）。密码只保存在本机安全存储中，只会发送给学校的登录服务。
+        {t('app.campus.intro')}
       </Text>
-      <Field label="学号 / 职工号" value={username} onChangeText={setUsername} autoCapitalize="none" keyboardType="number-pad" autoFocus />
-      <SecretField label="密码" value={password} onChangeText={setPassword} textContentType="password" autoComplete="password" />
+      <Field label={t('app.campus.username')} value={username} onChangeText={setUsername} autoCapitalize="none" keyboardType="number-pad" autoFocus />
+      <SecretField label={t('app.campus.password')} value={password} onChangeText={setPassword} textContentType="password" autoComplete="password" />
       <Text variant="caption" tone="faint">
-        如果账号开启了短信验证或手机令牌，登录时会提示你输入验证码。
+        {t('app.campus.factorHint')}
       </Text>
       {message ? <Status message={message} /> : null}
     </SheetScreen>
@@ -94,6 +96,7 @@ const isNetworkError = (e: unknown) => {
 };
 
 function Status({ message }: { message: { tone: 'up' | 'down'; text: string; network?: boolean } }) {
+  const t = useT();
   return (
     <Surface level={2}>
       <View className="gap-1">
@@ -102,7 +105,7 @@ function Status({ message }: { message: { tone: 'up' | 'down'; text: string; net
         </Text>
         {message.tone === 'down' && message.network ? (
           <Text variant="caption" tone="muted">
-            部分服务只能在校园网内访问；如果在校外，请连接校园网后再试。
+            {t('app.campus.networkHint')}
           </Text>
         ) : null}
       </View>

@@ -1,7 +1,10 @@
 /**
  * Thin number formatting for usage and context (docs/AGENT-HARNESS.md: `12.4k`, `1,234 字`,
- * `86%`). Hermes' Intl ignores most locales, so format by hand.
+ * `86%`). Hermes' Intl ignores most locales, so format by hand. Day labels follow the app
+ * language (src/utils/date.ts); numbers are the same in both.
  */
+import { getLocale, type Locale } from '@/i18n';
+import { formatDate, formatDateWeekday } from '@/utils/date';
 
 /** 1234567 → "1,234,567". Rounds to an integer. */
 export function formatInt(n: number): string {
@@ -36,14 +39,12 @@ export function formatPercent(ratio: number): string {
   return `${Math.round(ratio * 100)}%`;
 }
 
-const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六'];
-
-/** "10月19日 周一". */
-export function formatDay(d: Date): string {
-  return `${d.getMonth() + 1}月${d.getDate()}日 周${WEEKDAYS[d.getDay()]}`;
+/** "10月19日 周一" / "Mon, Oct 19". */
+export function formatDay(d: Date, locale: Locale = getLocale()): string {
+  return formatDateWeekday(d, d, locale);
 }
 
-/** "10月19日". */
-export function formatShortDay(d: Date): string {
-  return `${d.getMonth() + 1}月${d.getDate()}日`;
+/** "10月19日" / "Oct 19". */
+export function formatShortDay(d: Date, locale: Locale = getLocale()): string {
+  return formatDate(d, d, locale);
 }

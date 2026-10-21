@@ -19,6 +19,10 @@ import {
   turnCaption,
   userText,
 } from './session-utils';
+import { makeTr } from './testing-tr';
+
+const zh = makeTr('zh-Hans');
+const en = makeTr('en');
 
 const user = (id: string, text: string): ChatMessage => ({ id, role: 'user', parts: [{ type: 'text', text }], createdAt: 1 });
 const reply = (id: string, text: string): ChatMessage => ({ id, role: 'assistant', parts: [{ type: 'text', text }], createdAt: 2 });
@@ -37,6 +41,7 @@ describe('titles and previews', () => {
     expect(cleanTitle('标题：「校园卡余额查询」。')).toBe('校园卡余额查询');
     expect(cleanTitle('"Weekly plan"\nmore')).toBe('Weekly plan');
     expect(cleanTitle('  ')).toBeNull();
+    expect(cleanTitle('Title: Campus card balance and network fee reminders for next week')).toBe('Campus card balance and network fee reminders');
   });
 });
 
@@ -105,17 +110,28 @@ describe('list', () => {
   const now = new Date(2026, 9, 20, 15, 0).getTime();
   const h = 3_600_000;
   test('sections', () => {
-    expect(sectionOf(now - h, now)).toBe('今天');
-    expect(sectionOf(now - 20 * h, now)).toBe('昨天');
-    expect(sectionOf(now - 4 * 24 * h, now)).toBe('7 天内');
-    expect(sectionOf(now - 30 * 24 * h, now)).toBe('更早');
+    expect(sectionOf(now - h, now)).toBe('today');
+    expect(sectionOf(now - 20 * h, now)).toBe('yesterday');
+    expect(sectionOf(now - 4 * 24 * h, now)).toBe('week');
+    expect(sectionOf(now - 30 * 24 * h, now)).toBe('earlier');
   });
   test('relative time', () => {
-    expect(relativeTime(now - 10_000, now)).toBe('刚刚');
-    expect(relativeTime(now - 5 * 60_000, now)).toBe('5 分钟前');
-    expect(relativeTime(new Date(2026, 9, 20, 9, 5).getTime(), now)).toBe('09:05');
-    expect(relativeTime(now - 20 * h, now)).toBe('昨天');
-    expect(relativeTime(new Date(2026, 0, 3).getTime(), now)).toBe('1月3日');
+    expect(relativeTime(now - 10_000, zh, now)).toBe('刚刚');
+    expect(relativeTime(now - 5 * 60_000, zh, now)).toBe('5 分钟前');
+    expect(relativeTime(new Date(2026, 9, 20, 9, 5).getTime(), zh, now)).toBe('09:05');
+    expect(relativeTime(now - 20 * h, zh, now)).toBe('昨天');
+    expect(relativeTime(new Date(2026, 9, 17, 9).getTime(), zh, now)).toBe('周六');
+    expect(relativeTime(new Date(2026, 0, 3).getTime(), zh, now)).toBe('1月3日');
+    expect(relativeTime(new Date(2025, 9, 3).getTime(), zh, now)).toBe('2025/10/3');
+  });
+  test('relative time in English', () => {
+    expect(relativeTime(now - 10_000, en, now)).toBe('Just now');
+    expect(relativeTime(now - 60_000, en, now)).toBe('1 min ago');
+    expect(relativeTime(now - 5 * 60_000, en, now)).toBe('5 min ago');
+    expect(relativeTime(now - 20 * h, en, now)).toBe('Yesterday');
+    expect(relativeTime(new Date(2026, 9, 17, 9).getTime(), en, now)).toBe('Sat');
+    expect(relativeTime(new Date(2026, 0, 3).getTime(), en, now)).toBe('Jan 3');
+    expect(relativeTime(new Date(2025, 9, 3).getTime(), en, now)).toBe('Oct 3, 2025');
   });
   test('grouping, pinned first, search over title and preview', () => {
     const list = [
@@ -124,9 +140,9 @@ describe('list', () => {
       { id: 'c', title: null, preview: '树洞搜索', pinned: false, updatedAt: now - 20 * h },
     ];
     expect(groupSessions(list, '', now).map((g) => [g.section, g.items.map((i) => i.id)])).toEqual([
-      ['置顶', ['b']],
-      ['今天', ['a']],
-      ['昨天', ['c']],
+      ['pinned', ['b']],
+      ['today', ['a']],
+      ['yesterday', ['c']],
     ]);
     expect(groupSessions(list, '树洞', now).flatMap((g) => g.items.map((i) => i.id))).toEqual(['c']);
   });
@@ -142,7 +158,10 @@ describe('queue and stats', () => {
     expect(formatTokens(860)).toBe('860');
     expect(formatTokens(12_400)).toBe('12.4k');
     expect(formatTokens(1_000)).toBe('1k');
-    expect(turnCaption({ durationMs: 9200, inputTokens: 12_400, cachedInputTokens: 10_664, outputTokens: 860 }, 'Flash')).toBe('Flash · 9.2s · 输入 12.4k（缓存 86%）· 输出 860');
+    const meta = { durationMs: 9200, inputTokens: 12_400, cachedInputTokens: 10_664, outputTokens: 860 };
+    expect(turnCaption(meta, 'Flash', zh)).toBe('Flash · 9.2s · 输入 12.4k（缓存 86%）· 输出 860');
+    expect(turnCaption(meta, 'Flash', en)).toBe('Flash · 9.2s · In 12.4k (86% cached) · Out 860');
+    expect(turnCaption({ inputTokens: 900, outputTokens: 12 }, undefined, en)).toBe('In 900 · Out 12');
   });
 });
 

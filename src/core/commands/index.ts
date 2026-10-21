@@ -9,7 +9,9 @@ import { sendMessage } from '@/core/agent/run';
 import { sessions } from '@/core/agent/session/sessions';
 import { services } from '@/core/runtime/invoke';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
+import { commandText } from '@/core/runtime/localize';
 import { registry } from '@/core/runtime/registry';
+import { getLocale, subscribeLocale, t } from '@/i18n';
 
 import { builtinCommands } from './builtins';
 import { mergeCommands, type LocalRunner } from './merge';
@@ -17,16 +19,12 @@ import { parseCommandLine } from './parse';
 import type { Command, CommandContext } from './types';
 
 export type { Command, CommandContext, CommandResult } from './types';
+export { isAsciiAlias } from './builtins';
 export { menuQuery } from './parse';
 export { rankCommands } from './rank';
 
-/** Menu group order and headers. */
-export const COMMAND_GROUPS: { id: Command['group']; title: string }[] = [
-  { id: 'session', title: '会话' },
-  { id: 'context', title: '上下文' },
-  { id: 'app', title: '应用' },
-  { id: 'plugin', title: '插件' },
-];
+/** Menu group order; headers are `chat.commands.groups.<id>`. */
+export const COMMAND_GROUPS: Command['group'][] = ['session', 'context', 'app', 'plugin'];
 
 const runLocal: LocalRunner = async (entry, input, ctx) => {
   const def = entry.def;
@@ -35,29 +33,42 @@ const runLocal: LocalRunner = async (entry, input, ctx) => {
   return typeof out === 'string' ? out : undefined;
 };
 
-let cache: { version: number; settings: unknown; commands: Command[] } | null = null;
-const builtins = builtinCommands(() => listCommands());
+let cache: { version: number; settings: unknown; locale: string; commands: Command[] } | null = null;
+// Rebuilt when the language changes (descriptions, notices and alias order are per language).
+let builtins: { locale: string; commands: Command[] } | null = null;
+function builtinsFor(locale: string): Command[] {
+  if (builtins?.locale !== locale) builtins = { locale, commands: builtinCommands(() => listCommands()) };
+  return builtins.commands;
+}
 
 /** All commands (built-ins + enabled, available plugins), for the menu. Stable between changes. */
 export function listCommands(): Command[] {
   const version = registry.version();
   const settings = pluginSettings.snapshot();
-  if (cache && cache.version === version && cache.settings === settings) return cache.commands;
+  const locale = getLocale();
+  if (cache && cache.version === version && cache.settings === settings && cache.locale === locale) return cache.commands;
   const entries = registry
     .commands()
     .filter((e) => pluginSettings.get(e.pluginId).enabled && !registry.unavailable(e.pluginId))
-    .map((e) => ({ ...e, icon: registry.get(e.pluginId)?.icon }));
-  const commands = mergeCommands(builtins, entries, runLocal);
-  cache = { version, settings, commands };
+    .map((e) => {
+      const plugin = registry.get(e.pluginId);
+      // The plugin's English overlay (description, argHint, extra aliases) in English.
+      const text = commandText(plugin, e.name, e.def, locale);
+      return { ...e, def: { ...e.def, ...text }, icon: plugin?.icon };
+    });
+  const commands = mergeCommands(builtinsFor(locale), entries, runLocal);
+  cache = { version, settings, locale, commands };
   return commands;
 }
 
 function subscribe(listener: () => void) {
   const a = registry.subscribe(listener);
   const b = pluginSettings.subscribe(listener);
+  const c = subscribeLocale(listener);
   return () => {
     a();
     b();
+    c();
   };
 }
 
@@ -88,7 +99,7 @@ export async function executeCommandLine(draft: string, ctx: CommandContext): Pr
     sessions.notice(text, tone, { command: label, sessionId: ctx.sessionId });
 
   if (command.idleOnly && isStreaming(ctx.sessionId)) {
-    notice('回复结束后再试', 'warn');
+    notice(t('chat.commands.retryAfterReply'), 'warn');
     return true;
   }
 
@@ -115,7 +126,7 @@ export async function executeCommandLine(draft: string, ctx: CommandContext): Pr
       notice(result.notice, result.tone ?? 'info');
     }
   } catch (e) {
-    notice(`${label} 失败：${e instanceof Error ? e.message : String(e)}`, 'error');
+    notice(t('chat.commands.failed', { command: label, error: e instanceof Error ? e.message : String(e) }), 'error');
   }
   flushDraft();
   return true;

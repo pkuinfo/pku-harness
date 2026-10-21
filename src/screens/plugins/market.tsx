@@ -13,21 +13,28 @@ import { Segmented } from '@/components/segmented';
 import { Skeleton } from '@/components/skeleton';
 import { Text } from '@/components/text';
 import { usePlugins } from '@/core/runtime/hooks';
+import { pluginDescription, pluginName } from '@/core/runtime/localize';
 import { loadMarketplace, type MarketState, type RegistryEntry } from '@/core/runtime/marketplace';
-import { HOST_CAPABILITIES } from '@/core/runtime/registry';
+import { HOST_CAPABILITIES, registry } from '@/core/runtime/registry';
 import type { Capability } from '@/core/runtime/types';
+import { useLocale, useT, type Locale } from '@/i18n';
 import { fonts, radius, typography, useTheme } from '@/theme';
 
 type Filter = 'all' | 'builtin' | 'remote';
 
-const FILTERS: { label: string; value: Filter }[] = [
-  { label: '全部', value: 'all' },
-  { label: '内置', value: 'builtin' },
-  { label: '远程', value: 'remote' },
-];
+/**
+ * Registry entries are written in Chinese. A built-in entry is the same plugin the app ships,
+ * so its name and description come from the plugin's own English overlay when there is one.
+ */
+function entryText(entry: RegistryEntry, locale: Locale) {
+  const plugin = entry.kind === 'builtin' ? registry.get(entry.id) : undefined;
+  return plugin ? { name: pluginName(plugin, locale), description: pluginDescription(plugin, locale) } : { name: entry.name, description: entry.description };
+}
 
 function EntryCard({ entry, installed }: { entry: RegistryEntry; installed: boolean }) {
   const c = useTheme();
+  const t = useT();
+  const text = entryText(entry, useLocale());
   const missing = entry.requires.filter((r) => !HOST_CAPABILITIES.has(r as Capability));
   const action = () => {
     if (installed) {
@@ -48,33 +55,41 @@ function EntryCard({ entry, installed }: { entry: RegistryEntry; installed: bool
         <View className="flex-1 gap-0.5">
           <View className="flex-row items-center gap-1">
             <Text variant="bodyStrong" numberOfLines={1} className="shrink">
-              {entry.name}
+              {text.name}
             </Text>
             {entry.verified ? <Icon name="shield" size={14} color={c.up} /> : null}
           </View>
           <Text variant="caption" tone="faint">
-            {entry.author} · {entry.kind === 'builtin' ? '内置' : '远程 MCP'}
+            {entry.author} · {entry.kind === 'builtin' ? t('app.plugins.marketplace.builtin') : t('app.plugins.marketplace.remoteMcp')}
           </Text>
         </View>
       </View>
       <Text variant="callout" tone="muted">
-        {entry.description}
+        {text.description}
       </Text>
       <View className="flex-row flex-wrap gap-1">
-        {entry.tags.map((t) => (
-          <Chip key={t} label={t} />
+        {entry.tags.map((tag) => (
+          <Chip key={tag} label={tag} />
         ))}
-        {missing.length ? <Chip label="此设备不支持" tone="warn" icon="warning" /> : null}
+        {missing.length ? <Chip label={t('app.plugins.marketplace.unsupported')} tone="warn" icon="warning" /> : null}
       </View>
       <View className="flex-row gap-2">
         <Button
-          title={installed ? (entry.kind === 'builtin' ? '已内置' : '已安装') : entry.endpoint ? '安装' : '填写地址'}
+          title={
+            installed
+              ? entry.kind === 'builtin'
+                ? t('app.plugins.marketplace.included')
+                : t('app.plugins.marketplace.installed')
+              : entry.endpoint
+                ? t('app.plugins.marketplace.install')
+                : t('app.plugins.marketplace.enterUrl')
+          }
           size="sm"
           variant={installed ? 'secondary' : 'primary'}
           onPress={action}
           disabled={!installed && missing.length > 0}
         />
-        <Button title="源码" size="sm" variant="ghost" icon="globe" onPress={() => WebBrowser.openBrowserAsync(entry.source)} />
+        <Button title={t('app.plugins.marketplace.source')} size="sm" variant="ghost" icon="globe" onPress={() => WebBrowser.openBrowserAsync(entry.source)} />
       </View>
     </View>
   );
@@ -83,6 +98,13 @@ function EntryCard({ entry, installed }: { entry: RegistryEntry; installed: bool
 /** 插件市场: every plugin in the community registry, built-in and remote side by side. */
 export function Marketplace() {
   const c = useTheme();
+  const t = useT();
+  const locale = useLocale();
+  const filters: { label: string; value: Filter }[] = [
+    { label: t('app.plugins.marketplace.all'), value: 'all' },
+    { label: t('app.plugins.marketplace.builtin'), value: 'builtin' },
+    { label: t('app.plugins.marketplace.remote'), value: 'remote' },
+  ];
   const plugins = usePlugins();
   const [state, setState] = useState<MarketState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,37 +129,42 @@ export function Marketplace() {
     const q = query.trim().toLowerCase();
     return (state?.registry.plugins ?? [])
       .filter((e) => filter === 'all' || e.kind === filter)
-      .filter((e) => !q || `${e.name} ${e.description} ${e.tags.join(' ')}`.toLowerCase().includes(q));
-  }, [state, filter, query]);
+      .filter((e) => {
+        if (!q) return true;
+        // Match the shown (possibly English) text and the registry's own Chinese text.
+        const shown = entryText(e, locale);
+        return `${shown.name} ${shown.description} ${e.name} ${e.description} ${e.tags.join(' ')}`.toLowerCase().includes(q);
+      });
+  }, [state, filter, query, locale]);
 
   return (
     <Screen
-      title="插件市场"
-      subtitle="Community"
+      title={t('app.plugins.marketplace.title')}
+      subtitle={t('app.plugins.marketplace.eyebrow')}
       back
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={c.accent} colors={[c.accent]} progressBackgroundColor={c.surface} />}>
       <FadeIn index={0}>
         <View className="gap-3">
           <Text variant="callout" tone="muted">
-            所有插件平等：内置的随应用发布，社区的通过 MCP 远程运行。想贡献？在 pkuinfo/pku-harness-plugins 提交 PR。
+            {t('app.plugins.marketplace.intro')}
           </Text>
           <View className="flex-row items-center gap-2 rounded-sm border-[0.5px] border-edge bg-surface-2 px-3">
             <Icon name="search" size={16} color={c.textFaint} />
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="搜索插件"
+              placeholder={t('app.plugins.marketplace.search')}
               placeholderTextColor={c.textFaint}
-              accessibilityLabel="搜索插件"
+              accessibilityLabel={t('app.plugins.marketplace.search')}
               className="flex-1 py-2 text-fg"
               style={{ fontFamily: fonts.regular, fontSize: typography.body.fontSize }}
             />
           </View>
-          <Segmented options={FILTERS} value={filter} onChange={setFilter} />
+          <Segmented options={filters} value={filter} onChange={setFilter} />
         </View>
       </FadeIn>
       {error && !state ? (
-        <EmptyState icon="warning" title="插件市场暂时打不开" message={error} action={<Button title="重试" size="sm" variant="secondary" onPress={() => load(true)} />} />
+        <EmptyState icon="warning" title={t('app.plugins.marketplace.loadFailed')} message={error} action={<Button title={t('core.common.retry')} size="sm" variant="secondary" onPress={() => load(true)} />} />
       ) : !state ? (
         <View className="gap-3">
           <Skeleton height={140} rounded={radius.lg} />
@@ -145,8 +172,8 @@ export function Marketplace() {
         </View>
       ) : (
         <View className="gap-3">
-          {state.stale ? <Chip label="离线：显示上次的列表" tone="warn" icon="warning" /> : null}
-          {entries.length === 0 ? <EmptyState icon="puzzle" title="没有匹配的插件" /> : null}
+          {state.stale ? <Chip label={t('app.plugins.marketplace.offline')} tone="warn" icon="warning" /> : null}
+          {entries.length === 0 ? <EmptyState icon="puzzle" title={t('app.plugins.marketplace.noMatch')} /> : null}
           {entries.map((e, i) => (
             <FadeIn key={e.id} index={i + 1}>
               <EntryCard entry={e} installed={installedIds.has(e.kind === 'builtin' ? e.id : `mcp-${e.id}`)} />

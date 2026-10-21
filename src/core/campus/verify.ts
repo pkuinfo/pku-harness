@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
+import { t } from '@/i18n';
+
 /**
  * Second-factor codes IAAA asks for (SMS, email or 手机令牌 OTP). Any campus login, including
  * background session refreshes, can need one; the root layout renders the prompt and the login
@@ -48,7 +50,7 @@ export class VerificationUnavailable extends Error {}
 
 /** Ask the user for a code; resolves null if they cancel. */
 export function askVerification(req: Omit<VerificationRequest, 'id'>): Promise<string | null> {
-  if (!uiReady) return Promise.reject(new VerificationUnavailable('校园登录需要验证码，请打开 App 完成验证'));
+  if (!uiReady) return Promise.reject(new VerificationUnavailable(t('app.campus.errors.verifyInApp')));
   return new Promise((resolve) => {
     const id = nextId++;
     resolvers.set(id, resolve);
