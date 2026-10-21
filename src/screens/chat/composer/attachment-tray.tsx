@@ -34,14 +34,17 @@ export function textChipLines(a: AttachmentPart, tr: Tr): { title: string; subti
 function RemoveBadge({ label, onPress }: { label: string; onPress: () => void }) {
   const c = useTheme();
   return (
+    // Android drops touches outside the parent's bounds (hitSlop included), so the 32 px target
+    // sits inside the item's padded corner; the 20 px disc is what shows.
     <PressableScale
       accessibilityRole="button"
       accessibilityLabel={label}
       onPress={onPress}
-      hitSlop={8}
       scaleTo={0.85}
-      className="absolute -right-1.5 -top-1.5 size-5 items-center justify-center rounded-full border-[0.5px] border-edge bg-elevated">
-      <Icon name="close" size={11} color={c.text} />
+      className="absolute right-0 top-0 size-8 items-center justify-center">
+      <View className="size-5 items-center justify-center rounded-full border-[0.5px] border-edge bg-elevated">
+        <Icon name="close" size={11} color={c.text} />
+      </View>
     </PressableScale>
   );
 }
@@ -68,24 +71,24 @@ export function AttachmentTray({
   const exit = reduced ? FadeOut : ZoomOut;
   const layout = reduced ? undefined : LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness);
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerClassName="gap-2 px-3 pb-1 pt-3">
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerClassName="gap-0.5 pb-1 pl-3 pr-1.5 pt-1.5">
       {items.map((a) =>
         a.kind === 'image' ? (
-          <Animated.View key={a.id} entering={enter} exiting={exit} layout={layout}>
+          <Animated.View key={a.id} entering={enter} exiting={exit} layout={layout} className="pr-1.5 pt-1.5">
             <PressableScale accessibilityRole="imagebutton" accessibilityLabel={t('chat.attach.viewImage', { name: a.name })} onPress={() => onOpen(a)}>
               <Image source={{ uri: a.uri }} contentFit="cover" transition={120} style={[styles.thumb, { backgroundColor: c.surface3 }]} />
             </PressableScale>
             <RemoveBadge label={t('chat.attach.removeImage', { name: a.name })} onPress={() => onRemove(a)} />
           </Animated.View>
         ) : (
-          <Animated.View key={a.id} entering={enter} exiting={exit} layout={layout}>
+          <Animated.View key={a.id} entering={enter} exiting={exit} layout={layout} className="pr-1.5 pt-1.5">
             <TextChip attachment={a} onPress={() => onOpen(a)} />
             <RemoveBadge label={t('chat.attach.removeItem', { name: textChipLines(a, t).name })} onPress={() => onRemove(a)} />
           </Animated.View>
         ),
       )}
       {Array.from({ length: pending }, (_, i) => (
-        <Animated.View key={`pending-${i}`} entering={FadeIn} exiting={FadeOut} layout={layout}>
+        <Animated.View key={`pending-${i}`} entering={FadeIn} exiting={FadeOut} layout={layout} className="pr-1.5 pt-1.5">
           <View className="size-14 items-center justify-center rounded-md bg-surface-3" style={CURVE} accessibilityLabel={t('chat.attach.processing')}>
             <ActivityIndicator size="small" color={c.textMuted} />
           </View>

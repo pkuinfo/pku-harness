@@ -161,7 +161,7 @@ export const chat: Messages['chat'] = {
     previewHint: '{title}, tap to preview',
     closePreview: 'Close preview',
     remove: 'Remove',
-    restore: 'Back to message',
+    restore: 'Insert as text',
   },
   queue: {
     pausedBanner: 'Reply interrupted, queued messages are paused',

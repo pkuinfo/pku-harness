@@ -19,7 +19,7 @@ const LEN = 2 * Math.PI * R;
 
 /**
  * The composer's context meter (docs/AGENT-HARNESS.md §6.2): fill = session tokens / budget;
- * faint under 60 %, warn to 85 %, down above. Hidden while the session is empty. The sweep
+ * muted under 60 %, warn to 85 %, down above. Hidden while the session is empty. The sweep
  * springs on the UI thread when the size changes (per turn, never per token).
  */
 export function ContextRing({ sessionId, onPress }: { sessionId?: string; onPress?: () => void }) {
@@ -29,7 +29,7 @@ export function ContextRing({ sessionId, onPress }: { sessionId?: string; onPres
   const b = useContextBreakdown(sessionId);
   const ratio = b.budget > 0 ? b.total / b.budget : 0;
   const fill = Math.min(1, Math.max(0, ratio));
-  const color = ratio >= 0.85 ? c.down : ratio >= 0.6 ? c.warn : c.textFaint;
+  const color = ratio >= 0.85 ? c.down : ratio >= 0.6 ? c.warn : c.textMuted;
 
   const p = useSharedValue(fill);
   useEffect(() => {
@@ -49,7 +49,8 @@ export function ContextRing({ sessionId, onPress }: { sessionId?: string; onPres
       className="items-center justify-center"
       style={{ width: SIZE + 8, height: SIZE + 8 }}>
       <Svg width={SIZE} height={SIZE} style={{ transform: [{ rotate: '-90deg' }] }}>
-        <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} stroke={c.surface3} strokeWidth={STROKE} fill="none" />
+        {/* A visible full track and square ends: a gauge, never mistaken for a loading spinner. */}
+        <Circle cx={SIZE / 2} cy={SIZE / 2} r={R} stroke={c.textFaint} strokeOpacity={0.35} strokeWidth={STROKE} fill="none" />
         <AnimatedCircle
           cx={SIZE / 2}
           cy={SIZE / 2}
@@ -57,7 +58,7 @@ export function ContextRing({ sessionId, onPress }: { sessionId?: string; onPres
           stroke={color}
           strokeWidth={STROKE}
           fill="none"
-          strokeLinecap="round"
+          strokeLinecap="butt"
           strokeDasharray={`${LEN} ${LEN}`}
           animatedProps={props}
         />

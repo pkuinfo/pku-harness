@@ -157,11 +157,19 @@ export function Composer({ glass = false }: { glass?: boolean }) {
   const suggestion = useMemo(() => (images ? null : imageModelSuggestion()), [images]);
 
   // ---- text (§4.3) --------------------------------------------------------------------------
+  // Android's controlled TextInput can report the same paste twice (the native field still holds
+  // the text until the reset value lands, ~3 ms apart): turn one paste into one chip.
+  const lastPaste = useRef<{ text: string; at: number } | null>(null);
   const onChangeText = useCallback(
     (next: string) => {
       const prev = composerDraft.get().text;
       const paste = detectPaste(prev, next);
+      if (paste && lastPaste.current && lastPaste.current.text === paste.pasted && Date.now() - lastPaste.current.at < 500) {
+        composerDraft.setText(paste.rest);
+        return;
+      }
       if (paste) {
+        lastPaste.current = { text: paste.pasted, at: Date.now() };
         if (remainingSlots(composerDraft.get().attachments.length) === 0) {
           composerToast.show(t('chat.composer.pasteFull'), 'warn');
         } else {
