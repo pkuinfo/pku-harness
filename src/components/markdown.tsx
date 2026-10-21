@@ -1,5 +1,5 @@
 import type { Token, Tokens } from 'marked';
-import { memo, useMemo, useState, type ReactNode } from 'react';
+import { memo, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Linking, ScrollView, View } from 'react-native';
 
 import { useT } from '@/i18n';
@@ -8,6 +8,7 @@ import { cx } from '@/utils/cx';
 import { lexMarkdown, streamLexer } from '@/utils/markdown-lex';
 
 import { Icon } from './icon';
+import { layoutColumns, numericColumn } from './table-layout';
 import { Text, type TextTone } from './text';
 
 /**
@@ -126,20 +127,66 @@ function List({ list, depth }: { list: Tokens.List; depth: number }) {
 }
 
 function Table({ table }: { table: Tokens.Table }) {
-  const align = (a: Tokens.TableCell['align']) => (a === 'right' ? 'right' : a === 'center' ? 'center' : 'left');
+  // One width per column for every row, fitted to the bubble when possible (table-layout.ts).
+  const [available, setAvailable] = useState(0);
+  const rows = [table.header, ...table.rows];
+  const text = rows.map((row) => row.map((cell) => cell.text));
+  const cols = Math.max(0, ...rows.map((r) => r.length));
+  // Real font metrics: an invisible pass lays every cell out unconstrained; each column's widest
+  // cell is its natural width. Re-measured whenever the content changes (streaming).
+  const key = text.map((r) => r.join('\u0001')).join('\u0002');
+  const [measure, setMeasure] = useState<{ key: string; widths: number[] } | null>(null);
+  const got = useRef<{ key: string; widths: number[] }>({ key: '', widths: [] });
+  const onColumn = (c: number, w: number) => {
+    if (got.current.key !== key) got.current = { key, widths: [] };
+    got.current.widths[c] = w;
+    const done = Array.from({ length: cols }, (_, i) => got.current.widths[i]).every((x) => x != null);
+    if (done) setMeasure({ key, widths: [...got.current.widths] });
+  };
+  const measured = measure?.key === key ? measure.widths : undefined;
+  const { widths, scroll } = layoutColumns(text, available, { measured });
+  const numeric = widths.map((_, c) => numericColumn(table.rows.map((row) => row[c]?.text ?? '')));
+  const align = (a: Tokens.TableCell['align'], c: number) => (a === 'right' ? 'right' : a === 'center' ? 'center' : a === 'left' ? 'left' : numeric[c] ? 'right' : 'left');
   return (
-    <View className="overflow-hidden rounded-lg border-[0.5px] border-edge bg-surface" style={{ borderCurve: 'continuous' }}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View>
-          {[table.header, ...table.rows].map((row, r) => (
-            <View key={r} className={cx('flex-row', r === 0 ? 'bg-surface-2' : 'border-t-[0.5px] border-edge')}>
-              {row.map((cell, ci) => (
-                <View key={ci} className="min-w-20 max-w-60 px-3 py-2">
-                  <Text variant={r === 0 ? 'caption' : 'callout'} tone={r === 0 ? 'muted' : 'default'} align={align(cell.align)} selectable>
-                    <Inline tokens={cell.tokens} />
+    <View
+      className="overflow-hidden rounded-lg border-[0.5px] border-edge bg-surface"
+      style={{ borderCurve: 'continuous' }}
+      onLayout={(e) => setAvailable(Math.floor(e.nativeEvent.layout.width))}>
+      {measured ? null : (
+        <ScrollView horizontal pointerEvents="none" style={{ height: 0, opacity: 0 }} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          <View className="flex-row">
+            {Array.from({ length: cols }, (_, ci) => (
+              <View key={ci} className="items-start" onLayout={(e) => onColumn(ci, e.nativeEvent.layout.width)}>
+                {rows.map((row, r) => (
+                  <Text key={r} variant={r === 0 ? 'caption' : 'callout'} numberOfLines={1}>
+                    {row[ci] ? <Inline tokens={row[ci].tokens} /> : ' '}
                   </Text>
-                </View>
-              ))}
+                ))}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+      )}
+      <ScrollView horizontal scrollEnabled={scroll} showsHorizontalScrollIndicator={scroll}>
+        <View>
+          {rows.map((row, r) => (
+            <View key={r} className={cx('flex-row', r === 0 ? 'bg-surface-2' : 'border-t-[0.5px] border-edge')}>
+              {widths.map((w, ci) => {
+                const cell = row[ci];
+                return (
+                  <View key={ci} className="px-2 py-2" style={{ width: w }}>
+                    <Text
+                      variant={r === 0 ? 'caption' : 'callout'}
+                      tone={r === 0 ? 'muted' : 'default'}
+                      align={align(cell?.align ?? null, ci)}
+                      // Full cell width, so right/center alignment has room to work.
+                      style={[{ width: '100%' }, numeric[ci] ? { fontVariant: ['tabular-nums'] } : null]}
+                      selectable>
+                      {cell ? <Inline tokens={cell.tokens} /> : null}
+                    </Text>
+                  </View>
+                );
+              })}
             </View>
           ))}
         </View>
