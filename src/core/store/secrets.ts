@@ -6,8 +6,11 @@ import * as SecureStore from 'expo-secure-store';
  */
 export type SecretKey = 'campus.username' | 'campus.password' | 'campus.otpSecret' | 'ai.apiKey' | `ai.${string}.apiKey` | `remote.${string}.token` | `campus.${string}`;
 
+// iOS: readable after the first unlock since boot, still device-only (never in backups or on
+// another phone). Background checks usually run while the phone is locked; WHEN_UNLOCKED would
+// make every one of them fail to read the campus session or the AI key. Android ignores this.
 const options: SecureStore.SecureStoreOptions = {
-  keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY,
+  keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY,
 };
 
 const storeKey = (k: SecretKey) => k.replace(/[^A-Za-z0-9._-]/g, '_');

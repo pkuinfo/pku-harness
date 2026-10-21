@@ -44,16 +44,21 @@ export async function initNotifications() {
   }
 }
 
+/** iOS provisional (quiet, in Notification Center only) is not enough for reminders. IosAuthorizationStatus.PROVISIONAL. */
+const IOS_PROVISIONAL = 3;
+const iosQuiet = (p: Notifications.NotificationPermissionsStatus) => Platform.OS === 'ios' && p.ios?.status === IOS_PROVISIONAL;
+
 export async function getNotificationPermission(): Promise<PermissionState> {
   const p = await Notifications.getPermissionsAsync();
-  if (p.granted) return 'granted';
+  if (p.granted && !iosQuiet(p)) return 'granted';
   return p.canAskAgain ? 'undetermined' : 'denied';
 }
 
 export async function requestNotificationPermission(): Promise<PermissionState> {
   await initNotifications();
-  const p = await Notifications.requestPermissionsAsync();
-  if (p.granted) return 'granted';
+  // iOS: ask for real alerts (not provisional, which arrives silently and defeats reminders).
+  const p = await Notifications.requestPermissionsAsync({ ios: { allowAlert: true, allowSound: true, allowBadge: true } });
+  if (p.granted && !iosQuiet(p)) return 'granted';
   return p.canAskAgain ? 'undetermined' : 'denied';
 }
 
@@ -69,7 +74,43 @@ export async function requestExactAlarmPermission(): Promise<boolean> {
   return (await Notifications.requestExactAlarmPermissionsAsync()).granted;
 }
 
+/**
+ * Android may defer or kill background work for battery optimisation (and some OEMs more than
+ * stock). Unrestricted keeps exact wake-ups and their network access reliable. True = optimised
+ * (restricted).
+ */
+export async function getBatteryOptimized(): Promise<boolean> {
+  if (Platform.OS !== 'android') return false;
+  const { default: notifee } = await import('react-native-notify-kit');
+  return notifee.isBatteryOptimizationEnabled();
+}
+
+/** Opens the system battery settings for this app (no special permission needed). */
+export async function openBatteryOptimizationSettings(): Promise<void> {
+  if (Platform.OS !== 'android') return;
+  const { default: notifee } = await import('react-native-notify-kit');
+  await notifee.openBatteryOptimizationSettings();
+}
+
+/** What on-time delivery depends on, for the welcome step, Settings and the Schedule tab. */
+export type DeliveryReadiness = { notifications: PermissionState; exactAlarms: boolean; batteryOptimized: boolean };
+
+export async function deliveryReadiness(): Promise<DeliveryReadiness> {
+  const [notifications, exactAlarms, batteryOptimized] = await Promise.all([
+    getNotificationPermission(),
+    getExactAlarmPermission(),
+    getBatteryOptimized().catch(() => false),
+  ]);
+  return { notifications, exactAlarms, batteryOptimized };
+}
+
 export type NotifyContent = {
+  /**
+   * iOS interruption level: 'timeSensitive' breaks through Focus and the summary (reminders,
+   * alerts the user asked for; needs the time-sensitive entitlement in app.json), 'passive' for
+   * status notices. Default by channel: reminders/alerts → timeSensitive, others → active.
+   */
+  urgency?: 'timeSensitive' | 'active' | 'passive';
   title: string;
   body?: string;
   /** In-app route to open on tap. */
@@ -83,6 +124,7 @@ const content = (c: NotifyContent): Notifications.NotificationContentInput => ({
   body: c.body,
   data: { ...c.data, ...(c.url ? { url: c.url } : null) },
   sound: 'default',
+  interruptionLevel: c.urgency ?? (c.channel === 'reminders' || c.channel === 'alerts' || c.channel == null ? 'timeSensitive' : 'active'),
 });
 
 /** Show a notification now. */
@@ -95,8 +137,8 @@ export async function notifyNow(c: NotifyContent) {
 }
 
 /**
- * Schedule a notification at an exact instant. Uses `setExactAndAllowWhileIdle` when the
- * exact-alarm permission is granted (expo-notifications ExpoSchedulingDelegate), else inexact.
+ * Schedule a notification at an exact instant: `setAlarmClock` (delivery 'alarmClock', Expo SDK
+ * 58) when the exact-alarm permission is granted, else best effort.
  */
 export async function notifyAt(at: Date, c: NotifyContent, identifier?: string) {
   await initNotifications();
@@ -107,6 +149,9 @@ export async function notifyAt(at: Date, c: NotifyContent, identifier?: string) 
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: at,
       channelId: CHANNELS[c.channel ?? 'reminders'].id,
+      // setAlarmClock: never deferred by Doze or battery saver (falls back to setExactAndAllowWhileIdle
+      // without the exact-alarm permission). Reminders are promises about a minute.
+      delivery: 'alarmClock',
     },
   });
 }

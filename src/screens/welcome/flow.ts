@@ -3,13 +3,18 @@
  * consent, then the setup steps. Progress is saved after every step (src/core/boot.ts
  * `onboardingProgress`) so a kill mid-setup resumes on the same step.
  */
+import { deliveryBlocker, type NotifyReadiness } from '@/core/runtime/types';
 import type { MessageKey } from '@/i18n';
 
-export const SETUP_STEPS = ['ai', 'campus', 'plugins', 'done'] as const;
+/**
+ * Setup order. New steps may be inserted (saved progress stores step names, so an older save
+ * still resumes on its step); never rename one.
+ */
+export const SETUP_STEPS = ['ai', 'campus', 'plugins', 'permissions', 'done'] as const;
 export type SetupStep = (typeof SETUP_STEPS)[number];
 
 /** Steps with a progress segment (the finish screen is not a task). */
-export const TASK_STEPS = ['ai', 'campus', 'plugins'] as const satisfies readonly SetupStep[];
+export const TASK_STEPS = ['ai', 'campus', 'plugins', 'permissions'] as const satisfies readonly SetupStep[];
 
 export type StepOutcome = 'done' | 'skipped';
 
@@ -75,6 +80,20 @@ export function retreat(progress: OnboardingProgress, step: SetupStep): Onboardi
 export function stepPosition(step: SetupStep): { index: number; total: number } | null {
   const i = (TASK_STEPS as readonly SetupStep[]).indexOf(step);
   return i < 0 ? null : { index: i + 1, total: TASK_STEPS.length };
+}
+
+/**
+ * How the reminders step ends: done once both required permissions (notifications, exact
+ * alarms) are on; battery optimisation is only a recommendation.
+ */
+export function permissionsOutcome(r: NotifyReadiness): StepOutcome {
+  return deliveryBlocker(r) ? 'skipped' : 'done';
+}
+
+/** The finish screen's reminders summary: on time, possibly late (no exact alarms), or off. */
+export function remindersSummary(r: NotifyReadiness): 'onTime' | 'mayBeLate' | 'off' {
+  const b = deliveryBlocker(r);
+  return b === 'notifications' ? 'off' : b === 'exactAlarms' ? 'mayBeLate' : 'onTime';
 }
 
 export type SetupState = {

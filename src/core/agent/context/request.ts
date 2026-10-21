@@ -75,8 +75,12 @@ export type RequestPrefix = { system: string; tools: ToolSet; messages: ModelMes
  * request diverges right after the system prompt and the cached conversation is missed
  * (measured: 5.5k of 6.6k cached instead of ~all). A stray tool call there runs nothing.
  */
-export async function requestPrefix(history: ModelMessage[], opts: { signal?: AbortSignal; sideRequest?: boolean; turn?: TurnInfo } = {}): Promise<RequestPrefix> {
-  const tools = buildToolSet(opts.signal, opts.turn);
+export async function requestPrefix(
+  history: ModelMessage[],
+  opts: { signal?: AbortSignal; sideRequest?: boolean; turn?: TurnInfo; actor?: 'agent' | 'scheduler' } = {},
+): Promise<RequestPrefix> {
+  // The same tool block for every actor (the cached prefix); who may run what is decided in invokeTool.
+  const tools = buildToolSet(opts.signal, opts.turn, opts.actor);
   if (opts.sideRequest) for (const name of Object.keys(tools)) tools[name] = { ...tools[name], execute: undefined };
   return { system: buildSystemPrompt(), tools, messages: await resolveImages(history) };
 }

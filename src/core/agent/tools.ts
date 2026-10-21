@@ -18,7 +18,7 @@ export const fromModelName = (name: string) => name.replace('__', '.');
  * conversation behind it (docs/AGENT-HARNESS.md §5.1). `turn` is the chat turn's taint state
  * (docs/AGENT-HARNESS.md §5.7), shared by every call the agent makes in it.
  */
-export function buildToolSet(signal?: AbortSignal, turn?: TurnInfo): ToolSet {
+export function buildToolSet(signal?: AbortSignal, turn?: TurnInfo, actor: 'agent' | 'scheduler' = 'agent'): ToolSet {
   const set: ToolSet = {};
   // Most stable plugins first (core → bundled → remote), then by tool id: installing or turning
   // off a plugin changes the block as late as possible (assembly.ts).
@@ -34,7 +34,7 @@ export function buildToolSet(signal?: AbortSignal, turn?: TurnInfo): ToolSet {
       inputSchema: entry.def.input,
       execute: async (input: unknown) => {
         try {
-          return await invokeTool(entry.id, input, { actor: 'agent', signal, turn });
+          return await invokeTool(entry.id, input, { actor, signal, turn });
         } catch (e) {
           // Return errors as data so the model can explain or recover.
           return { error: e instanceof Error ? e.message : String(e) };

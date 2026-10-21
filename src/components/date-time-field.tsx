@@ -1,9 +1,12 @@
 import { DatePickerDialog, TimePickerDialog } from '@expo/ui/jetpack-compose';
+import { DatePicker } from '@expo/ui/swift-ui';
+import { labelsHidden, tint } from '@expo/ui/swift-ui/modifiers';
 import { useState } from 'react';
 import { Platform, View } from 'react-native';
 
 import { useLocale, useT } from '@/i18n';
 import { useTheme, type ThemeColors } from '@/theme';
+import { cx } from '@/utils/cx';
 import { formatDateWeekday } from '@/utils/date';
 
 import { Icon } from './icon';
@@ -45,8 +48,9 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export const formatClock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
 /**
- * Date and/or time input using the native Material 3 dialogs (Android). The date dialog
- * reports UTC midnight of the chosen day; the time dialog reports local time.
+ * Date and/or time input. Android: the native Material 3 dialogs (the date dialog reports UTC
+ * midnight of the chosen day; the time dialog reports local time). iOS: the SwiftUI compact
+ * DatePicker inside the field (tap the chip → the system calendar / wheel popover), local time.
  */
 export function DateTimeField({
   label,
@@ -101,7 +105,27 @@ export function DateTimeField({
       <Text variant="callout" tone="muted">
         {label}
       </Text>
-      <View className="flex-row items-center gap-2">
+      {Platform.OS === 'ios' ? (
+        <View className="min-h-12 flex-row items-center gap-2 rounded-md border border-edge bg-surface-2 px-3" style={CURVE}>
+          <Icon name={mode === 'time' ? 'clock' : 'schedule'} size={18} color={c.textMuted} />
+          <View className="flex-1 items-start">
+            <NativeHost>
+              <DatePicker
+                selection={base}
+                displayedComponents={mode === 'date' ? ['date'] : mode === 'time' ? ['hourAndMinute'] : ['date', 'hourAndMinute']}
+                onDateChange={onChange}
+                modifiers={[labelsHidden(), tint(c.accent)]}
+              />
+            </NativeHost>
+          </View>
+          {value && onClear ? (
+            <PressableScale accessibilityRole="button" accessibilityLabel={t('app.ui.clear', { label })} onPress={onClear} className="size-10 items-center justify-center">
+              <Icon name="close" size={18} color={c.textFaint} />
+            </PressableScale>
+          ) : null}
+        </View>
+      ) : null}
+      <View className={cx('flex-row items-center gap-2', Platform.OS === 'ios' && 'hidden')}>
         <PressableScale
           accessibilityRole="button"
           accessibilityLabel={t('app.ui.fieldValue', { label, value: text })}

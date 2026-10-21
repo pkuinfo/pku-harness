@@ -1,15 +1,17 @@
 import * as BackgroundTask from 'expo-background-task';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { live } from '@/core/dashboard/live-store';
 import { cancelNotification, listScheduledNotifications, notifyAt, notifyNow } from '@/core/notify';
+import { plainText } from '@/core/agent/session/session-utils';
 import { invokeTool } from '@/core/runtime/invoke';
 import { t } from '@/i18n';
 import { registry } from '@/core/runtime/registry';
 
-import { evaluate, fillTemplate, getPath, lastOccurrence, MAX_ACTIVE_JOBS, MAX_LATE_MS, MIN_CHECK_GAP_MS, minGap, nextOccurrence, recordRun, runsBy } from '@pku-harness/sdk';
+import { evaluate, fillTemplate, getPath, lastOccurrence, MAX_ACTIVE_JOBS, MAX_AGENT_JOBS, MAX_LATE_MS, MIN_AGENT_GAP_MS, MIN_CHECK_GAP_MS, minGap, nextOccurrence, recordRun, runsBy, runsInJs } from '@pku-harness/sdk';
+import { runAgentJob } from './agent-run';
 import { dismissWake, EventType, isWakeEvent, notifee, syncWakeups } from './exact-wake';
-import { diffArmed, planNotifications } from './plan';
+import { ANDROID_LIMITS, diffArmed, IOS_LIMITS, planNotifications } from './plan';
 import { jobStore } from './store';
 import { actionSchema, triggerSchema, type Job, type JobInput, type JobPatch } from '@pku-harness/sdk';
 
@@ -46,6 +48,14 @@ function derive(job: Job, now: number): Job {
 function assertAllowed(job: Pick<Job, 'id' | 'enabled' | 'trigger' | 'action'>, now: number) {
   if (job.enabled && jobStore.list().filter((j) => j.enabled && j.id !== job.id).length >= MAX_ACTIVE_JOBS) {
     throw new Error(t('app.schedule.tooMany', { max: MAX_ACTIVE_JOBS }));
+  }
+  if (job.action.type === 'agent') {
+    if (job.enabled && jobStore.list().filter((j) => j.enabled && j.id !== job.id && j.action.type === 'agent').length >= MAX_AGENT_JOBS) {
+      throw new Error(t('app.schedule.tooManyAgent', { max: MAX_AGENT_JOBS }));
+    }
+    const gap = minGap(job.trigger, now);
+    if (gap < MIN_AGENT_GAP_MS) throw new Error(t('app.schedule.agentTooOften', { minutes: MIN_AGENT_GAP_MS / 60_000, actual: Math.max(1, Math.round(gap / 60_000)) }));
+    return;
   }
   if (job.action.type !== 'check') return;
   // The same check twice means two alerts for one event: point the caller at the existing job.
@@ -105,7 +115,7 @@ export async function updateJob(
   };
   assertAllowed(next, now);
   // A new schedule for a check job restarts its series.
-  if (patch.trigger && next.action.type === 'check') {
+  if (patch.trigger && runsInJs(next.action)) {
     next.lastRunAt = null;
     next.createdAt = now;
   }
@@ -126,33 +136,44 @@ export async function deleteJob(id: string) {
  * `ask` for the scheduler), and tells the user when it keeps failing instead of failing quietly.
  */
 export async function runCheck(job: Job, now = Date.now(), opts: { manual?: boolean } = {}): Promise<{ notified: boolean; value?: unknown; error?: string }> {
-  if (job.action.type !== 'check') throw new Error(t('app.schedule.notCheck'));
+  if (!runsInJs(job.action)) throw new Error(t('app.schedule.notCheck'));
   const a = job.action;
   const started = Date.now();
   const scheduledAt = opts.manual ? null : job.nextRunAt;
-  let outcome: { notified: boolean; value?: unknown; error?: string };
+  let outcome: { notified: boolean; value?: unknown; output?: string; error?: string };
   try {
-    const effect = registry.tool(a.tool)?.def.effect;
-    if (effect && effect !== 'read') throw new Error(t('app.schedule.readOnly', { tool: a.tool }));
-    const result = await invokeTool(a.tool, a.args ?? {}, { actor: 'scheduler' });
-    // Share the fresh result with dashboard widgets bound to the same source.
-    if (effect === 'read') live.prime({ tool: a.tool, args: a.args }, result);
-    const value = getPath(result, a.condition.path);
-    const hit = evaluate(a.condition, value, job.lastValue);
-    if (hit) {
-      await notifyNow({
-        title: fillTemplate(a.title, value),
-        body: a.body ? fillTemplate(a.body, value) : undefined,
-        url: a.url,
-        data: { jobId: job.id },
-        channel: 'alerts',
-      });
+    if (a.type === 'agent') {
+      // A fresh, read-only, silent-by-default agent run (agent-run.ts).
+      const { output, silent } = await runAgentJob(job);
+      if (!silent) {
+        await notifyNow({ title: job.title, body: plainText(output).slice(0, 240), url: `/m/schedule/reminder?id=${encodeURIComponent(job.id)}`, data: { jobId: job.id }, channel: 'alerts' });
+      }
+      outcome = { notified: !silent, output };
+    } else if (a.type === 'check') {
+      const effect = registry.tool(a.tool)?.def.effect;
+      if (effect && effect !== 'read') throw new Error(t('app.schedule.readOnly', { tool: a.tool }));
+      const result = await invokeTool(a.tool, a.args ?? {}, { actor: 'scheduler' });
+      // Share the fresh result with dashboard widgets bound to the same source.
+      if (effect === 'read') live.prime({ tool: a.tool, args: a.args }, result);
+      const value = getPath(result, a.condition.path);
+      const hit = evaluate(a.condition, value, job.lastValue);
+      if (hit) {
+        await notifyNow({
+          title: fillTemplate(a.title, value),
+          body: a.body ? fillTemplate(a.body, value) : undefined,
+          url: a.url,
+          data: { jobId: job.id },
+          channel: 'alerts',
+        });
+      }
+      outcome = { notified: hit, value };
+    } else {
+      outcome = { notified: false };
     }
-    outcome = { notified: hit, value };
   } catch (e) {
     outcome = { notified: false, error: e instanceof Error ? e.message : String(e) };
   }
-  const run = { at: now, scheduledAt, ok: !outcome.error, notified: outcome.notified, value: outcome.value, error: outcome.error, ms: Date.now() - started, ...(opts.manual ? { manual: true } : {}) };
+  const run = { at: now, scheduledAt, ok: !outcome.error, notified: outcome.notified, value: outcome.value, output: outcome.output, error: outcome.error, ms: Date.now() - started, ...(opts.manual ? { manual: true } : {}) };
   const { patch, alert } = recordRun(job, run);
   // Advance even on failure so a broken check doesn't spin; the error is shown on the job.
   await jobStore.put({
@@ -170,6 +191,8 @@ export async function runCheck(job: Job, now = Date.now(), opts: { manual?: bool
       body: alert === 'disabled' ? t('app.schedule.disabledBody', { count }) : t('app.schedule.failingBody', { count, error: outcome.error ?? '' }),
       data: { jobId: job.id },
       channel: 'alerts',
+      // A problem report, not the thing the user asked to be told about: no Focus break-through.
+      urgency: 'active',
     }).catch(() => {});
     if (alert === 'disabled') changed();
   }
@@ -191,7 +214,7 @@ export function runDueChecks(now = Date.now()): Promise<number> {
 }
 
 async function runDueNow(now: number): Promise<number> {
-  const ids = jobStore.list().filter((j) => j.enabled && j.action.type === 'check' && j.nextRunAt != null && j.nextRunAt <= now).map((j) => j.id);
+  const ids = jobStore.list().filter((j) => j.enabled && runsInJs(j.action) && j.nextRunAt != null && j.nextRunAt <= now).map((j) => j.id);
   let ran = 0;
   for (const id of ids) {
     const job = jobStore.get(id);
@@ -229,7 +252,7 @@ async function syncNow() {
     const d = derive(job, now);
     if (d.nextRunAt !== job.nextRunAt || d.runs !== job.runs) await jobStore.put(d);
   }
-  const desired = planNotifications(jobStore.list(), now, (n, total) => t('app.schedule.progress', { n, total }));
+  const desired = planNotifications(jobStore.list(), now, (n, total) => t('app.schedule.progress', { n, total }), Platform.OS === 'ios' ? IOS_LIMITS : ANDROID_LIMITS);
   const scheduled = (await listScheduledNotifications()).map((n) => n.identifier);
   const { cancel, schedule } = diffArmed(desired, scheduled);
   for (const id of cancel) await cancelNotification(id);
@@ -248,7 +271,7 @@ async function ensureBackgroundTask() {
       return;
     }
     // Check jobs need frequent wakeups; notify-only series just need periodic re-arming.
-    const hasChecks = active.some((j) => j.action.type === 'check');
+    const hasChecks = active.some((j) => runsInJs(j.action));
     await BackgroundTask.registerTaskAsync(BACKGROUND_TASK, { minimumInterval: hasChecks ? 15 : 12 * 60 });
   } catch (e) {
     console.warn('background task registration failed', e);
@@ -264,7 +287,7 @@ function scheduleTick() {
   timer = null;
   const next = jobStore
     .list()
-    .filter((j) => j.enabled && j.action.type === 'check' && j.nextRunAt != null)
+    .filter((j) => j.enabled && runsInJs(j.action) && j.nextRunAt != null)
     .reduce<number | null>((min, j) => (min == null || j.nextRunAt! < min ? j.nextRunAt! : min), null);
   if (next == null) return;
   timer = setTimeout(

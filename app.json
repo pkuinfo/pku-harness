@@ -10,7 +10,26 @@
     "ios": {
       "icon": "./assets/expo.icon",
       "bundleIdentifier": "org.pkuinfo.harness",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "entitlements": {
+        "com.apple.developer.usernotifications.time-sensitive": true
+      },
+      "config": {
+        "usesNonExemptEncryption": false
+      },
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsLocalNetworking": true,
+          "NSExceptionDomains": {
+            "pku.edu.cn": {
+              "NSIncludesSubdomains": true,
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionMinimumTLSVersion": "TLSv1.0",
+              "NSExceptionRequiresForwardSecrecy": false
+            }
+          }
+        }
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -48,10 +67,22 @@
       [
         "expo-notifications",
         {
-          "color": "#F0444F"
+          "color": "#F0444F",
+          "enableRemoteNotifications": false
         }
       ],
-      "react-native-notify-kit",
+      [
+        "react-native-notify-kit",
+        {
+          "android": {
+            "foregroundService": {
+              "types": [
+                "shortService"
+              ]
+            }
+          }
+        }
+      ],
       [
         "expo-image-picker",
         {

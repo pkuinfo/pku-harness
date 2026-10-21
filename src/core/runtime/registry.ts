@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import CampusHttpModule from '../../../modules/campus-http';
 
 import { t, type MessageKey } from '@/i18n';
 
@@ -15,8 +15,9 @@ export const HOST_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
   'campus-network',
   'notifications',
   'background',
-  // modules/campus-http is Android-only for now.
-  ...(Platform.OS === 'android' ? (['campus-session'] as const) : []),
+  // The authenticated campus session needs the native module (modules/campus-http): present on
+  // Android builds; iOS gets it once the Swift port lands (docs/IOS.md).
+  ...(CampusHttpModule != null ? (['campus-session'] as const) : []),
 ]);
 
 const CAPABILITY_LABEL: Record<Capability, MessageKey> = {

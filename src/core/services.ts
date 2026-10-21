@@ -1,6 +1,7 @@
 import * as Crypto from 'expo-crypto';
 import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
+import { Linking } from 'react-native';
 import { z } from 'zod';
 
 import '@/core/campus/adapters';
@@ -8,6 +9,7 @@ import { campusAccount, campusHandoff, pluginCampusRequest } from '@/core/campus
 import { bindFinish, bindStart, currentCodeAsync, otpStatus, unbindLocal } from '@/core/campus/otp';
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';
+import { deliveryReadiness, getNotificationPermission, openBatteryOptimizationSettings, requestExactAlarmPermission, requestNotificationPermission } from '@/core/notify';
 import { services } from '@/core/runtime/invoke';
 import { pluginName, toolTitle, widgetText } from '@/core/runtime/localize';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
@@ -81,6 +83,18 @@ const host: HostServices = {
     has: (id) => !!remotePlugins.get(id),
   },
   genui: { describeCatalog, checkSpec },
+  notify: {
+    readiness: deliveryReadiness,
+    fix: async (kind) => {
+      if (kind === 'notifications') {
+        // Once denied for good the system no longer prompts: only its settings screen can help.
+        if ((await getNotificationPermission()) === 'denied') await Linking.openSettings();
+        else await requestNotificationPermission();
+      } else if (kind === 'exactAlarms') await requestExactAlarmPermission();
+      else await openBatteryOptimizationSettings();
+      return deliveryReadiness();
+    },
+  },
   scheduler: {
     create: createJob,
     update: updateJob,

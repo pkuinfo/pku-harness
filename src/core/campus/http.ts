@@ -1,4 +1,4 @@
-import CampusHttp, { type CampusResponse, type MultipartOptions, type RequestOptions, type StoredCookie } from '../../../modules/campus-http';
+import CampusHttpModule, { type CampusResponse, type MultipartOptions, type RequestOptions, type StoredCookie } from '../../../modules/campus-http';
 
 import { secrets } from '@/core/store/secrets';
 import { t } from '@/i18n';
@@ -19,7 +19,17 @@ export type CampusSessionId = 'iaaa' | 'card' | 'its' | 'treehole' | 'blackboard
 
 const cookieKey = (id: CampusSessionId) => `campus.cookies.${id}` as const;
 
+/** Whether this build has the native campus HTTP module (Android today; iOS needs the Swift port). */
+export const campusHttpAvailable = CampusHttpModule != null;
+
+/** The native module, or a readable error on a build without it (never a launch crash). */
+function native() {
+  if (!CampusHttpModule) throw new Error(t('app.campus.errors.unsupportedDevice'));
+  return CampusHttpModule;
+}
+
 async function ensure(id: CampusSessionId) {
+  const CampusHttp = native();
   if (CampusHttp.hasSession(id)) return;
   CampusHttp.createSession(id, { userAgent: MOBILE_UA, followRedirects: false });
   const saved = await secrets.get(cookieKey(id));
@@ -33,7 +43,7 @@ async function ensure(id: CampusSessionId) {
 }
 
 async function persist(id: CampusSessionId) {
-  const cookies = CampusHttp.exportCookies(id);
+  const cookies = native().exportCookies(id);
   await secrets.set(cookieKey(id), JSON.stringify(cookies));
 }
 
@@ -46,7 +56,7 @@ export async function campusFetch(id: CampusSessionId, req: RequestOptions): Pro
   if (req.multipart) req = { ...req, method: req.method ?? 'POST', timeoutMs: req.timeoutMs ?? UPLOAD_TIMEOUT_MS };
   let res: CampusResponse;
   try {
-    res = await CampusHttp.request(id, req);
+    res = await native().request(id, req);
   } catch (e) {
     throw networkError(req.url, e);
   }
@@ -76,12 +86,12 @@ export const FORM = 'application/x-www-form-urlencoded; charset=UTF-8';
 
 /** Forget a session's cookies (logout, or a stale session that must sign in again). */
 export async function resetSession(id: CampusSessionId) {
-  CampusHttp.closeSession(id);
+  CampusHttpModule?.closeSession(id);
   await secrets.delete(cookieKey(id)).catch(() => {});
 }
 
 export function cookieValue(id: CampusSessionId, url: string, name: string) {
-  return CampusHttp.hasSession(id) ? CampusHttp.cookieValue(id, url, name) : null;
+  return CampusHttpModule?.hasSession(id) ? CampusHttpModule.cookieValue(id, url, name) : null;
 }
 
 export type { CampusResponse, MultipartOptions, RequestOptions };

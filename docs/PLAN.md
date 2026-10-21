@@ -103,7 +103,9 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [ ] T11.8b Chart palette as theme tokens; compaction notice uses the same calibrated numbers as the context sheet
 
 - [x] T11.11 Scheduled tasks hardened: read-only re-check at run time, no prompts for unattended runs, limits + duplicate guard, serialized runs, lateness window, run log + failure alerts/auto-disable, run history in the reminder form and scheduler tools (2026-10-21)
-- [ ] T11.12 Agent-driven scheduled tasks (`agent` action: isolated session per run on the shared prefix, read-only, NO_REPLY = silent, usage purpose 'scheduler')
+- [x] T11.13 On-time delivery permissions: onboarding step 准时提醒 (notifications, exact alarms, battery; live status, re-read on foreground, skippable with consequence; finish summary), SDK `services.notify.readiness()/fix()` + `deliveryBlocker`, Schedule tab warning banner (2026-10-21)
+- [x] T11.12 Agent-driven scheduled tasks: fresh read-only session per run on the shared prefix, NO_REPLY = silent, last-step answer + out-of-steps is a failure, usage purpose 'scheduler'; exact delivery on Android via alarm-clock wake-ups + shortService foreground service (2026-10-21)
+- [~] T11.14 iOS readiness (docs/IOS.md): launch-safe without campus-http, keychain after-first-unlock, 64-pending caps, Time Sensitive, ATS, SwiftUI date picker; Swift campus-http port pending
 
 ## M12 Plugin batch 2 (in progress, 2026-10-21)
 - [~] T12.1 Money & utilities: cwfw expansion (salaries/rewards, tuition, tax), dorm electricity / water / bath balances + cashier recharge

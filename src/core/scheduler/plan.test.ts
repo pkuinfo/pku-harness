@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
 
-import { diffArmed, MAX_ARMED, planNotifications } from './plan';
+import { diffArmed, IOS_LIMITS, MAX_ARMED, planNotifications } from './plan';
 import type { Job } from '@pku-harness/sdk';
 
 const at = (y: number, mo: number, d: number, h = 0, mi = 0) => new Date(y, mo - 1, d, h, mi).getTime();
@@ -63,6 +63,18 @@ describe('planNotifications', () => {
     const a = planNotifications([job({ updatedAt: 1 })], now)[0].identifier;
     const b = planNotifications([job({ updatedAt: 2 })], now)[0].identifier;
     expect(a).not.toBe(b);
+  });
+});
+
+describe('iOS limits (64 pending per app)', () => {
+  test('never more than the iOS cap, and a dense series cannot crowd out the others', () => {
+    const dense = job({ id: 'dense', trigger: { type: 'every', unit: 'hour', interval: 1, startAt: now } });
+    const daily = job({ id: 'daily', trigger: { type: 'every', unit: 'day', interval: 1, times: ['21:00'], startAt: now } });
+    const plan = planNotifications([dense, daily], now, undefined, IOS_LIMITS);
+    expect(plan.length).toBeLessThanOrEqual(IOS_LIMITS.maxArmed);
+    // The hourly job alone would fill the cap within a day; the daily one still gets its next runs.
+    expect(plan.filter((p) => p.jobId === 'daily').length).toBeGreaterThan(0);
+    expect(plan.filter((p) => p.jobId === 'dense').length).toBeLessThanOrEqual(IOS_LIMITS.perJob);
   });
 });
 

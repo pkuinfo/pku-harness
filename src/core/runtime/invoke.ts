@@ -68,6 +68,9 @@ export async function invokeTool(
   const mode = settings.modes[entry.def.effect];
   const title = toolTitle(plugin, entry.name, entry.def.title);
   if (mode === 'off') throw new ToolError(t('app.plugins.runtime.toolBlocked', { title }), 'disabled');
+  // Unattended runs only read, whatever the per-plugin modes say: the stored task is not consent
+  // to change, pay or post (docs/ARCHITECTURE.md §8).
+  if (opts.actor === 'scheduler' && entry.def.effect !== 'read') throw new ToolError(t('app.plugins.runtime.scheduledReadOnly', { title }), 'declined');
   // A scheduled run has no one to ask (and may be headless): an `ask` tool is declined, never prompted.
   if (mode === 'ask' && opts.actor === 'scheduler') throw new ToolError(t('app.plugins.runtime.scheduledNoAsk', { title }), 'declined');
   // A user tapping a button has already expressed intent; only agent calls prompt.

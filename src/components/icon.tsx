@@ -51,6 +51,7 @@ export const icons = {
   shield: { ios: 'checkmark.shield', android: 'verified_user' },
   alarm: { ios: 'alarm', android: 'alarm' },
   bolt: { ios: 'bolt', android: 'bolt' },
+  battery: { ios: 'battery.100percent', android: 'battery_full' },
   send2: { ios: 'paperplane', android: 'send' },
   drag: { ios: 'line.3.horizontal', android: 'drag_handle' },
   calendarClock: { ios: 'calendar.badge.clock', android: 'event_upcoming' },

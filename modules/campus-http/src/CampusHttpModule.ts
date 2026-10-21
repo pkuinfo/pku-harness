@@ -1,4 +1,4 @@
-import { NativeModule, requireNativeModule } from 'expo';
+import { NativeModule, requireOptionalNativeModule } from 'expo';
 
 export type SessionOptions = {
   userAgent?: string;
@@ -58,5 +58,8 @@ declare class CampusHttpModule extends NativeModule<{}> {
   cookieValue(id: string, url: string, name: string): string | null;
 }
 
-/** Android only for now (iOS later). See android/…/CampusHttpModule.kt. */
-export default requireNativeModule<CampusHttpModule>('CampusHttp');
+/**
+ * Android only for now (iOS needs a Swift port, docs/IOS.md). Optional, so a build without it
+ * (iOS today) still launches: campus features report themselves unavailable instead of crashing.
+ */
+export default requireOptionalNativeModule<CampusHttpModule>('CampusHttp');
