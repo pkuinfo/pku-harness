@@ -6,7 +6,7 @@ import { registry } from '@/core/runtime/registry';
 import { kv } from '@/core/store/kv';
 import { getLocale } from '@/i18n';
 
-import { byStability, languageLine, languageSnapshot, newFacts, visibleContext } from './assembly';
+import { byStability, languageLine, languageSnapshot, newFacts, visibleContextBlocks } from './assembly';
 import { beijingTimeLine } from './prompt-time';
 
 /**
@@ -18,7 +18,8 @@ import { beijingTimeLine } from './prompt-time';
  * time budget; a slow or failing plugin is skipped rather than blocking the reply.
  */
 export async function gatherContext(query: string, history: readonly ModelMessage[], now = new Date()): Promise<string> {
-  const seen = visibleContext(history);
+  const blocks = visibleContextBlocks(history);
+  const seen = blocks.join('\n');
   const contributors = registry
     .list()
     .filter((p) => p.context && pluginSettings.get(p.id).enabled && !registry.unavailable(p.id))
@@ -32,5 +33,5 @@ export async function gatherContext(query: string, history: readonly ModelMessag
     ),
   );
   const fresh = parts.map((part) => (part ? newFacts(part, seen) : undefined));
-  return [beijingTimeLine(now), languageSnapshot(languageLine(getLocale()), seen), ...fresh].filter(Boolean).join('\n\n');
+  return [beijingTimeLine(now), languageSnapshot(languageLine(getLocale()), blocks), ...fresh].filter(Boolean).join('\n\n');
 }

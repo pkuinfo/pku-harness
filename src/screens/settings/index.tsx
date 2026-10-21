@@ -6,6 +6,7 @@ import { ListGroup, ListRow } from '@/components/list-group';
 import { Screen } from '@/components/screen';
 import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
+import { modelInfo } from '@/core/agent/attachments/attachments';
 import { useAIConfig } from '@/core/agent/provider';
 import { useCampusAccount } from '@/core/campus/account';
 import { exportData, resetData } from '@/core/data';
@@ -58,7 +59,7 @@ export function Settings() {
             icon="sparkles"
             iconTint={c.accent}
             title={t('app.settings.ai')}
-            subtitle={ai.hasKey ? `${ai.config.name} · ${ai.config.model}` : t('app.settings.aiNotConnected')}
+            subtitle={ai.hasKey ? `${ai.config.name} · ${modelInfo(ai.config.providerId, ai.config.model)?.name ?? ai.config.model}` : t('app.settings.aiNotConnected')}
             onPress={() => router.push('/ai-settings')}
           />
           <ListRow icon="trendUp" title={t('app.settings.usage')} subtitle={t('app.settings.usageSubtitle')} onPress={() => router.push('/usage')} />

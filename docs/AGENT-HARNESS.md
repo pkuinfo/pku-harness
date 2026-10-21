@@ -230,7 +230,10 @@ hits only as far as it matches an earlier one byte for byte, so everything is bu
    time (every turn), reply language (only when it changed, so switching language mid-chat no
    longer rewrites the system prompt), then plugin facts by stability. A fact already visible
    in the history (a memory) is not repeated; memory is a once-per-chat snapshot, not
-   per-message retrieval.
+   per-message retrieval (§5.7). A fact that changed is retracted with `- [已删除] old` /
+   `- [更正] old → new` (`CONTEXT_MARK` in the SDK), only in chats whose history still shows
+   `old`, once. The language line is trusted only in the host's slot (first line after the
+   time) and only as one of the two exact host strings, so a plugin fact can't forge it.
 6. **Measure it.** Each request records provider-reported cached vs uncached input
    (`src/core/usage`); the usage board shows the hit rate, its trend, misses and the money saved.
 
@@ -281,6 +284,51 @@ full output.
 ### 5.6 Steps
 
 `stopWhen` stays at 10 steps; hitting it adds a notice "已达到单次回复的步骤上限" with 继续.
+
+### 5.7 Memory
+
+The memory plugin (`plugins/plugins/memory`, core) keeps durable facts about the student on the
+device. Grounded in Claude's memory tool and Claude Code auto memory (files the agent edits
+itself, the user can read and edit everything), ChatGPT memory (a toggle, a manage screen,
+source per item), MemGPT (a small core in context + a searchable archive) and mem0 (explicit
+add/update/delete instead of silent merges); the gate follows OWASP ASI06 (memory poisoning).
+
+- **Never in the system prompt.** The first turn's `<context>` block carries a snapshot: active
+  memories, pinned first, then by kind (preference, fact, routine, person, other), then
+  oldest first, then id; at most 30 items / 1,500 characters. The order never depends on the
+  query. Later turns add only what changed (§5.1 `newFacts`): a turn with no memory change adds
+  zero bytes. `memory.recall` (query → best matches by bigram overlap) reaches the long tail.
+- **Retractions.** `forget`, edits and clear-all log `{deleted | updated, old, new}` in the
+  plugin KV (30 days, ≤ 200). The block lists them before the snapshot; the host keeps a line
+  only while the chat still believes `old`, so it lands once and never in a fresh chat.
+  Re-adding a deleted text drops its deletion.
+- **One clean line.** Text is one line (controls, invisible/bidi characters, `<…>` tags and
+  list/marker prefixes stripped, `→` → `->`), ≤ 120 characters. Refused with a clear error:
+  secrets as values (18-digit ID, 16–19-digit card numbers, mainland mobiles, `sk-`/GitHub
+  keys, JWTs, "密码是 abc123", "验证码 482913"; the words alone pass) and instructions to the
+  assistant (starts with 忽略 / 你必须 / 从现在起 / always / ignore / `system:` …, or contains
+  "ignore previous instructions"-style phrases). Write memories as facts: "用户喜欢……".
+- **Taint gate + provenance.** Items carry `source: { kind: user_said | ui | inferred,
+  sessionId }` and `status: active | pending`. The host tracks one taint flag per chat turn
+  (`run.ts` → `requestPrefix` → `buildToolSet` → `invokeTool(…, { turn })` → `ctx.turn`): a call
+  to a tool flagged `untrusted` in the SDK (treehole feeds/search/read, notices, campus events,
+  Blackboard announcements/assignment/content) or to any remote plugin taints the rest of the
+  turn. A `remember` after that, any scheduler write, any agent write outside a chat turn, or
+  any agent write while 自动记住 is off is saved as **pending**: never in context, approved or
+  discarded by the user on the memory screen. An update of an active memory from an untrusted
+  write becomes a pending replacement. Exception: when the user's own message in the turn asks
+  to remember ("记住…", "remember…", `TurnInfo.userAsked`) the write is active at once —
+  third-party text can't write the user's message, so approval there would be pure friction.
+  Approval is only for what the agent decided to save after reading untrusted content.
+  Approval, clear-all and the toggle are `userOnly` tools:
+  never offered to the model, refused for agent and scheduler calls.
+- **No silent merge or eviction.** A near-duplicate returns `status: "similar"` with the
+  candidates; the model retries with `replaces: <id>` (update) or `replaces: "new"`. At 300
+  memories `remember` returns `full` with a consolidation hint; nothing is evicted.
+- **Screen** (Settings → AI 记忆): 自动记住 switch, pending approvals, memories grouped by kind
+  with a source chip (你说的 / 设置里添加 / AI 推断), tap to edit (sheet: text, kind, pin,
+  delete), pin, add, export (share sheet, text or JSON), clear all with confirmation.
+- **Migration.** Memories stored before 0.3 load as `active` with source `inferred`.
 
 ## 6. Usage and context visualization
 

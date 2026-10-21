@@ -154,14 +154,16 @@ definePlugin({
 - **Request context** (DeepSeek Harness's context plugins): a plugin may define
   `context({ query, kv, services })`. Before each turn the harness gathers these (800 ms budget
   each) and prepends them to the user's message as `<context>…</context>` in the model-visible,
-  logged history; the chat UI shows only what the user typed. The memory plugin uses this to
-  add the few memories relevant to the question (pinned ones always).
+  logged history; the chat UI shows only what the user typed. The memory plugin uses this for a
+  once-per-chat snapshot plus retractions of what changed (docs/AGENT-HARNESS.md §5.7).
 - **Approvals**: when an agent call hits an effect set to `ask`, `invokeTool` awaits
   `src/core/runtime/approvals.ts`; the root layout shows a prompt (plugin, tool, effect,
   inputs) with allow / deny / always allow. User taps never ask; the background runtime has no
   prompt, so `ask` there means decline.
 - **Untrusted content**: text coming from campus services (forum posts, announcements) is
-  wrapped as data in tool results, never concatenated into instructions.
+  wrapped as data in tool results, never concatenated into instructions. Tools that return it
+  are flagged `untrusted` (remote plugins always are); calling one taints the agent's turn, and
+  memory written after that waits for the user's approval (AGENT-HARNESS §5.7).
 
 ## 6. Generative UI
 
@@ -215,9 +217,23 @@ One engine serves dashboard alerts, schedule reminders and to-dos.
 - **Trigger** (recurrence): `at` (one-shot), or `every` with `{ unit: minute|hour|day|week,
   interval, times?: ['08:00'], startAt, count?, until? }`. Covers "in 2 days", "every
   morning", "every 3 days, 16 times then stop".
-- **Action**: `notify` (static message), or `check` (call a plugin data source, evaluate a
-  condition like `balance < 100`, notify only if true, optionally run the agent with the
-  result).
+- **Action**: `notify` (static message), or `check` (call a read-only plugin data source,
+  evaluate a condition like `balance < 100`, notify only if true). Checks are deterministic:
+  no model call runs unattended. (An `agent` action — a fresh isolated session per run on the
+  shared request prefix, read-only tools, silent unless there is something to report — is the
+  planned next step.)
+- **Unattended-run policy** (`sdk/src/scheduler/policy.ts`, enforced in `engine.ts`, the one
+  place jobs are created, changed and run):
+  - a check only reads: re-checked at run time, not just at creation; an `ask`-mode tool is
+    declined for the scheduler (no one to ask, possibly headless), never prompted;
+  - limits: ≤ 50 enabled jobs, a check at most every 15 min, no duplicate check (same tool,
+    args and condition → the caller is pointed at the existing job);
+  - runs are serialized (five triggers can fire at once) and each job is re-read before it
+    runs, so an occurrence never runs twice; missed occurrences collapse into the latest one,
+    and one more than 2 h late is logged as missed instead of alerting hours late;
+  - every run is logged on the job (last 20: due vs actual time, result, value, error);
+    2 failures in a row notify the user once (again after 6 h), 10 turn the job off and say so
+    (after OpenClaw's cron failure alerts).
 - **Execution** (`src/core/scheduler`):
   - `recurrence.ts` is pure and unit-tested: a series is periods (minute/hour step, day, or
     Monday-based week) × slots (times × weekdays); slots before `startAt` are skipped, the

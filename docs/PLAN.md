@@ -99,7 +99,11 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T11.7 First-run onboarding: 3D welcome, then AI service → PKU sign-in → plugin picks → done (resumable); English pass + fixed an SVG gradient-id collision that crashed the AI step (2026-10-21)
 - [x] T11.8a Context engineering for the prefix cache: one request prefix (system → fixed tool block → append-only history) shared by chat, title and compaction; on-demand tool loading tried and reverted (it broke the cache); see AGENT-HARNESS §5.1 (2026-10-21)
 - [x] T11.9 Cache & cost visibility: usage board prompt-cache section (hit rate, trend, by purpose, saved), spending from published prices, DeepSeek balance (Settings + usage board), default context budget 64k → 128k (2026-10-21)
+- [x] T11.10 Memory redesign: taint gate (SDK `ToolDef.untrusted` / `userOnly`, `ctx.turn`) with pending approvals, provenance, sanitize + secrets/instruction filter, retraction lines, deterministic snapshot + `recall`, explicit `replaces` instead of silent merge/eviction, full memory screen; language line unforgeable; see AGENT-HARNESS §5.7 (2026-10-21)
 - [ ] T11.8b Chart palette as theme tokens; compaction notice uses the same calibrated numbers as the context sheet
+
+- [x] T11.11 Scheduled tasks hardened: read-only re-check at run time, no prompts for unattended runs, limits + duplicate guard, serialized runs, lateness window, run log + failure alerts/auto-disable, run history in the reminder form and scheduler tools (2026-10-21)
+- [ ] T11.12 Agent-driven scheduled tasks (`agent` action: isolated session per run on the shared prefix, read-only, NO_REPLY = silent, usage purpose 'scheduler')
 
 ## M12 Plugin batch 2 (in progress, 2026-10-21)
 - [~] T12.1 Money & utilities: cwfw expansion (salaries/rewards, tuition, tax), dorm electricity / water / bath balances + cashier recharge

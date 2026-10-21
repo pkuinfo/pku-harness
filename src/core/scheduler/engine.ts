@@ -7,7 +7,7 @@ import { invokeTool } from '@/core/runtime/invoke';
 import { t } from '@/i18n';
 import { registry } from '@/core/runtime/registry';
 
-import { evaluate, fillTemplate, getPath , lastOccurrence, nextOccurrence, runsBy } from '@pku-harness/sdk';
+import { evaluate, fillTemplate, getPath, lastOccurrence, MAX_ACTIVE_JOBS, MAX_LATE_MS, MIN_CHECK_GAP_MS, minGap, nextOccurrence, recordRun, runsBy } from '@pku-harness/sdk';
 import { dismissWake, EventType, isWakeEvent, notifee, syncWakeups } from './exact-wake';
 import { diffArmed, planNotifications } from './plan';
 import { jobStore } from './store';
@@ -39,14 +39,39 @@ function derive(job: Job, now: number): Job {
   return { ...job, nextRunAt: nextOccurrence(job.trigger, from)?.at ?? null };
 }
 
+/**
+ * Limits for unattended work (SDK scheduler/policy.ts), enforced here — the one place every job
+ * is created or changed, whoever asks (agent, plugin, screen).
+ */
+function assertAllowed(job: Pick<Job, 'id' | 'enabled' | 'trigger' | 'action'>, now: number) {
+  if (job.enabled && jobStore.list().filter((j) => j.enabled && j.id !== job.id).length >= MAX_ACTIVE_JOBS) {
+    throw new Error(t('app.schedule.tooMany', { max: MAX_ACTIVE_JOBS }));
+  }
+  if (job.action.type !== 'check') return;
+  // The same check twice means two alerts for one event: point the caller at the existing job.
+  const same = (o: Job['action']) => JSON.stringify(o.type === 'check' ? [o.tool, o.args ?? {}, o.condition] : null);
+  const twin = jobStore.list().find((j) => j.id !== job.id && j.enabled && j.action.type === 'check' && same(j.action) === same(job.action));
+  if (twin) throw new Error(t('app.schedule.duplicate', { title: twin.title, id: twin.id }));
+  const effect = registry.tool(job.action.tool)?.def.effect;
+  if (effect && effect !== 'read') throw new Error(t('app.schedule.readOnly', { tool: job.action.tool }));
+  const gap = minGap(job.trigger, now);
+  if (gap < MIN_CHECK_GAP_MS) {
+    throw new Error(t('app.schedule.tooOften', { minutes: MIN_CHECK_GAP_MS / 60_000, actual: Math.max(1, Math.round(gap / 60_000)) }));
+  }
+}
+
 export async function createJob(input: JobInput): Promise<Job> {
   const now = Date.now();
+  const id = jobStore.newId();
+  const trigger = triggerSchema.parse(input.trigger);
+  const action = actionSchema.parse(input.action);
+  assertAllowed({ id, enabled: input.enabled ?? true, trigger, action }, now);
   const job = derive(
     {
-      id: jobStore.newId(),
+      id,
       title: input.title,
-      trigger: triggerSchema.parse(input.trigger),
-      action: actionSchema.parse(input.action),
+      trigger,
+      action,
       enabled: input.enabled ?? true,
       source: input.source,
       meta: input.meta,
@@ -78,6 +103,7 @@ export async function updateJob(
     // Ensure updatedAt changes even within the same millisecond, so notifications re-arm.
     updatedAt: Math.max(now, cur.updatedAt + 1),
   };
+  assertAllowed(next, now);
   // A new schedule for a check job restarts its series.
   if (patch.trigger && next.action.type === 'check') {
     next.lastRunAt = null;
@@ -94,14 +120,23 @@ export async function deleteJob(id: string) {
   changed();
 }
 
-/** Run one check job now and record the result. Returns whether it notified. */
-export async function runCheck(job: Job, now = Date.now()): Promise<{ notified: boolean; value?: unknown; error?: string }> {
+/**
+ * Run one check job now and record the result (run log, failure policy). Unattended: it only
+ * reads (re-checked here, not just at creation), never asks the user (invokeTool declines
+ * `ask` for the scheduler), and tells the user when it keeps failing instead of failing quietly.
+ */
+export async function runCheck(job: Job, now = Date.now(), opts: { manual?: boolean } = {}): Promise<{ notified: boolean; value?: unknown; error?: string }> {
   if (job.action.type !== 'check') throw new Error(t('app.schedule.notCheck'));
   const a = job.action;
+  const started = Date.now();
+  const scheduledAt = opts.manual ? null : job.nextRunAt;
+  let outcome: { notified: boolean; value?: unknown; error?: string };
   try {
+    const effect = registry.tool(a.tool)?.def.effect;
+    if (effect && effect !== 'read') throw new Error(t('app.schedule.readOnly', { tool: a.tool }));
     const result = await invokeTool(a.tool, a.args ?? {}, { actor: 'scheduler' });
     // Share the fresh result with dashboard widgets bound to the same source.
-    if (registry.tool(a.tool)?.def.effect === 'read') live.prime({ tool: a.tool, args: a.args }, result);
+    if (effect === 'read') live.prime({ tool: a.tool, args: a.args }, result);
     const value = getPath(result, a.condition.path);
     const hit = evaluate(a.condition, value, job.lastValue);
     if (hit) {
@@ -113,28 +148,70 @@ export async function runCheck(job: Job, now = Date.now()): Promise<{ notified: 
         channel: 'alerts',
       });
     }
-    await jobStore.put({
-      ...job,
-      runs: job.runs + 1,
-      lastRunAt: now,
-      lastValue: value,
-      lastError: undefined,
-      nextRunAt: nextOccurrence(job.trigger, now)?.at ?? null,
-    });
-    return { notified: hit, value };
+    outcome = { notified: hit, value };
   } catch (e) {
-    const error = e instanceof Error ? e.message : String(e);
-    // Advance anyway so a broken check doesn't spin; the error is shown on the job.
-    await jobStore.put({ ...job, lastError: error, lastRunAt: now, nextRunAt: nextOccurrence(job.trigger, now)?.at ?? null });
-    return { notified: false, error };
+    outcome = { notified: false, error: e instanceof Error ? e.message : String(e) };
   }
+  const run = { at: now, scheduledAt, ok: !outcome.error, notified: outcome.notified, value: outcome.value, error: outcome.error, ms: Date.now() - started, ...(opts.manual ? { manual: true } : {}) };
+  const { patch, alert } = recordRun(job, run);
+  // Advance even on failure so a broken check doesn't spin; the error is shown on the job.
+  await jobStore.put({
+    ...job,
+    ...patch,
+    runs: outcome.error ? job.runs : job.runs + 1,
+    lastRunAt: now,
+    ...(outcome.error ? { lastError: outcome.error } : { lastValue: outcome.value, lastError: undefined }),
+    nextRunAt: nextOccurrence(job.trigger, now)?.at ?? null,
+  });
+  if (alert !== 'none') {
+    const count = patch.failures ?? 0;
+    await notifyNow({
+      title: t(alert === 'disabled' ? 'app.schedule.disabledTitle' : 'app.schedule.failingTitle', { title: job.title }),
+      body: alert === 'disabled' ? t('app.schedule.disabledBody', { count }) : t('app.schedule.failingBody', { count, error: outcome.error ?? '' }),
+      data: { jobId: job.id },
+      channel: 'alerts',
+    }).catch(() => {});
+    if (alert === 'disabled') changed();
+  }
+  return outcome;
 }
 
 /** Run every enabled check job that is due. */
-export async function runDueChecks(now = Date.now()) {
-  const due = jobStore.list().filter((j) => j.enabled && j.action.type === 'check' && j.nextRunAt != null && j.nextRunAt <= now);
-  for (const job of due) await runCheck(job, now);
-  return due.length;
+/**
+ * Run every enabled check job that is due. Five callers can fire it at once (foreground timer,
+ * wake event, app foreground, background task, headless wake), so runs are serialized and each
+ * job is re-read just before it runs: an occurrence that already ran has moved `nextRunAt` on and
+ * is not run twice. Missed occurrences collapse into the latest one; one older than
+ * MAX_LATE_MS is logged as missed instead of alerting hours late (one-shots always run).
+ */
+let checking: Promise<number> = Promise.resolve(0);
+export function runDueChecks(now = Date.now()): Promise<number> {
+  checking = checking.then(() => runDueNow(now), () => runDueNow(now));
+  return checking;
+}
+
+async function runDueNow(now: number): Promise<number> {
+  const ids = jobStore.list().filter((j) => j.enabled && j.action.type === 'check' && j.nextRunAt != null && j.nextRunAt <= now).map((j) => j.id);
+  let ran = 0;
+  for (const id of ids) {
+    const job = jobStore.get(id);
+    if (!job || !job.enabled || job.nextRunAt == null || job.nextRunAt > now) continue;
+    // The latest occurrence that is due (missed ones collapse into it).
+    const latest = lastOccurrence(job.trigger, now)?.at ?? job.nextRunAt;
+    if (job.trigger.type !== 'at' && now - latest > MAX_LATE_MS) {
+      await recordMissed(job, latest, now);
+      continue;
+    }
+    await runCheck({ ...job, nextRunAt: latest }, now);
+    ran++;
+  }
+  return ran;
+}
+
+/** Log a run that was too late to be useful and move on to the next occurrence. */
+async function recordMissed(job: Job, scheduledAt: number, now: number) {
+  const { patch } = recordRun(job, { at: now, scheduledAt, ok: true, notified: false, ms: 0, missed: true });
+  await jobStore.put({ ...job, history: patch.history, lastRunAt: now, nextRunAt: nextOccurrence(job.trigger, now)?.at ?? null });
 }
 
 let syncing: Promise<void> = Promise.resolve();

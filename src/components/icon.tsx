@@ -75,6 +75,7 @@ export const icons = {
   pause: { ios: 'pause.circle', android: 'pause_circle' },
   play: { ios: 'play.fill', android: 'play_arrow' },
   undo: { ios: 'arrow.uturn.backward', android: 'undo' },
+  pin: { ios: 'pin', android: 'push_pin' },
 } as const;
 
 export type IconName = keyof typeof icons;

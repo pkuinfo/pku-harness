@@ -12,6 +12,7 @@ import { aiConfig } from './provider';
 import { attachmentsOf, cutBefore, nextQueued, plainText, textOf, userText } from '@/core/agent/session/session-utils';
 import { sessions } from '@/core/agent/session/sessions';
 import { autoTitle } from '@/core/agent/session/title';
+import { asksToRemember } from '@/core/agent/context/assembly';
 import { modelFor, requestPrefix } from '@/core/agent/context/request';
 import { fromModelName } from './tools';
 
@@ -140,6 +141,9 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
   let produced: ModelMessage[] = [];
   let partial = '';
   let model: LanguageModel | undefined;
+  // Taint gate (§5.7): set once the agent reads third-party content in this turn; memory saved
+  // after that waits for the user's approval.
+  const taint = { sessionId: sid, tainted: false, userAsked: asksToRemember(text) };
 
   const streamOnce = async (history: ModelMessage[]) => {
     produced = [];
@@ -149,7 +153,7 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     const toolStart = new Map<string, number>();
     const toolMs = new Map<string, number>();
     // The conversation's prefix (system → tools → history), shared with title and summary requests.
-    const prefix = await requestPrefix(history, { signal });
+    const prefix = await requestPrefix(history, { signal, turn: taint });
     const result = streamText({
       model: model!,
       ...prefix,

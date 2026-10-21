@@ -16,6 +16,7 @@ import { File } from 'expo-file-system';
 import { aiConfig, getModel } from '@/core/agent/provider';
 import { buildToolSet } from '@/core/agent/tools';
 import { registry } from '@/core/runtime/registry';
+import type { TurnInfo } from '@/core/runtime/types';
 
 import { buildSystemPrompt } from './system-prompt';
 
@@ -74,8 +75,8 @@ export type RequestPrefix = { system: string; tools: ToolSet; messages: ModelMes
  * request diverges right after the system prompt and the cached conversation is missed
  * (measured: 5.5k of 6.6k cached instead of ~all). A stray tool call there runs nothing.
  */
-export async function requestPrefix(history: ModelMessage[], opts: { signal?: AbortSignal; sideRequest?: boolean } = {}): Promise<RequestPrefix> {
-  const tools = buildToolSet(opts.signal);
+export async function requestPrefix(history: ModelMessage[], opts: { signal?: AbortSignal; sideRequest?: boolean; turn?: TurnInfo } = {}): Promise<RequestPrefix> {
+  const tools = buildToolSet(opts.signal, opts.turn);
   if (opts.sideRequest) for (const name of Object.keys(tools)) tools[name] = { ...tools[name], execute: undefined };
   return { system: buildSystemPrompt(), tools, messages: await resolveImages(history) };
 }

@@ -75,6 +75,7 @@ export function toPluginDef(m: RemoteManifest): PluginDef {
       description: t.description ?? t.name,
       input: inputSchemaOf(t),
       effect: effectOf(t),
+      untrusted: true,
       execute: async (input, ctx) => {
         const client = await clientFor(m);
         const r = await client.callTool(t.name, (input ?? {}) as Record<string, unknown>, ctx.signal);

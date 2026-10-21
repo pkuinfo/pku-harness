@@ -90,7 +90,7 @@ const host: HostServices = {
     runCheck: async (id) => {
       const job = jobStore.get(id);
       if (!job) throw new Error(t('app.schedule.noJob', { id }));
-      return runCheck(job);
+      return runCheck(job, Date.now(), { manual: true });
     },
   },
   widgets: {

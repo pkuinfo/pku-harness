@@ -7,11 +7,14 @@
  *   most often); by id within a tier. A change lands as late as possible and keeps the rest.
  * - **Snapshot only what changed.** Per-turn facts ride in the user message's `<context>` block.
  *   A fact already visible in the history (a memory, the reply language) is not repeated: each
- *   turn appends only lines the model hasn't seen since the last compaction.
+ *   turn appends only lines the model hasn't seen since the last compaction. A fact that changed
+ *   is retracted (`- [已删除] old`, `- [更正] old → new`) only where the history still shows it.
  *
  * Pure: no React Native imports, unit-tested.
  */
 import type { ModelMessage } from 'ai';
+
+import { CONTEXT_MARK } from '@pku-harness/sdk';
 
 export type TieredPlugin = { id: string; core?: boolean; remote?: unknown };
 
@@ -27,8 +30,8 @@ export function byStability(a: TieredPlugin, b: TieredPlugin): number {
   return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
 }
 
-/** The `<context>` blocks the model can still see (user messages since the last compaction). */
-export function visibleContext(history: readonly ModelMessage[]): string {
+/** Each `<context>` block the model can still see (user messages since the last compaction), oldest first. */
+export function visibleContextBlocks(history: readonly ModelMessage[]): string[] {
   const out: string[] = [];
   for (const m of history) {
     if (m.role !== 'user') continue;
@@ -37,22 +40,80 @@ export function visibleContext(history: readonly ModelMessage[]): string {
     const close = text.indexOf('</context>');
     if (open >= 0 && close > open) out.push(text.slice(open + 9, close));
   }
-  return out.join('\n');
+  return out;
+}
+
+/** The `<context>` blocks the model can still see, joined. */
+export function visibleContext(history: readonly ModelMessage[]): string {
+  return visibleContextBlocks(history).join('\n');
+}
+
+type FactLine = { kind: 'fact'; text: string } | { kind: 'deleted'; old: string } | { kind: 'corrected'; old: string; text: string };
+
+/** A list line (`- …`) as a fact, a deletion or a correction; undefined for other lines. */
+function parseFact(line: string): FactLine | undefined {
+  const l = line.trim();
+  if (!l.startsWith('- ')) return undefined;
+  const body = l.slice(2).trim();
+  if (body.startsWith(CONTEXT_MARK.deleted)) return { kind: 'deleted', old: body.slice(CONTEXT_MARK.deleted.length).trim() };
+  if (body.startsWith(CONTEXT_MARK.corrected)) {
+    const rest = body.slice(CONTEXT_MARK.corrected.length).trim();
+    const at = rest.indexOf(CONTEXT_MARK.arrow.trim());
+    if (at > 0) return { kind: 'corrected', old: rest.slice(0, at).trim(), text: rest.slice(at + 1).trim() };
+  }
+  return { kind: 'fact', text: body };
+}
+
+/** Apply a fact line to what the model currently believes. */
+function apply(believed: Set<string>, f: FactLine) {
+  if (f.kind === 'fact') believed.add(f.text);
+  else {
+    believed.delete(f.old);
+    if (f.kind === 'corrected') believed.add(f.text);
+  }
+}
+
+/** The facts the model currently believes from the visible context, in order (retractions applied). */
+export function believedFacts(seen: string): Set<string> {
+  const believed = new Set<string>();
+  for (const line of seen.split('\n')) {
+    const f = parseFact(line);
+    if (f) apply(believed, f);
+  }
+  return believed;
 }
 
 /**
- * A plugin's context block minus the facts already visible: list lines (`- …`) the model has
- * seen are dropped, and the block is dropped when nothing new is left. Other lines (a header)
- * stay with the new items they introduce.
+ * A plugin's context block minus what the model already knows. Retractions come first, in
+ * order: one is kept only while the model still believes its old fact (so it lands once, and
+ * never in a chat that didn't see the fact). Then facts the model doesn't believe yet are kept
+ * (a correction already carries its new text). The block is dropped when nothing new is left;
+ * other lines (a header) stay with the new items they introduce. A block without list items
+ * repeats only when its text changed.
  */
 export function newFacts(block: string, seen: string): string | undefined {
-  const seenLines = new Set(seen.split('\n').map((l) => l.trim()));
   const lines = block.split('\n');
-  const items = lines.filter((l) => l.trimStart().startsWith('- '));
-  if (!items.length) return seenLines.has(block.trim()) ? undefined : block;
-  const fresh = items.filter((l) => !seenLines.has(l.trim()));
-  if (!fresh.length) return undefined;
-  return lines.filter((l) => !l.trimStart().startsWith('- ') || fresh.includes(l)).join('\n');
+  const facts = lines.map(parseFact);
+  if (!facts.some(Boolean)) {
+    const seenLines = new Set(seen.split('\n').map((l) => l.trim()));
+    return seenLines.has(block.trim()) ? undefined : block;
+  }
+  const believed = believedFacts(seen);
+  const keep = new Set<number>();
+  facts.forEach((f, i) => {
+    if (f && f.kind !== 'fact' && believed.has(f.old)) {
+      keep.add(i);
+      apply(believed, f);
+    }
+  });
+  facts.forEach((f, i) => {
+    if (f?.kind === 'fact' && !believed.has(f.text)) {
+      keep.add(i);
+      apply(believed, f);
+    }
+  });
+  if (!keep.size) return undefined;
+  return lines.filter((_, i) => !facts[i] || keep.has(i)).join('\n');
 }
 
 /** The reply-language snapshot line; appended only when it differs from the last one visible. */
@@ -64,11 +125,31 @@ export function languageLine(locale: 'en' | 'zh-Hans'): string {
     : `${LANGUAGE_PREFIX}中文（用户用其他语言写时跟随用户）`;
 }
 
-/** `line` if the latest visible language snapshot says something else (or there is none). */
-export function languageSnapshot(line: string, seen: string): string | undefined {
-  const last = seen
-    .split('\n')
-    .filter((l) => l.startsWith(LANGUAGE_PREFIX))
-    .at(-1);
+/**
+ * `line` if the latest visible language snapshot says something else (or there is none). Only
+ * the host's own line counts: in each block, the first line after the time line, and only when
+ * it is exactly one of the host's language lines. Plugin facts (a memory, say) come after it and
+ * can't forge or suppress a language switch.
+ */
+export function languageSnapshot(line: string, seenBlocks: readonly string[]): string | undefined {
+  const host = new Set([languageLine('en'), languageLine('zh-Hans')]);
+  let last: string | undefined;
+  for (const block of seenBlocks) {
+    const candidate = block
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)[1];
+    if (candidate && host.has(candidate)) last = candidate;
+  }
   return last === line ? undefined : line;
 }
+
+/**
+ * The user's own message asks to remember something ("记住我在物理学院", "remember that…").
+ * Used by the memory taint gate: a write the user asked for is their intent, even when the turn
+ * also read third-party content (which can't write the user's message).
+ */
+export function asksToRemember(text: string): boolean {
+  return /记住|记一下|记下来?|别忘了|不要忘|帮我记|\bremember\b|\bkeep in mind\b|\bnote that\b|\bdon['’]t forget\b/i.test(text);
+}
+
