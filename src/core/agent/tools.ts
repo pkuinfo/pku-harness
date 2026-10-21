@@ -5,6 +5,8 @@ import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import { resolveDynamic } from '@/core/runtime/types';
 
+import { byStability } from './context/assembly';
+
 /** Model-facing tool names can't contain dots: `campus-card.getBalance` → `campus-card__getBalance`. */
 export const toModelName = (id: string) => id.replace('.', '__');
 export const fromModelName = (name: string) => name.replace('__', '.');
@@ -17,7 +19,10 @@ export const fromModelName = (name: string) => name.replace('__', '.');
  */
 export function buildToolSet(signal?: AbortSignal): ToolSet {
   const set: ToolSet = {};
-  const entries = [...registry.tools()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  // Most stable plugins first (core → bundled → remote), then by tool id: installing or turning
+  // off a plugin changes the block as late as possible (assembly.ts).
+  const rank = new Map(registry.list().slice().sort(byStability).map((p, i) => [p.id, i]));
+  const entries = [...registry.tools()].sort((a, b) => (rank.get(a.pluginId) ?? 0) - (rank.get(b.pluginId) ?? 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
   for (const entry of entries) {
     // Only what the user enabled and this device can run is offered to the model.
     if (!pluginSettings.get(entry.pluginId).enabled || registry.unavailable(entry.pluginId)) continue;

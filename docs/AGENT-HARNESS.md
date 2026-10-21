@@ -224,7 +224,14 @@ hits only as far as it matches an earlier one byte for byte, so everything is bu
    Side requests are cache hits except for their instruction. They keep the tool schemas (without
    `execute`) and never set `toolChoice: 'none'`: DeepSeek drops the tool section from the prompt
    for `none`, which misses the whole conversation.
-5. **Measure it.** Each request records provider-reported cached vs uncached input
+5. **Sort by stability, snapshot only changes** (`context/assembly.ts`). Plugin instructions and
+   tools are ordered core → bundled → remote (by id within a tier), so installing or turning off
+   a plugin changes the prompt as late as possible. The `<context>` block has a fixed order:
+   time (every turn), reply language (only when it changed, so switching language mid-chat no
+   longer rewrites the system prompt), then plugin facts by stability. A fact already visible
+   in the history (a memory) is not repeated; memory is a once-per-chat snapshot, not
+   per-message retrieval.
+6. **Measure it.** Each request records provider-reported cached vs uncached input
    (`src/core/usage`); the usage board shows the hit rate, its trend, misses and the money saved.
 
 ### 5.2 Token estimate

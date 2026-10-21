@@ -236,11 +236,12 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
   try {
     // Plugin request context (memory, …) travels with the user message in the model-visible,
     // logged history; the chat UI shows only what the user typed.
-    const context = await gatherContext(text);
-    const body = userText(text, attachments);
-    const typed = context ? `<context>\n${context}\n</context>\n\n${body}` : body;
     const latest = sessionStore.get(sid);
     if (!latest) return;
+    // Knows what the model already saw, so it appends only new facts (assembly.ts).
+    const context = await gatherContext(text, latest.history);
+    const body = userText(text, attachments);
+    const typed = context ? `<context>\n${context}\n</context>\n\n${body}` : body;
     sessionStore.patch(sid, { history: [...latest.history, { role: 'user', content: userContent(typed, attachments) }] });
     model = await modelFor(providerId, modelName);
     await maybeCompact(sid);
