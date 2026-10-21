@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-import type { Capability, PluginDef, ProviderDef, ToolDef } from './types';
+import type { Capability, CommandContribution, PluginDef, ProviderDef, ToolDef } from './types';
 
 export type ToolEntry = { id: string; pluginId: string; name: string; def: ToolDef };
 /**
@@ -27,6 +27,8 @@ const CAPABILITY_LABEL: Record<Capability, string> = {
 };
 
 export type ProviderEntry = { id: string; pluginId: string; def: ProviderDef };
+/** A plugin's `contributes.commands` entry; the commands module names and filters them. */
+export type CommandEntry = { pluginId: string; name: string; def: CommandContribution };
 
 const plugins = new Map<string, PluginDef>();
 const listeners = new Set<() => void>();
@@ -74,6 +76,10 @@ export const registry = {
   /** Provider ids are `<plugin>.<provider>`. */
   providers(): ProviderEntry[] {
     return this.list().flatMap((p) => Object.entries(p.providers ?? {}).map(([key, def]) => ({ id: `${p.id}.${key}`, pluginId: p.id, def })));
+  },
+  /** Slash commands contributed by all registered plugins, in plugin order. */
+  commands(): CommandEntry[] {
+    return this.list().flatMap((p) => Object.entries(p.contributes?.commands ?? {}).map(([name, def]) => ({ pluginId: p.id, name, def })));
   },
   provider(id: string): ProviderEntry | undefined {
     return this.providers().find((p) => p.id === id);

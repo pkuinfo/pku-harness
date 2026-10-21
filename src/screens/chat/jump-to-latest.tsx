@@ -5,7 +5,7 @@ import Animated, { FadeIn, FadeOut, useReducedMotion, ZoomIn, ZoomOut } from 're
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
-import { useChat } from '@/core/agent/chat-store';
+import { useChat } from '@/core/agent/session/chat-store';
 import { useTabsBlurTarget } from '@/hooks/use-floating-overlay';
 import { shadows, springs, useTheme, useThemeName } from '@/theme';
 

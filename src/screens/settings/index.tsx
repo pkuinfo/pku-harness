@@ -51,6 +51,7 @@ export function Settings() {
             subtitle={ai.hasKey ? `${ai.config.name} · ${ai.config.model}` : '未连接 · 默认 DeepSeek'}
             onPress={() => router.push('/ai-settings')}
           />
+          <ListRow icon="trendUp" title="用量" subtitle="Token 用量、活跃时段与常用工具" onPress={() => router.push('/usage')} />
         </ListGroup>
       </FadeIn>
       {contributed.length ? (

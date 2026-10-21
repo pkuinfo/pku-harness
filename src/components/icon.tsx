@@ -58,6 +58,23 @@ export const icons = {
   server: { ios: 'server.rack', android: 'dns' },
   search: { ios: 'magnifyingglass', android: 'search' },
   store: { ios: 'bag', android: 'storefront' },
+  share: { ios: 'square.and.arrow.up', android: 'share' },
+  compress: { ios: 'arrow.down.right.and.arrow.up.left', android: 'compress' },
+  gauge: { ios: 'gauge.with.dots.needle.33percent', android: 'data_usage' },
+  chart: { ios: 'chart.bar', android: 'bar_chart' },
+  help: { ios: 'questionmark.circle', android: 'help' },
+  // Composer (docs/AGENT-HARNESS.md §4).
+  camera: { ios: 'camera', android: 'photo_camera' },
+  photos: { ios: 'photo.on.rectangle', android: 'photo_library' },
+  image: { ios: 'photo', android: 'image' },
+  file: { ios: 'doc', android: 'description' },
+  fileText: { ios: 'doc.plaintext', android: 'article' },
+  command: { ios: 'command', android: 'terminal' },
+  expand: { ios: 'arrow.up.left.and.arrow.down.right', android: 'open_in_full' },
+  queue: { ios: 'text.line.last.and.arrowtriangle.forward', android: 'queue' },
+  pause: { ios: 'pause.circle', android: 'pause_circle' },
+  play: { ios: 'play.fill', android: 'play_arrow' },
+  undo: { ios: 'arrow.uturn.backward', android: 'undo' },
 } as const;
 
 export type IconName = keyof typeof icons;

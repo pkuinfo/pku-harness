@@ -1,6 +1,6 @@
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, type ComponentRef } from 'react';
-import { ScrollView, StyleSheet, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { ScrollView, StyleSheet, TextInput, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { KeyboardChatScrollView, useKeyboardState, useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,16 +11,22 @@ import { FadeIn } from '@/components/fade-in';
 import { Glass } from '@/components/glass';
 import { Logo } from '@/components/logo';
 import { Text } from '@/components/text';
-import { chatStore, useChat, useChatSelector } from '@/core/agent/chat-store';
+import { AgentOrbit } from '@/components/agent-orbit';
+import { PressableScale } from '@/components/pressable-scale';
+import { chatStore, useChat, useChatSelector } from '@/core/agent/session/chat-store';
 import { useAIConfig } from '@/core/agent/provider';
-import { interruptedTurn, regenerateLast, retryLast, sendMessage, stopGeneration } from '@/core/agent/run';
-import { radius, spacing } from '@/theme';
+import { interruptedTurn, regenerateLast, retryLast, sendMessage } from '@/core/agent/run';
+import { sessions, useActiveSessionId, useEditing, useRenameRequest, useSessionMeta, useSessions } from '@/core/agent/session/sessions';
+import { registry } from '@/core/runtime/registry';
+import { radius, spacing, typography, useTheme } from '@/theme';
+import { haptics } from '@/utils/haptics';
 import { floatingOverlay } from '@/hooks/use-floating-overlay';
 import { useFocusEnter } from '@/hooks/use-focus-enter';
 import { useTabBarInset } from '@/hooks/use-tab-bar-inset';
 
 import { AgentStatus } from './agent-status';
-import { Composer } from './composer';
+import { Composer } from '@/screens/chat/composer';
+import { composerDraft } from './composer/draft';
 import { JumpToLatest } from './jump-to-latest';
 import { MessageView } from './message';
 
@@ -104,6 +110,27 @@ export function Chat() {
   const lastUserId = useChatSelector((s) => s.messages.findLast((m) => m.role === 'user')?.id);
   const seenUserId = useRef(lastUserId);
 
+  // Another session opened (sheet, notification): land at its end.
+  const sessionId = useActiveSessionId();
+  const seenSession = useRef(sessionId);
+  useEffect(() => {
+    if (seenSession.current === sessionId) return;
+    seenSession.current = sessionId;
+    seenUserId.current = lastUserId;
+    pinned.current = true;
+    setAway(false);
+    setUnread(false);
+    requestAnimationFrame(() => scrollEnd(false));
+  }, [sessionId, lastUserId, scrollEnd]);
+
+  // A tapped "回复好了" notification opens its session (`/?session=<id>`).
+  const params = useLocalSearchParams<{ session?: string }>();
+  useEffect(() => {
+    if (!params.session) return;
+    void sessions.open(params.session);
+    router.setParams({ session: undefined });
+  }, [params.session]);
+
   const onContentSizeChange = useCallback((_w: number, h: number) => {
     size.current.content = h;
     if (lastUserId !== seenUserId.current) {
@@ -139,15 +166,10 @@ export function Chat() {
 
   return (
     <View className="flex-1">
-      <View className="flex-row items-center gap-3 px-4 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
-        <Logo size={32} orbiting={busy} />
-        <View className="flex-1">
-          <Text variant="headline">PKU Harness</Text>
-          <Text variant="caption" tone="faint">
-            {hasKey ? `${config.name} · ${config.model}` : '未连接 AI 服务'}
-          </Text>
-        </View>
-        {!empty ? <IconButton icon="plus" label="新对话" variant="ghost" onPress={() => chatStore.clear()} /> : null}
+      <View className="flex-row items-center gap-2 px-4 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
+        <SessionsButton />
+        <ChatTitle fallbackName={config.name} fallbackModel={config.model} connected={hasKey} />
+        {!empty ? <IconButton icon="plus" label="新对话" variant="ghost" onPress={() => void sessions.create()} /> : null}
       </View>
 
       <Animated.View className="flex-1" style={enter}>
@@ -204,7 +226,8 @@ export function Chat() {
       </Animated.View>
 
       <Animated.View style={lift} onLayout={(e) => setComposerHeight(Math.round(e.nativeEvent.layout.height))}>
-        <Composer busy={busy} onSend={sendMessage} onStop={stopGeneration} glass={empty} />
+        <EditBanner />
+        <Composer glass={empty} />
       </Animated.View>
       <View style={{ height: bar }} />
     </View>
@@ -223,26 +246,31 @@ function submitForm(callId: string, form: Record<string, unknown>, label?: strin
   sendMessage(`${label ?? '提交'}：${JSON.stringify(form)}`);
 }
 
+const regenerate = () => void regenerateLast();
+
 /** The conversation: the only part of the screen that re-renders while a reply streams in. */
 function Messages() {
   const chat = useChat();
   const busy = chat.status === 'streaming';
   // The reply started when the last user message was sent.
   const startedAt = chat.messages.findLast((m) => m.role === 'user')?.createdAt ?? 0;
+  // Notices after a reply don't take its "latest" footer (重新生成, resting orbit).
+  const lastId = chat.messages.findLast((m) => m.role !== 'event')?.id;
+  const reply = busy ? chat.messages.find((m) => m.id === chat.running) : undefined;
   return (
     <>
-      {chat.messages.map((m, i) => (
+      {chat.messages.map((m) => (
         <MessageView
-              key={m.id}
-              message={m}
-              onSubmitForm={submitForm}
-              streaming={busy && i === chat.messages.length - 1}
-              last={i === chat.messages.length - 1}
-              onRegenerate={() => void regenerateLast()}
-            />
+          key={m.id}
+          message={m}
+          onSubmitForm={submitForm}
+          streaming={busy && m.id === chat.running}
+          last={m.id === lastId}
+          onRegenerate={regenerate}
+        />
       ))}
-      {busy ? <AgentStatus reply={chat.messages.at(-1)} startedAt={startedAt} /> : null}
-      {interruptedTurn(chat) ? (
+      {busy ? <AgentStatus reply={reply ?? chat.messages.at(-1)} startedAt={startedAt} /> : null}
+      {!busy && interruptedTurn(chat) ? (
         <View className="flex-row items-center gap-3">
           <Text variant="callout" tone="muted" className="flex-1">
             回复中断了
@@ -258,6 +286,109 @@ function Messages() {
         </View>
       ) : null}
     </>
+  );
+}
+
+/** Header left: opens the sessions sheet; an orbit while another session replies, a dot when one is unread. */
+function SessionsButton() {
+  const list = useSessions();
+  const active = useActiveSessionId();
+  const othersBusy = list.some((m) => m.id !== active && m.status === 'streaming');
+  const othersUnread = list.some((m) => m.id !== active && m.unread);
+  return (
+    <View>
+      <IconButton icon="drag" label={othersUnread ? '对话列表，有新回复' : '对话列表'} variant="ghost" onPress={() => router.push('/sessions')} />
+      {othersBusy ? (
+        <View pointerEvents="none" className="absolute -top-0.5 -right-0.5 rounded-full bg-elevated p-px">
+          <AgentOrbit state="writing" size={14} />
+        </View>
+      ) : othersUnread ? (
+        <View pointerEvents="none" className="absolute top-1.5 right-1.5 size-2 rounded-full bg-accent" />
+      ) : null}
+    </View>
+  );
+}
+
+/** Session title (tap to rename inline) over `provider · model`. */
+function ChatTitle({ fallbackName, fallbackModel, connected }: { fallbackName: string; fallbackModel: string; connected: boolean }) {
+  const c = useTheme();
+  const meta = useSessionMeta();
+  const [renaming, setRenaming] = useState(false);
+  const [draft, setDraft] = useState('');
+  const title = meta?.title || '新对话';
+  const providerName = meta?.providerId ? (registry.provider(meta.providerId)?.def.name ?? meta.providerId) : fallbackName;
+  const model = meta?.model ?? fallbackModel;
+  const canRename = !!meta && meta.messageCount > 0;
+  const start = useCallback(() => {
+    if (!meta) return;
+    haptics.select();
+    setDraft(meta.title ?? '');
+    setRenaming(true);
+  }, [meta]);
+  // `/rename` without a title starts the inline rename here.
+  const request = useRenameRequest();
+  const seen = useRef(request);
+  useEffect(() => {
+    if (request === seen.current) return;
+    seen.current = request;
+    start();
+  }, [request, start]);
+  const save = () => {
+    if (meta && draft.trim()) void sessions.rename(meta.id, draft);
+    setRenaming(false);
+  };
+  return (
+    <View className="flex-1">
+      {renaming ? (
+        <TextInput
+          value={draft}
+          onChangeText={setDraft}
+          autoFocus
+          selectTextOnFocus
+          returnKeyType="done"
+          onSubmitEditing={save}
+          onBlur={() => setRenaming(false)}
+          placeholder="对话标题"
+          placeholderTextColor={c.textFaint}
+          selectionColor={c.accent}
+          accessibilityLabel="重命名对话"
+          className="border-b-[0.5px] border-accent p-0"
+          style={[typography.headline, { color: c.text }]}
+        />
+      ) : (
+        <PressableScale haptic={false} disabled={!canRename} onPress={start} accessibilityRole="button" accessibilityLabel={`${title}，点按重命名`}>
+          <Text variant="headline" numberOfLines={1}>
+            {title}
+          </Text>
+        </PressableScale>
+      )}
+      <Text variant="caption" tone="faint" numberOfLines={1}>
+        {connected || meta?.providerId ? `${providerName} · ${model}` : '未连接 AI 服务'}
+      </Text>
+    </View>
+  );
+}
+
+/** 编辑消息 ✕: the next send replaces that message and everything after it. */
+function EditBanner() {
+  const editing = useEditing();
+  if (!editing) return null;
+  return (
+    <View className="mx-4 mb-1 flex-row items-center gap-2 rounded-md bg-surface-2 py-1 pr-1 pl-3" style={{ borderCurve: 'continuous' }}>
+      <Text variant="caption" tone="muted" className="flex-1">
+        编辑消息 · 发送后将替换这条及之后的内容
+      </Text>
+      <IconButton
+        icon="close"
+        label="取消编辑"
+        variant="ghost"
+        size={28}
+        onPress={() => {
+          sessions.cancelEdit();
+          composerDraft.clear();
+        }}
+      />
+    </View>
   );
 }
 

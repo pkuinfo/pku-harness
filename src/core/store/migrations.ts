@@ -59,4 +59,43 @@ export const migrations: { version: number; sql: string }[] = [
       );
     `,
   },
+  {
+    // Sessions (docs/AGENT-HARNESS.md §2): the v1 table gains list metadata. Messages and model
+    // history live as one JSON record per session in kv('session').
+    version: 2,
+    sql: `
+      ALTER TABLE sessions ADD COLUMN pinned INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE sessions ADD COLUMN title_source TEXT NOT NULL DEFAULT 'fallback';
+      ALTER TABLE sessions ADD COLUMN preview TEXT NOT NULL DEFAULT '';
+      ALTER TABLE sessions ADD COLUMN provider_id TEXT;
+      ALTER TABLE sessions ADD COLUMN model TEXT;
+      ALTER TABLE sessions ADD COLUMN message_count INTEGER NOT NULL DEFAULT 0;
+      ALTER TABLE sessions ADD COLUMN unread INTEGER NOT NULL DEFAULT 0;
+      CREATE INDEX sessions_updated ON sessions(updated_at);
+    `,
+  },
+  {
+    // Usage records, one row per model request (docs/AGENT-HARNESS.md §6.1). turn_id groups the
+    // steps of one user turn (optional).
+    version: 3,
+    sql: `
+      CREATE TABLE usage (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        at INTEGER NOT NULL,
+        session_id TEXT NOT NULL,
+        provider_id TEXT NOT NULL,
+        model TEXT NOT NULL,
+        purpose TEXT NOT NULL,
+        input INTEGER NOT NULL DEFAULT 0,
+        cached_input INTEGER NOT NULL DEFAULT 0,
+        output INTEGER NOT NULL DEFAULT 0,
+        reasoning INTEGER NOT NULL DEFAULT 0,
+        duration_ms INTEGER NOT NULL DEFAULT 0,
+        tools TEXT NOT NULL DEFAULT '[]',
+        turn_id TEXT
+      );
+      CREATE INDEX usage_at ON usage(at);
+      CREATE INDEX usage_session ON usage(session_id, purpose, at);
+    `,
+  },
 ];

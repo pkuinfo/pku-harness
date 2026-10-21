@@ -12,7 +12,9 @@ export const fromModelName = (name: string) => name.replace('__', '.');
 /** Expose every enabled plugin tool to the model; execution goes through `invokeTool`. */
 export function buildToolSet(signal?: AbortSignal): ToolSet {
   const set: ToolSet = {};
-  for (const entry of registry.tools()) {
+  // Sorted by id so the tool block is a stable, cacheable prefix (docs/AGENT-HARNESS.md §5.1).
+  const entries = [...registry.tools()].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+  for (const entry of entries) {
     // Only what the user enabled and this device can run is offered to the model.
     if (!pluginSettings.get(entry.pluginId).enabled || registry.unavailable(entry.pluginId)) continue;
     set[toModelName(entry.id)] = tool({

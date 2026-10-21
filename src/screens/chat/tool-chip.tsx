@@ -6,7 +6,7 @@ import { AgentOrbit } from '@/components/agent-orbit';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
-import type { ChatPart } from '@/core/agent/chat-store';
+import type { ChatPart } from '@/core/agent/session/chat-store';
 import { registry } from '@/core/runtime/registry';
 import { springs, useTheme } from '@/theme';
 

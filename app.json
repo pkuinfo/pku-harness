@@ -51,7 +51,15 @@
           "color": "#F0444F"
         }
       ],
-      "react-native-notify-kit"
+      "react-native-notify-kit",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "允许 PKU Harness 访问相册，以便把图片作为附件发给 AI 助手",
+          "cameraPermission": "允许 PKU Harness 使用相机，以便拍照后作为附件发给 AI 助手",
+          "microphonePermission": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

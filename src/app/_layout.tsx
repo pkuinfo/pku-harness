@@ -20,7 +20,7 @@ import { wakeAurora } from '@/components/aurora';
 import { VerificationPrompt } from '@/components/verification-prompt';
 import { boot } from '@/core/boot';
 import { useNotificationRouting } from '@/core/notify/use-routing';
-import { useTheme, useThemeName } from '@/theme';
+import { radius, useTheme, useThemeName } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -62,6 +62,41 @@ export default function RootLayout() {
           <Stack.Screen name="campus" options={{ presentation: 'modal' }} />
           <Stack.Screen name="m/[plugin]/[screen]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="plugins/add" options={{ presentation: 'modal' }} />
+          {/* Composer model picker (docs/AGENT-HARNESS.md §4.5): solid elevated form sheet. */}
+          <Stack.Screen
+            name="model-picker"
+            options={{
+              presentation: 'formSheet',
+              sheetAllowedDetents: 'fitToContents',
+              sheetGrabberVisible: true,
+              sheetCornerRadius: radius.xl,
+              contentStyle: { backgroundColor: c.elevated },
+            }}
+          />
+          {/* Sessions sheet (docs/AGENT-HARNESS.md §2). */}
+          <Stack.Screen
+            name="sessions"
+            options={{
+              presentation: 'formSheet',
+              sheetAllowedDetents: [0.7, 1],
+              sheetGrabberVisible: true,
+              sheetCornerRadius: radius.xl,
+              contentStyle: { backgroundColor: c.elevated },
+            }}
+          />
+          {/* Context sheet (docs/AGENT-HARNESS.md §6.3): sized to its content. */}
+          <Stack.Screen
+            name="context"
+            options={{
+              presentation: 'formSheet',
+              sheetAllowedDetents: 'fitToContents',
+              sheetGrabberVisible: true,
+              sheetCornerRadius: radius.xl,
+              contentStyle: { backgroundColor: c.elevated },
+            }}
+          />
+          {/* Usage screen (docs/AGENT-HARNESS.md §6.4): a pushed screen. */}
+          <Stack.Screen name="usage" />
         </Stack>
         <ApprovalPrompt />
         <VerificationPrompt />

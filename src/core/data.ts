@@ -1,7 +1,7 @@
 import * as BackgroundTask from 'expo-background-task';
 import * as Notifications from 'expo-notifications';
 
-import { chatStore } from '@/core/agent/chat-store';
+import { sessionStore } from '@/core/agent/session/chat-store';
 import { signOut } from '@/core/campus/account';
 import { aiConfig } from '@/core/agent/provider';
 import { seedStarterWidgets } from '@/core/dashboard/starter';
@@ -28,7 +28,8 @@ export async function exportData() {
     todos: todoStore.list(),
     widgets: widgetStore.list(),
     timetable: timetable.get(),
-    kv: kvRows.filter((r) => r.ns !== 'chat').map((r) => ({ ns: r.ns, key: r.key, value: JSON.parse(r.value) })),
+    // Conversations (old single chat + sessions) and drafts stay out of exports.
+    kv: kvRows.filter((r) => r.ns !== 'chat' && r.ns !== 'session' && r.ns !== 'draft').map((r) => ({ ns: r.ns, key: r.key, value: JSON.parse(r.value) })),
   };
 }
 
@@ -40,11 +41,11 @@ export async function resetData() {
   for (const m of remotePlugins.list()) await remotePlugins.uninstall(m.id);
   const db = await getDb();
   await db.withTransactionAsync(async () => {
-    for (const table of ['kv', 'messages', 'sessions', 'widgets', 'jobs', 'todos', 'cache']) await db.execAsync(`DELETE FROM ${table}`);
+    for (const table of ['kv', 'messages', 'sessions', 'usage', 'widgets', 'jobs', 'todos', 'cache']) await db.execAsync(`DELETE FROM ${table}`);
   });
   for (const key of ['ai.apiKey', 'campus.username', 'campus.password', 'campus.otpSecret'] as const) await secrets.delete(key).catch(() => {});
   for (const p of registry.providers()) await secrets.delete(`ai.${p.id}.apiKey`).catch(() => {});
-  chatStore.clear();
+  sessionStore.reset();
   await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load()]);
   await seedStarterWidgets();
 }

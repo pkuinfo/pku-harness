@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import Animated, { Easing, interpolateColor, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 import { Text } from '@/components/text';
-import type { ChatMessage } from '@/core/agent/chat-store';
+import type { ChatMessage } from '@/core/agent/session/chat-store';
 import { registry } from '@/core/runtime/registry';
 import { typography, useTheme } from '@/theme';
 

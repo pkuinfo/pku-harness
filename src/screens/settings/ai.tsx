@@ -8,8 +8,10 @@ import { Chip } from '@/components/chip';
 import { Field, SecretField } from '@/components/field';
 import { Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
+import { Segmented } from '@/components/segmented';
 import { dismiss, SheetScreen } from '@/components/sheet-screen';
 import { Text } from '@/components/text';
+import { CONTEXT_BUDGET_OPTIONS, setContextBudgetSetting, useContextBudgetSetting } from '@/core/agent/context/compaction';
 import { aiConfig, getModel, useAIConfig } from '@/core/agent/provider';
 import { usePlugins } from '@/core/runtime/hooks';
 import { usePluginSettings } from '@/core/runtime/plugin-settings';
@@ -226,7 +228,34 @@ export function AISettings() {
           </Animated.View>
         ) : null}
       </Animated.View>
+
+      <ContextBudget />
     </SheetScreen>
+  );
+}
+
+/** 上下文预算 (docs/AGENT-HARNESS.md §5.3): older turns are summarised above it. Saved on change. */
+function ContextBudget() {
+  const budget = useContextBudgetSetting();
+  const options = CONTEXT_BUDGET_OPTIONS.map((o) => ({ label: o.label, value: o.label }));
+  const current = CONTEXT_BUDGET_OPTIONS.find((o) => o.value === budget)?.label ?? '64k';
+  return (
+    <View className="gap-2">
+      <Text variant="callout" tone="muted">
+        上下文预算
+      </Text>
+      <Segmented
+        options={options}
+        value={current}
+        onChange={(label) => {
+          const next = CONTEXT_BUDGET_OPTIONS.find((o) => o.label === label);
+          if (next) void setContextBudgetSetting(next.value);
+        }}
+      />
+      <Text variant="caption" tone="faint">
+        对话超过预算（或模型上下文的 80%）时，会自动把较早的内容压缩成摘要。预算越小回复越快、越省。
+      </Text>
+    </View>
   );
 }
 
