@@ -135,9 +135,12 @@ definePlugin({
   modeled on DeepSeek Harness's `llm-deepseek-account` / `llm-pi-ai` adapters. Secrets
   live in SecureStore per provider; the agent asks the active provider for its model.
   Streaming uses `expo/fetch`.
-- **Loop**: `streamText` with tools from every enabled plugin plus core tools, multi-step
-  until the model stops. Every turn is appended to a session log in SQLite, the same
-  "model-visible means logged" rule DeepSeek Harness follows.
+- **Loop** (`src/core/agent/run.ts`): `streamText` with tools from every enabled plugin plus core
+  tools, multi-step until the model stops (10-step cap). Each **session** keeps its UI messages
+  and its exact model-visible history separately (`src/core/agent/session/`; SQLite `sessions`
+  rows + per-session records), following DeepSeek Harness's "model-visible means logged" rule.
+  Sessions, `/` commands, the composer, context management (compaction, budget, tool-output
+  capping) and usage recording are specified in [AGENT-HARNESS.md](AGENT-HARNESS.md).
 - **Core tools** (always present):
   - `ui.render`: show a generative-UI spec in the chat (form, picker, card, list, …).
     User input in that UI comes back to the agent as the next message.
@@ -267,7 +270,7 @@ One engine serves dashboard alerts, schedule reminders and to-dos.
 | Data | Where |
 |---|---|
 | Campus credentials, AI API key | `expo-secure-store` |
-| Sessions, chat log, widgets, jobs, todos, timetable cache, plugin KV | `expo-sqlite` (one DB, versioned migrations) |
+| Sessions (index rows) + per-session messages/history/draft/queue records, usage log, widgets, jobs, todos, timetable cache, plugin KV | `expo-sqlite` (one DB, versioned migrations) |
 | UI prefs (theme, last tab) | SQLite KV |
 
 ## 11. Design system

@@ -30,6 +30,12 @@ import { composerDraft } from './composer/draft';
 import { JumpToLatest } from './jump-to-latest';
 import { MessageView } from './message';
 
+/** The last message is an assistant reply with something in it (text, tools, UI). */
+const hasReplyContent = (messages: { role: string; parts: unknown[] }[]) => {
+  const last = messages.filter((m) => m.role !== 'event').at(-1);
+  return last?.role === 'assistant' && last.parts.length > 0;
+};
+
 /** Within this many px of the end counts as "at the latest" (and re-pins following). */
 const NEAR_END = 72;
 
@@ -270,7 +276,9 @@ function Messages() {
         />
       ))}
       {busy ? <AgentStatus reply={reply ?? chat.messages.at(-1)} startedAt={startedAt} /> : null}
-      {!busy && interruptedTurn(chat) ? (
+      {/* Only when nothing of the reply arrived; a cut-off reply with content says so (and offers
+          重试) in its own footer, so the status is never shown twice. */}
+      {!busy && interruptedTurn(chat) && !hasReplyContent(chat.messages) ? (
         <View className="flex-row items-center gap-3">
           <Text variant="callout" tone="muted" className="flex-1">
             回复中断了

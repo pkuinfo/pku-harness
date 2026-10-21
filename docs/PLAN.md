@@ -88,3 +88,19 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [~] T9.5 Treehole SMS verification done by the user, treehole read tools live; `elective.*` untestable mid-semester (site closed); pay-code screen verified on the real account (QR, balance, 30 s refresh; confirmed by the user); exact-alarm permission still open (2026-10-19)
 - [~] T9.3 README for contributors done (2026-10-18); every screen checked on the emulator in dark and light; full impeccable review pass todo
 - [x] T9.6 Performance pass on a release build (emulator, `top -H`, Hermes sampling profile via the inspector proxy). Streaming: Markdown lexes only the unfinished tail (`streamLexer`, 10× less lexing on a 4.6k reply), only the message list subscribes to tokens, stable FadeIn animations, one save timer per quiet period; peak JS ~70% → ~50%, main thread ~58% → ~25%, taps answer mid-stream. Idle: the Skia aurora (TextureView the blur couldn't capture, ~110 errors/s) became gradient views that rest when the app is idle, and the logo's orbit no longer leaks after a reply; idle main thread ~53% → ~4%, RenderThread ~60% → 0 (2026-10-19)
+
+## M11 Agent harness core (spec: docs/AGENT-HARNESS.md)
+- [x] T11.1 Sessions: multi-session store (migration 2, per-session records, flush on background), per-session model, background replies + unread + notification, auto titles, sessions sheet (search, sections, swipe delete + undo, rename, pin), edit & resend, interrupted turns marked on load (2026-10-21)
+- [x] T11.2 Slash commands: registry (built-ins + plugin `contributes.commands`, Chinese aliases, collision namespacing), parser, fuzzy / menu; 14 built-ins; /余额 /今天 /树洞 plugin commands (2026-10-21)
+- [x] T11.3 Composer: attachments (camera/photos/text files, modality-gated), long paste → chip, full-screen editor, 100k limit, send/stop/queue with pause, model picker sheet, per-session drafts (2026-10-21)
+- [x] T11.4 Context management: static system prompt (time in per-turn context), stable tool order, 上下文预算 (64k default), prune → summarise → commit compaction, /compact, tool-output capping, overflow recovery (2026-10-21)
+- [x] T11.5 Usage & context visualization: per-request recording (migration 3), context ring + sheet, usage screen (KPIs, 20-week heat map, hour-of-day, 14-day tokens, tools, models) (2026-10-21)
+- [~] T11.6 Device pass (picky): swipe-delete bleed-through, context total, partial-command send, model picker sizing, stale cleared drafts, duplicate interruption UI fixed; full pass of attachments / queue / compaction / usage screen pending (2026-10-21)
+- [~] T11.7 First-run onboarding: 3D welcome, then AI service → PKU sign-in → plugin picks → done (resumable) (in progress)
+- [ ] T11.8 Chart palette as theme tokens; trim the ~14k-token tool block (tool search / plugin-scoped activation)
+
+## M12 Plugin batch 2 (in progress, 2026-10-21)
+- [~] T12.1 Money & utilities: cwfw expansion (salaries/rewards, tuition, tax), dorm electricity / water / bath balances + cashier recharge
+- [~] T12.2 Blackboard depth: assignment submission (host multipart + file picker), grades, due-date → to-dos, 智云课堂
+- [~] T12.3 Library: loans + renew, seat reservation, catalog search, hours
+- [~] T12.4 Campus life: notices (official sites / info-spider), shuttle timetables, canteens, portal apps

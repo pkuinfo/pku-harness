@@ -4,7 +4,7 @@ import { Pressable, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { AgentOrbit } from '@/components/agent-orbit';
-import { IconButton } from '@/components/button';
+import { Button, IconButton } from '@/components/button';
 import { Text } from '@/components/text';
 import type { ChatMessage, TurnMeta } from '@/core/agent/session/chat-store';
 import { turnCaption } from '@/core/agent/session/session-utils';
@@ -68,12 +68,15 @@ export function ReplyActions({ message, last, onRegenerate }: { message: ChatMes
             }}
           />
         ) : null}
-        {last && onRegenerate ? <IconButton icon="refresh" label="重新生成" variant="ghost" size={32} onPress={onRegenerate} /> : null}
+        {/* A finished reply offers a quiet ↻; one cut short says what happened and offers a
+            labelled 重试, which is easier to find when something went wrong. */}
+        {last && onRegenerate && !ended ? <IconButton icon="refresh" label="重新生成" variant="ghost" size={32} onPress={onRegenerate} /> : null}
         {ended ? (
           <Text variant="caption" tone={meta?.ended === 'error' ? 'down' : 'faint'} className="ml-1">
             {ended}
           </Text>
         ) : null}
+        {ended && last && onRegenerate ? <Button title="重试" size="sm" variant="secondary" icon="refresh" onPress={onRegenerate} style={{ marginLeft: 'auto' }} /> : null}
       </View>
       {stats && caption ? (
         <Animated.View entering={FadeIn.duration(140)} exiting={FadeOut.duration(100)}>
