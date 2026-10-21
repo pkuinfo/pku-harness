@@ -3,6 +3,7 @@
  * consent, then the setup steps. Progress is saved after every step (src/core/boot.ts
  * `onboardingProgress`) so a kill mid-setup resumes on the same step.
  */
+import type { MessageKey } from '@/i18n';
 
 export const SETUP_STEPS = ['ai', 'campus', 'plugins', 'done'] as const;
 export type SetupStep = (typeof SETUP_STEPS)[number];
@@ -86,18 +87,19 @@ export type SetupState = {
 };
 
 /**
- * Two or three first questions that work with what was just set up. Without an AI service there
- * is nothing to ask yet.
+ * Two or three first questions that work with what was just set up, as dictionary keys (the
+ * finish screen translates them; the text goes into the composer in the app language). Without
+ * an AI service there is nothing to ask yet.
  */
-export function suggestionsFor(s: SetupState): string[] {
+export function suggestionsFor(s: SetupState): MessageKey[] {
   if (!s.ai) return [];
-  const out: string[] = [];
+  const out: MessageKey[] = [];
   const on = (id: string) => s.enabled.has(id);
-  if (s.campus && on('campus-card')) out.push('校园卡还剩多少钱？');
-  if (s.campus && on('course-sync')) out.push('把这学期的课表同步过来');
-  else if (s.campus && on('netfee')) out.push('网费还剩多少？');
-  if (s.campus && on('courses') && out.length < 3) out.push('最近有哪些作业要交？');
-  const general = ['这周是第几教学周？', '明天早上 8 点提醒我交作业', '帮我搭一个看板'];
+  if (s.campus && on('campus-card')) out.push('welcome.done.suggest.balance');
+  if (s.campus && on('course-sync')) out.push('welcome.done.suggest.timetable');
+  else if (s.campus && on('netfee')) out.push('welcome.done.suggest.netFee');
+  if (s.campus && on('courses') && out.length < 3) out.push('welcome.done.suggest.homework');
+  const general: MessageKey[] = ['welcome.done.suggest.week', 'welcome.done.suggest.remind', 'welcome.done.suggest.dashboard'];
   for (const g of general) {
     if (out.length >= 3) break;
     out.push(g);

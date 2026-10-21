@@ -15,6 +15,7 @@ import { usePlugins } from '@/core/runtime/hooks';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import type { ProviderEntry } from '@/core/runtime/registry';
 import type { ProviderModel } from '@/core/runtime/types';
+import { useT } from '@/i18n';
 import { useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
@@ -34,8 +35,9 @@ function useKeyProviders(): ProviderEntry[] {
     .filter((e) => e.def.auth === 'apiKey' || e.def.auth === 'none');
 }
 
-/** Step 1 · 连接 AI 服务: provider, key (validated by listing models), model. */
+/** Step 1 · Connect an AI provider: provider, key (validated by listing models), model. */
 export function AIStep({ onDone, onSkip, onBack }: { onDone: () => void; onSkip: () => void; onBack: () => void }) {
+  const t = useT();
   const c = useTheme();
   const providers = useKeyProviders();
   const { config, keys } = useAIConfig();
@@ -67,7 +69,7 @@ export function AIStep({ onDone, onSkip, onBack }: { onDone: () => void; onSkip:
 
   if (!entry) {
     return (
-      <StepShell step="ai" icon="sparkles" title="连接 AI 服务" why="没有可用的 AI 服务插件，可以稍后在 设置 → 插件 中开启。" primary="继续" onPrimary={onSkip} onBack={onBack} />
+      <StepShell step="ai" icon="sparkles" title={t('welcome.ai.title')} why={t('welcome.ai.noProvider')} primary={t('welcome.step.continue')} onPrimary={onSkip} onBack={onBack} />
     );
   }
 
@@ -114,7 +116,7 @@ export function AIStep({ onDone, onSkip, onBack }: { onDone: () => void; onSkip:
       setStatus({ kind: 'ok', listed });
       haptics.success();
     } catch (e) {
-      setStatus({ kind: 'error', text: describeVerifyError(e) });
+      setStatus({ kind: 'error', text: describeVerifyError(e, t) });
       haptics.warning();
     }
   };
@@ -131,9 +133,9 @@ export function AIStep({ onDone, onSkip, onBack }: { onDone: () => void; onSkip:
     <StepShell
       step="ai"
       icon="sparkles"
-      title="连接 AI 服务"
-      why="助手需要一个大模型来理解你的话。密钥只保存在本机，只发给你选的服务商。"
-      primary={ok ? '继续' : '验证并连接'}
+      title={t('welcome.ai.title')}
+      why={t('welcome.ai.why')}
+      primary={ok ? t('welcome.step.continue') : t('welcome.ai.verify')}
       onPrimary={ok ? proceed : verify}
       primaryLoading={status.kind === 'checking'}
       primaryDisabled={ok ? !model.trim() : !canVerify}
@@ -143,13 +145,13 @@ export function AIStep({ onDone, onSkip, onBack }: { onDone: () => void; onSkip:
 
       <Animated.View key={entry.id} entering={FadeIn} layout={LinearTransition} className="gap-4">
         {def.editableBaseURL ? (
-          <Field label="接口地址（Base URL）" value={baseURL} onChangeText={setBaseURL} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="https://…/v1" />
+          <Field label={t('welcome.ai.baseURL')} value={baseURL} onChangeText={setBaseURL} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="https://…/v1" />
         ) : null}
 
         {def.auth === 'apiKey' ? (
           <View className="gap-1">
             <Field
-              label="API Key"
+              label={t('welcome.ai.apiKey')}
               value={key}
               onChangeText={editKey}
               placeholder="sk-…"
@@ -162,8 +164,8 @@ export function AIStep({ onDone, onSkip, onBack }: { onDone: () => void; onSkip:
               returnKeyType="done"
               trailing={
                 <View className="flex-row">
-                  <IconButton icon="copy" label="粘贴" variant="ghost" size={40} onPress={paste} />
-                  <IconButton icon={shown ? 'eyeOff' : 'eye'} label={shown ? '隐藏' : '显示'} variant="ghost" size={40} onPress={() => setShown((s) => !s)} />
+                  <IconButton icon="copy" label={t('welcome.ai.paste')} variant="ghost" size={40} onPress={paste} />
+                  <IconButton icon={shown ? 'eyeOff' : 'eye'} label={shown ? t('welcome.ai.hide') : t('welcome.ai.show')} variant="ghost" size={40} onPress={() => setShown((s) => !s)} />
                 </View>
               }
             />
@@ -188,7 +190,7 @@ export function AIStep({ onDone, onSkip, onBack }: { onDone: () => void; onSkip:
         {ok && models.length ? (
           <Animated.View entering={FadeIn} className="gap-2">
             <Text variant="callout" tone="muted">
-              模型
+              {t('welcome.ai.model')}
             </Text>
             {models.map((m) => {
               const on = model === m.id;
@@ -221,24 +223,25 @@ export function AIStep({ onDone, onSkip, onBack }: { onDone: () => void; onSkip:
           </Animated.View>
         ) : null}
 
-        {ok && !models.length ? <Field label="模型 ID" value={model} onChangeText={setModel} autoCapitalize="none" autoCorrect={false} placeholder="例如 gpt-4o-mini" /> : null}
+        {ok && !models.length ? <Field label={t('welcome.ai.modelId')} value={model} onChangeText={setModel} autoCapitalize="none" autoCorrect={false} placeholder={t('welcome.ai.modelIdPlaceholder')} /> : null}
       </Animated.View>
     </StepShell>
   );
 }
 
 function StatusLine({ status }: { status: Status }) {
+  const t = useT();
   const c = useTheme();
   if (status.kind === 'idle') return null;
   if (status.kind === 'checking') {
     return (
       <Text variant="callout" tone="muted">
-        正在验证…
+        {t('welcome.ai.checking')}
       </Text>
     );
   }
   const good = status.kind === 'ok';
-  const text = good ? (status.listed?.length ? `已连接，可用 ${status.listed.length} 个模型` : '已连接') : status.text;
+  const text = good ? (status.listed?.length ? t('welcome.ai.connectedModels', { count: status.listed.length }) : t('welcome.ai.connected')) : status.text;
   return (
     <Animated.View entering={FadeIn} className={cx('flex-row items-center gap-2 rounded-md p-3', good ? 'bg-up-muted' : 'bg-down-muted')} style={{ borderCurve: 'continuous' }} accessibilityLiveRegion="polite">
       <Icon name={good ? 'check' : 'warning'} size={16} color={good ? c.up : c.down} />

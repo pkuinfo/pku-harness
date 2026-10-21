@@ -67,17 +67,17 @@ describe('suggestions', () => {
   });
   test('campus questions first when signed in', () => {
     const s = suggestionsFor({ ai: true, campus: true, enabled: all });
-    expect(s[0]).toBe('校园卡还剩多少钱？');
+    expect(s[0]).toBe('welcome.done.suggest.balance');
     expect(s).toHaveLength(3);
   });
   test('general questions when not signed in', () => {
     const s = suggestionsFor({ ai: true, campus: false, enabled: all });
     expect(s).toHaveLength(3);
-    expect(s).not.toContain('校园卡还剩多少钱？');
+    expect(s).not.toContain('welcome.done.suggest.balance');
   });
   test('respects disabled plugins', () => {
     const s = suggestionsFor({ ai: true, campus: true, enabled: new Set(['netfee']) });
-    expect(s[0]).toBe('网费还剩多少？');
+    expect(s[0]).toBe('welcome.done.suggest.netFee');
     expect(s).toHaveLength(3);
   });
 });

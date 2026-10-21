@@ -26,7 +26,7 @@ describe('plugin groups', () => {
   });
 
   test('badges only for requirements worth mentioning', () => {
-    expect(requirementBadges({ id: 'x', requires: ['network', 'campus-session', 'campus-network'] })).toEqual(['需登录', '仅校园网']);
+    expect(requirementBadges({ id: 'x', requires: ['network', 'campus-session', 'campus-network'] })).toEqual(['welcome.plugins.badges.campusSession', 'welcome.plugins.badges.campusNetwork']);
     expect(requirementBadges({ id: 'y' })).toEqual([]);
   });
 });

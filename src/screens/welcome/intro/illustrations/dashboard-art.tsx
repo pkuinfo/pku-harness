@@ -3,6 +3,7 @@ import Animated, { useAnimatedProps, useAnimatedStyle, useReducedMotion } from '
 import Svg, { Circle, Defs, G, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { Text } from '@/components/text';
+import { useT } from '@/i18n';
 import { spacing } from '@/theme';
 
 import { useArtPalette, useSvgId } from './art-palette';
@@ -47,6 +48,7 @@ const ARC = 2 * Math.PI * GAUGE.r;
  * One entrance (UI thread), then only the orb breathes, within a budget.
  */
 export function DashboardArt({ active }: { active: boolean }) {
+  const t = useT();
   const { width } = useWindowDimensions();
   const w = Math.min(width - spacing.xxl * 2, 360);
   const s = w / VB.w;
@@ -96,21 +98,21 @@ export function DashboardArt({ active }: { active: boolean }) {
         </Svg>
         <View className="absolute gap-0.5" style={{ left: 40 * s, top: 34 * s }}>
           <Text variant="caption" tone="muted">
-            校园卡余额（示例）
+            {t('welcome.art.cardBalance')}
           </Text>
           <Text variant="numberL">¥128.40</Text>
         </View>
         <View className="absolute gap-0.5" style={{ left: 88 * s, top: 172 * s }}>
           <Text variant="caption" tone="muted">
-            网费
+            {t('welcome.art.netFee')}
           </Text>
           <Text variant="bodyStrong">¥36</Text>
         </View>
         <View className="absolute gap-0.5" style={{ left: 176 * s, top: 164 * s }}>
           <Text variant="caption" tone="muted">
-            教学周
+            {t('welcome.art.weekLabel')}
           </Text>
-          <Text variant="bodyStrong">第 6 周</Text>
+          <Text variant="bodyStrong">{t('welcome.art.weekValue')}</Text>
         </View>
       </Animated.View>
     </View>

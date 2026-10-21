@@ -7,9 +7,11 @@ import { Icon, type IconName } from '@/components/icon';
 import { NativeSwitch } from '@/components/native-switch';
 import { Text } from '@/components/text';
 import { usePlugins } from '@/core/runtime/hooks';
+import { pluginDescription, pluginName } from '@/core/runtime/localize';
 import { pluginSettings, usePluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import type { PluginDef } from '@/core/runtime/types';
+import { useLocale, useT } from '@/i18n';
 import { radius, useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
@@ -18,6 +20,9 @@ import { groupPlugins, requirementBadges } from '../plugin-groups';
 import { StepShell } from './step-shell';
 
 function PluginRow({ plugin }: { plugin: PluginDef }) {
+  const t = useT();
+  const locale = useLocale();
+  const name = pluginName(plugin, locale);
   const c = useTheme();
   const settings = usePluginSettings(plugin.id);
   const why = registry.unavailable(plugin.id);
@@ -30,22 +35,22 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
       </View>
       <View className="flex-1 gap-1">
         <View className="flex-row flex-wrap items-center gap-1.5">
-          <Text variant="bodyStrong">{plugin.name}</Text>
+          <Text variant="bodyStrong">{name}</Text>
           {badges.map((b) => (
-            <Chip key={b} label={b} />
+            <Chip key={b} label={t(b)} />
           ))}
         </View>
         <Text variant="caption" tone="muted" numberOfLines={2}>
-          {why ?? plugin.description}
+          {why ?? pluginDescription(plugin, locale)}
         </Text>
       </View>
       {plugin.core ? (
-        <View accessible accessibilityLabel={`${plugin.name} 始终开启`} className="h-10 w-10 items-center justify-center">
+        <View accessible accessibilityLabel={t('welcome.plugins.alwaysOnA11y', { name })} className="h-10 w-10 items-center justify-center">
           <Icon name="lock" size={16} color={c.textFaint} />
         </View>
       ) : (
         <NativeSwitch
-          label={`启用 ${plugin.name}`}
+          label={t('welcome.plugins.toggleA11y', { name })}
           value={on}
           disabled={!!why}
           onValueChange={(v) => {
@@ -58,25 +63,26 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
   );
 }
 
-/** Step 3 · 选择插件: what the assistant may use. Toggles write plugin settings directly. */
+/** Step 3 · Choose plugins (选择插件): what the assistant may use. Toggles write plugin settings directly. */
 export function PluginsStep({ onDone, onSkip, onBack }: { onDone: () => void; onSkip: () => void; onBack: () => void }) {
+  const t = useT();
   const groups = groupPlugins(usePlugins());
   return (
     <StepShell
       step="plugins"
       icon="puzzle"
-      title="选择插件"
-      why="每个校园服务都是一个插件。开启的插件，你和 AI 都能使用。"
-      primary="继续"
+      title={t('welcome.plugins.title')}
+      why={t('welcome.plugins.why')}
+      primary={t('welcome.step.continue')}
       onPrimary={onDone}
       onSkip={onSkip}
       onBack={onBack}
-      note="可以随时在 设置 → 插件 中更改">
+      note={t('welcome.plugins.note')}>
       {groups.map((g, gi) => (
         <FadeIn key={g.id} index={gi + 3}>
           <View className="gap-2">
             <Text variant="micro" tone="faint" className="px-4">
-              {g.title}
+              {t(g.title)}
             </Text>
             <View className="overflow-hidden rounded-lg bg-surface" style={{ borderCurve: 'continuous' }}>
               <GlassEdges radius={radius.lg} />
@@ -89,7 +95,7 @@ export function PluginsStep({ onDone, onSkip, onBack }: { onDone: () => void; on
             </View>
             {g.footer ? (
               <Text variant="caption" tone="faint" className="px-4">
-                {g.footer}
+                {t(g.footer)}
               </Text>
             ) : null}
           </View>

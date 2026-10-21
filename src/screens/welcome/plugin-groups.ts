@@ -1,14 +1,20 @@
 /**
- * Groups for the plugin step (pure, unit-tested): 校园服务 / 效率 / 系统. Model providers are set up
- * in the AI step and remote plugins are added later, so neither appears here.
+ * Groups for the plugin step (pure, unit-tested): 校园服务 / 效率 / 系统 (campus services,
+ * productivity, system). Model providers are set up in the AI step and remote plugins are added
+ * later, so neither appears here. Titles, footers and badges are dictionary keys; the screen
+ * translates them.
  */
+import type { MessageKey } from '@/i18n';
+
 
 export type GroupId = 'campus' | 'productivity' | 'system';
 
-export const GROUPS: { id: GroupId; title: string; footer?: string }[] = [
-  { id: 'campus', title: '校园服务', footer: '需要登录北大账号；部分服务只在校园网内可用。' },
-  { id: 'productivity', title: '效率' },
-  { id: 'system', title: '系统', footer: '应用本身的一部分，始终开启。' },
+type Group = { id: GroupId; title: MessageKey; footer?: MessageKey };
+
+export const GROUPS: Group[] = [
+  { id: 'campus', title: 'welcome.plugins.groups.campus', footer: 'welcome.plugins.groups.campusFooter' },
+  { id: 'productivity', title: 'welcome.plugins.groups.productivity' },
+  { id: 'system', title: 'welcome.plugins.groups.system', footer: 'welcome.plugins.groups.systemFooter' },
 ];
 
 /** The fields grouping needs (a subset of PluginDef, so tests need no runtime). */
@@ -36,18 +42,18 @@ export function groupOf(p: PluginLike): GroupId | null {
 }
 
 /** Plugins bucketed by group, keeping registry order inside each group; empty groups dropped. */
-export function groupPlugins<T extends PluginLike>(plugins: readonly T[]): { id: GroupId; title: string; footer?: string; plugins: T[] }[] {
+export function groupPlugins<T extends PluginLike>(plugins: readonly T[]): (Group & { plugins: T[] })[] {
   return GROUPS.map((g) => ({ ...g, plugins: plugins.filter((p) => groupOf(p) === g.id) })).filter((g) => g.plugins.length > 0);
 }
 
 /** Device requirements worth a badge (plain internet access is assumed, so not shown). */
-const BADGE: Record<string, string> = {
-  'campus-session': '需登录',
-  'campus-network': '仅校园网',
-  notifications: '通知',
-  background: '后台',
+const BADGE: Record<string, MessageKey> = {
+  'campus-session': 'welcome.plugins.badges.campusSession',
+  'campus-network': 'welcome.plugins.badges.campusNetwork',
+  notifications: 'welcome.plugins.badges.notifications',
+  background: 'welcome.plugins.badges.background',
 };
 
-export function requirementBadges(p: PluginLike): string[] {
-  return (p.requires ?? []).map((c) => BADGE[c]).filter((b): b is string => !!b);
+export function requirementBadges(p: PluginLike): MessageKey[] {
+  return (p.requires ?? []).map((c) => BADGE[c]).filter((b): b is MessageKey => !!b);
 }

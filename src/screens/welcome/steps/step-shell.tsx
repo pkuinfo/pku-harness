@@ -9,6 +9,7 @@ import { FadeIn } from '@/components/fade-in';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
 import { MAX_CONTENT_WIDTH } from '@/hooks/use-layout';
+import { useT } from '@/i18n';
 import { curves, duration, spacing, useTheme } from '@/theme';
 
 import { TASK_STEPS, stepPosition, type SetupStep } from '../flow';
@@ -18,10 +19,11 @@ const EASE_OUT = Easing.bezier(...curves.out);
 
 /** One segment per task step: done ones full, the current one fills as it arrives. */
 function Progress({ step }: { step: SetupStep }) {
+  const t = useT();
   const pos = stepPosition(step);
   if (!pos) return <View className="flex-1" />;
   return (
-    <View className="flex-1 gap-1.5" accessible accessibilityRole="progressbar" accessibilityLabel={`第 ${pos.index} 步，共 ${pos.total} 步`}>
+    <View className="flex-1 gap-1.5" accessible accessibilityRole="progressbar" accessibilityLabel={t('welcome.step.progressA11y', { index: pos.index, total: pos.total })}>
       <View className="flex-row gap-1.5">
         {TASK_STEPS.map((s, i) => (
           <Segment key={s} state={i + 1 < pos.index ? 'done' : i + 1 === pos.index ? 'current' : 'todo'} />
@@ -84,12 +86,13 @@ export function StepShell({
   onBack?: () => void;
   note?: string;
 }) {
+  const t = useT();
   const c = useTheme();
   const insets = useSafeAreaInsets();
   return (
     <KeyboardAvoidingView className="flex-1" behavior="padding">
       <View className="flex-row items-center gap-3 px-4 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
-        {onBack ? <IconButton icon="back" label="上一步" variant="ghost" onPress={onBack} /> : <View className="h-10 w-10" />}
+        {onBack ? <IconButton icon="back" label={t('welcome.step.back')} variant="ghost" onPress={onBack} /> : <View className="h-10 w-10" />}
         <Progress step={step} />
         <View className="h-10 w-10" />
       </View>
@@ -127,7 +130,7 @@ export function StepShell({
           </Text>
         ) : null}
         <Button title={primary} size="lg" onPress={onPrimary} loading={primaryLoading} disabled={primaryDisabled} />
-        {onSkip ? <Button title="稍后设置" variant="ghost" size="md" onPress={onSkip} /> : null}
+        {onSkip ? <Button title={t('welcome.step.later')} variant="ghost" size="md" onPress={onSkip} /> : null}
       </View>
     </KeyboardAvoidingView>
   );

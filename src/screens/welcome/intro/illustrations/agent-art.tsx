@@ -4,6 +4,7 @@ import Svg from 'react-native-svg';
 
 import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
+import { useT } from '@/i18n';
 import { spacing } from '@/theme';
 
 import { useArtPalette, useSvgId } from './art-palette';
@@ -29,6 +30,7 @@ const REST = 0.9;
  * the UI thread; it plays a few times, then rests on the finished frame.
  */
 export function AgentArt({ active }: { active: boolean }) {
+  const tr = useT();
   const { width } = useWindowDimensions();
   const w = Math.min(width - spacing.xxl * 2, 360);
   const s = w / VB.w;
@@ -68,14 +70,16 @@ export function AgentArt({ active }: { active: boolean }) {
       ))}
       <Animated.View className="absolute self-end rounded-xl rounded-br-sm bg-brand px-4 py-2" style={[{ top: 12 * s, right: 8 * s, borderCurve: 'continuous' }, bubble]}>
         <Text variant="callout" tone="onAccent" numberOfLines={1}>
-          每天 8 点查校园卡余额
+          {tr('welcome.art.agentAsk')}
         </Text>
       </Animated.View>
       <Animated.View
         className="absolute flex-row items-center gap-2 rounded-lg border-[0.5px] px-3 py-2"
         style={[{ left: 18 * s, bottom: 4 * s, borderCurve: 'continuous', backgroundColor: p.cardFill, borderColor: p.cardEdge }, chip]}>
         <Icon name="check" size={14} color={p.accent} />
-        <Text variant="caption">已创建 · 每天 08:00 · 低于 ¥100 提醒</Text>
+        <Text variant="caption" numberOfLines={1}>
+          {tr('welcome.art.agentDone')}
+        </Text>
       </Animated.View>
     </View>
   );

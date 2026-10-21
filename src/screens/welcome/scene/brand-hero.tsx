@@ -5,6 +5,7 @@ import { GestureDetector, useExclusiveGestures, usePanGesture, useTapGesture } f
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { ErrorBoundary } from '@/components/error-boundary';
+import { useT } from '@/i18n';
 import { curves, duration, useThemeName } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
@@ -36,6 +37,7 @@ type Status = 'pending' | 'ready' | 'failed';
  * services round once more.
  */
 export function BrandHero({ size, active, mode = 'intro', forceFallback = false }: { size: number; active: boolean; mode?: SceneMode; forceFallback?: boolean }) {
+  const t = useT();
   const reduced = useReducedMotion();
   const focused = useIsFocused();
   const theme = useThemeName();
@@ -136,7 +138,7 @@ export function BrandHero({ size, active, mode = 'intro', forceFallback = false 
 
   const Native = GLView;
   return (
-    <View style={{ width: size, height: size }} accessible accessibilityRole="image" accessibilityLabel="PKU Harness 助手">
+    <View style={{ width: size, height: size }} accessible accessibilityRole="image" accessibilityLabel={t('welcome.heroA11y')}>
       {status === 'failed' ? (
         <View className="flex-1 items-center justify-center">
           <OrbArt size={size} live={live} intro={mode === 'intro'} />

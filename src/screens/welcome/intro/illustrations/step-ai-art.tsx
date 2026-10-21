@@ -4,6 +4,7 @@ import Svg from 'react-native-svg';
 
 import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
+import { useT } from '@/i18n';
 import { spacing } from '@/theme';
 
 import { useArtPalette, useSvgId } from './art-palette';
@@ -20,6 +21,7 @@ const VB = { w: 300, h: 120 };
  * answers on the right. One entrance on the UI thread, then the orb breathes briefly.
  */
 export function StepAIArt() {
+  const t = useT();
   const { width } = useWindowDimensions();
   const w = Math.min(width - spacing.xxl * 2, 340);
   const s = w / VB.w;
@@ -39,11 +41,11 @@ export function StepAIArt() {
       </Svg>
       <View className="absolute flex-row items-center gap-1.5" style={{ left: 18 * s, top: 50 * s }}>
         <Icon name="key" size={14} color={p.accent} />
-        <Text variant="caption">API Key</Text>
+        <Text variant="caption">{t('welcome.art.apiKey')}</Text>
       </View>
       <View className="absolute flex-row items-center gap-1.5" style={{ left: 216 * s, top: 50 * s }}>
         <Icon name="sparkles" size={14} color={p.accent} />
-        <Text variant="caption">模型</Text>
+        <Text variant="caption">{t('welcome.art.model')}</Text>
       </View>
     </View>
   );

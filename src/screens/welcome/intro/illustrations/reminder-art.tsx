@@ -4,6 +4,7 @@ import Svg, { Circle, Defs, G, Line, RadialGradient, Stop } from 'react-native-s
 
 import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
+import { useT } from '@/i18n';
 import { spacing } from '@/theme';
 
 import { useArtPalette, useSvgId, type ArtPalette } from './art-palette';
@@ -34,6 +35,7 @@ const ease = (x: number) => {
  * times on the UI thread, then rests with the series complete.
  */
 export function ReminderArt({ active }: { active: boolean }) {
+  const tr = useT();
   const { width } = useWindowDimensions();
   const w = Math.min(width - spacing.xxl * 2, 360);
   const s = w / VB.w;
@@ -104,7 +106,7 @@ export function ReminderArt({ active }: { active: boolean }) {
           08:00
         </Text>
         <Text variant="caption" tone="muted">
-          每 3 天 · 共 16 次
+          {tr('welcome.art.series')}
         </Text>
       </View>
     </View>

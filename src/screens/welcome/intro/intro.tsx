@@ -21,6 +21,7 @@ import { Aurora } from '@/components/aurora';
 import { Button } from '@/components/button';
 import { NativeCheckbox } from '@/components/native-checkbox';
 import { Text } from '@/components/text';
+import { useT } from '@/i18n';
 import { curves, duration, spacing } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
@@ -62,6 +63,7 @@ function Dot({ scroll, index, width }: { scroll: SharedValue<number>; index: num
 }
 
 function PageView({ page, index, scroll, width, current, intro, heroSize, forceFallback, live }: { page: IntroPage; index: number; scroll: SharedValue<number>; width: number; current: number; intro: SharedValue<number>; heroSize: number; forceFallback: boolean; live: boolean }) {
+  const t = useT();
   const reduced = useReducedMotion();
   const art = useLayer(scroll, index, width, 1.5, reduced);
   const kicker = useLayer(scroll, index, width, 0.45, reduced);
@@ -90,15 +92,15 @@ function PageView({ page, index, scroll, width, current, intro, heroSize, forceF
       <Animated.View className="gap-3" style={enter}>
         <Animated.View style={kicker}>
           <Text variant="micro" tone="accent">
-            {page.kicker}
+            {t(`welcome.intro.${page}.kicker`)}
           </Text>
         </Animated.View>
         <Animated.View style={title}>
-          <Text variant="display">{page.title}</Text>
+          <Text variant="display">{t(`welcome.intro.${page}.title`)}</Text>
         </Animated.View>
         <Animated.View style={body}>
           <Text variant="body" tone="muted">
-            {page.body}
+            {t(`welcome.intro.${page}.body`)}
           </Text>
         </Animated.View>
       </Animated.View>
@@ -111,6 +113,7 @@ function PageView({ page, index, scroll, width, current, intro, heroSize, forceF
  * false (leaving for setup) freezes the 3D scene.
  */
 export function Intro({ onAccept, startAtEnd = false, live, forceFallback }: { onAccept: () => void; startAtEnd?: boolean; live: boolean; forceFallback: boolean }) {
+  const t = useT();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const reduced = useReducedMotion();
@@ -192,30 +195,30 @@ export function Intro({ onAccept, startAtEnd = false, live, forceFallback }: { o
         className="flex-1"
         contentContainerStyle={{ paddingTop: insets.top + spacing.xl }}>
         {PAGES.map((p, i) => (
-          <PageView key={p.kicker} page={p} index={i} scroll={scroll} width={width} current={page} intro={copyIn} heroSize={heroSize} forceFallback={forceFallback} live={live} />
+          <PageView key={p} page={p} index={i} scroll={scroll} width={width} current={page} intro={copyIn} heroSize={heroSize} forceFallback={forceFallback} live={live} />
         ))}
       </Animated.ScrollView>
 
       <Animated.View className="gap-3 px-6" style={[{ paddingBottom: insets.bottom + spacing.lg }, footerStyle]}>
-        <View className="mb-2 flex-row gap-1 self-center" accessibilityRole="progressbar" accessibilityLabel={`第 ${page + 1} 页，共 ${PAGES.length} 页`}>
+        <View className="mb-2 flex-row gap-1 self-center" accessibilityRole="progressbar" accessibilityLabel={t('welcome.intro.pageA11y', { page: page + 1, total: PAGES.length })}>
           {PAGES.map((p, i) => (
-            <Dot key={p.kicker} scroll={scroll} index={i} width={width} />
+            <Dot key={p} scroll={scroll} index={i} width={width} />
           ))}
         </View>
         {last ? (
           <Animated.View className="flex-row items-center gap-2" style={consentStyle}>
-            <NativeCheckbox label="同意条款" value={agreed} onValueChange={toggle} />
-            <Pressable className="flex-1" onPress={() => toggle(!agreed)} accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} accessibilityLabel="同意条款">
+            <NativeCheckbox label={t('welcome.intro.consentLabel')} value={agreed} onValueChange={toggle} />
+            <Pressable className="flex-1" onPress={() => toggle(!agreed)} accessibilityRole="checkbox" accessibilityState={{ checked: agreed }} accessibilityLabel={t('welcome.intro.consentLabel')}>
               <Text variant="caption" tone="muted">
-                我已了解：AI 会按我授予的权限代我操作校园服务；校园密码只保存在这台手机上。
+                {t('welcome.intro.consent')}
               </Text>
             </Pressable>
           </Animated.View>
         ) : null}
-        <Button title={last ? '同意并继续' : '继续'} size="lg" onPress={next} disabled={last && !agreed} />
+        <Button title={last ? t('welcome.intro.accept') : t('welcome.intro.next')} size="lg" onPress={next} disabled={last && !agreed} />
         {/* Keeps its slot on the last page so the primary button doesn't jump. */}
         <View className={last ? 'opacity-0' : undefined} pointerEvents={last ? 'none' : 'auto'} accessibilityElementsHidden={last}>
-          <Button title="跳过介绍" variant="ghost" size="sm" onPress={() => goTo(PAGES.length - 1)} />
+          <Button title={t('welcome.intro.skip')} variant="ghost" size="sm" onPress={() => goTo(PAGES.length - 1)} />
         </View>
       </Animated.View>
     </View>

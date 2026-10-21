@@ -2,6 +2,7 @@ import { fetch as expoFetch } from 'expo/fetch';
 
 import type { ProviderEntry } from '@/core/runtime/registry';
 import type { ProviderModel } from '@/core/runtime/types';
+import { t } from '@/i18n';
 
 const TIMEOUT_MS = 15_000;
 
@@ -15,7 +16,7 @@ export async function verifyProvider(entry: ProviderEntry, baseURL: string, mode
   const run = async () => {
     if (entry.def.listModels) return entry.def.listModels(config);
     const { generateText } = await import('ai');
-    await generateText({ model: entry.def.createModel(config) as Parameters<typeof generateText>[0]['model'], prompt: '只回复：好的', maxOutputTokens: 8 });
+    await generateText({ model: entry.def.createModel(config) as Parameters<typeof generateText>[0]['model'], prompt: t('welcome.ai.testPrompt'), maxOutputTokens: 8 });
     return [];
   };
   let timer: ReturnType<typeof setTimeout> | undefined;

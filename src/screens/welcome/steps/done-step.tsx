@@ -10,6 +10,7 @@ import { useCampusAccount } from '@/core/campus/account';
 import { usePlugins } from '@/core/runtime/hooks';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
+import { useT } from '@/i18n';
 import { radius, spacing, useTheme } from '@/theme';
 
 import { suggestionsFor } from '../flow';
@@ -33,8 +34,9 @@ function SummaryRow({ icon, label, value, ok, index }: { icon: IconName; label: 
   );
 }
 
-/** Step 4 · 完成: what was set up, and two or three first questions that fit it. */
+/** Step 4 · Done (完成): what was set up, and two or three first questions that fit it. */
 export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: (question?: string) => void; onBack: () => void; live: boolean; forceFallback: boolean }) {
+  const t = useT();
   const { width } = useWindowDimensions();
   const { config, hasKey } = useAIConfig();
   const account = useCampusAccount();
@@ -47,32 +49,32 @@ export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: 
     [plugins, stored],
   );
   const services = plugins.filter((p) => !p.core && !p.providers && !p.remote && enabled.has(p.id)).length;
-  const suggestions = suggestionsFor({ ai: hasKey, campus: account.signedIn, enabled });
+  const suggestions = suggestionsFor({ ai: hasKey, campus: account.signedIn, enabled }).map((k) => t(k));
   const heroSize = Math.round(Math.min(width - spacing.xxxl * 2, 220));
 
   return (
     <StepShell
       step="done"
-      title="准备好了"
-      why={hasKey ? '试着问它一个问题，或者直接开始。' : '还没连接 AI 服务，可以稍后在 设置 → AI 服务 中连接。'}
+      title={t('welcome.done.title')}
+      why={hasKey ? t('welcome.done.why') : t('welcome.done.whyNoAI')}
       hero={
         <View className="items-center">
           <BrandHero size={heroSize} active={live} mode="celebrate" forceFallback={forceFallback} />
         </View>
       }
-      primary="开始使用"
+      primary={t('welcome.done.start')}
       onPrimary={() => onFinish()}
       onBack={onBack}>
       <View>
-        <SummaryRow index={3} icon="sparkles" label="AI 服务" ok={hasKey} value={hasKey ? `${config.name} · ${config.model}` : '未连接'} />
-        <SummaryRow index={4} icon="person" label="北大账号" ok={account.signedIn} value={account.signedIn ? (account.name ?? account.username ?? '已登录') : '未登录'} />
-        <SummaryRow index={5} icon="puzzle" label="校园服务" ok={services > 0} value={`已开启 ${services} 个`} />
+        <SummaryRow index={3} icon="sparkles" label={t('welcome.done.ai')} ok={hasKey} value={hasKey ? `${config.name} · ${config.model}` : t('welcome.done.notConnected')} />
+        <SummaryRow index={4} icon="person" label={t('welcome.done.account')} ok={account.signedIn} value={account.signedIn ? (account.name ?? account.username ?? t('welcome.done.signedIn')) : t('welcome.done.notSignedIn')} />
+        <SummaryRow index={5} icon="puzzle" label={t('welcome.done.services')} ok={services > 0} value={t('welcome.done.servicesOn', { count: services })} />
       </View>
       {suggestions.length ? (
         <View className="gap-2">
           <FadeIn index={6}>
             <Text variant="micro" tone="faint">
-              可以这样开始
+              {t('welcome.done.suggestTitle')}
             </Text>
           </FadeIn>
           {suggestions.map((q, i) => (
