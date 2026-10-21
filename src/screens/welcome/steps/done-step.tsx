@@ -5,6 +5,7 @@ import { FadeIn } from '@/components/fade-in';
 import { Glass } from '@/components/glass';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
+import { modelInfo } from '@/core/agent/attachments/attachments';
 import { useAIConfig } from '@/core/agent/provider';
 import { useCampusAccount } from '@/core/campus/account';
 import { usePlugins } from '@/core/runtime/hooks';
@@ -66,7 +67,7 @@ export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: 
       onPrimary={() => onFinish()}
       onBack={onBack}>
       <View>
-        <SummaryRow index={3} icon="sparkles" label={t('welcome.done.ai')} ok={hasKey} value={hasKey ? `${config.name} · ${config.model}` : t('welcome.done.notConnected')} />
+        <SummaryRow index={3} icon="sparkles" label={t('welcome.done.ai')} ok={hasKey} value={hasKey ? `${config.name} · ${modelInfo(config.providerId, config.model)?.name ?? config.model}` : t('welcome.done.notConnected')} />
         <SummaryRow index={4} icon="person" label={t('welcome.done.account')} ok={account.signedIn} value={account.signedIn ? (account.name ?? account.username ?? t('welcome.done.signedIn')) : t('welcome.done.notSignedIn')} />
         <SummaryRow index={5} icon="puzzle" label={t('welcome.done.services')} ok={services > 0} value={t('welcome.done.servicesOn', { count: services })} />
       </View>

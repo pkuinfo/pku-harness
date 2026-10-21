@@ -14,7 +14,8 @@ import { Text } from '@/components/text';
 import { AgentOrbit } from '@/components/agent-orbit';
 import { PressableScale } from '@/components/pressable-scale';
 import { chatStore, useChat, useChatSelector } from '@/core/agent/session/chat-store';
-import { useAIConfig } from '@/core/agent/provider';
+import { modelInfo } from '@/core/agent/attachments/attachments';
+import { aiConfig, useAIConfig } from '@/core/agent/provider';
 import { interruptedTurn, regenerateLast, retryLast, sendMessage } from '@/core/agent/run';
 import { sessions, useActiveSessionId, useEditing, useRenameRequest, useSessionMeta, useSessions } from '@/core/agent/session/sessions';
 import { registry } from '@/core/runtime/registry';
@@ -353,7 +354,9 @@ function ChatTitle({ fallbackName, fallbackModel, connected }: { fallbackName: s
   const [draft, setDraft] = useState('');
   const title = meta?.title || t('chat.header.newChat');
   const providerName = meta?.providerId ? (registry.provider(meta.providerId)?.def.name ?? meta.providerId) : fallbackName;
-  const model = meta?.model ?? fallbackModel;
+  const modelId = meta?.model ?? fallbackModel;
+  // The model's display name (DeepSeek-V4.1-Flash), not its API id.
+  const model = modelInfo(meta?.providerId ?? aiConfig.get().providerId, modelId)?.name ?? modelId;
   const canRename = !!meta && meta.messageCount > 0;
   const start = useCallback(() => {
     if (!meta) return;

@@ -91,7 +91,8 @@ function PageView({ page, index, scroll, width, current, intro, heroSize, forceF
       </Animated.View>
       <Animated.View className="gap-3" style={enter}>
         <Animated.View style={kicker}>
-          <Text variant="micro" tone="accent">
+          {/* Small caps in every language: no-op for Chinese, consistent casing in English. */}
+          <Text variant="micro" tone="accent" style={{ textTransform: 'uppercase' }}>
             {t(`welcome.intro.${page}.kicker`)}
           </Text>
         </Animated.View>

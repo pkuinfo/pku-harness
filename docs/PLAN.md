@@ -95,8 +95,8 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T11.3 Composer: attachments (camera/photos/text files, modality-gated), long paste → chip, full-screen editor, 100k limit, send/stop/queue with pause, model picker sheet, per-session drafts (2026-10-21)
 - [x] T11.4 Context management: static system prompt (time in per-turn context), stable tool order, 上下文预算 (64k default), prune → summarise → commit compaction, /compact, tool-output capping, overflow recovery (2026-10-21)
 - [x] T11.5 Usage & context visualization: per-request recording (migration 3), context ring + sheet, usage screen (KPIs, 20-week heat map, hour-of-day, 14-day tokens, tools, models) (2026-10-21)
-- [~] T11.6 Device pass (picky): swipe-delete bleed-through, context total, partial-command send, model picker sizing, stale cleared drafts, duplicate interruption UI fixed; full pass of attachments / queue / compaction / usage screen pending (2026-10-21)
-- [~] T11.7 First-run onboarding: 3D welcome, then AI service → PKU sign-in → plugin picks → done (resumable) (in progress)
+- [x] T11.6 Device pass (picky): swipe-delete bleed-through, context total, partial-command send, model picker sizing, stale cleared drafts, duplicate interruption UI; then long paste (one chip), chip ✕ target, queue + pause/resume, list pinning, full editor focus, text files, /compact, background reply notification (2026-10-21)
+- [x] T11.7 First-run onboarding: 3D welcome, then AI service → PKU sign-in → plugin picks → done (resumable); English pass + fixed an SVG gradient-id collision that crashed the AI step (2026-10-21)
 - [x] T11.8a On-demand tools: core plugins + `tools__load`, plugin catalog in the system prompt; a new chat's request went from ~30k to ~10k tokens (2026-10-21)
 - [ ] T11.8b Chart palette as theme tokens; compaction notice uses the same calibrated numbers as the context sheet
 

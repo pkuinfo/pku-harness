@@ -12,10 +12,11 @@ import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { aiConfig, DEFAULT_PROVIDER, useAIConfig } from '@/core/agent/provider';
 import { usePlugins } from '@/core/runtime/hooks';
+import { modelText, providerText } from '@/core/runtime/localize';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import type { ProviderEntry } from '@/core/runtime/registry';
 import type { ProviderModel } from '@/core/runtime/types';
-import { useT } from '@/i18n';
+import { useLocale, useT } from '@/i18n';
 import { useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
@@ -29,9 +30,16 @@ type Status = { kind: 'idle' } | { kind: 'checking' } | { kind: 'ok'; listed: Pr
 /** Providers a first run can set up with a key (account sign-ins live in Settings). */
 function useKeyProviders(): ProviderEntry[] {
   const plugins = usePlugins();
+  // Re-renders on a language change; names, hints and model blurbs come from the plugin's overlay.
+  const locale = useLocale();
   return plugins
     .filter((p) => !p.remote)
-    .flatMap((p) => Object.entries(p.providers ?? {}).map(([k, def]) => ({ id: `${p.id}.${k}`, pluginId: p.id, def })))
+    .flatMap((p) =>
+      Object.entries(p.providers ?? {}).map(([k, def]) => {
+        const models = def.models.map((m) => ({ ...m, ...modelText(p, k, m, locale) }));
+        return { id: `${p.id}.${k}`, pluginId: p.id, def: { ...def, ...providerText(p, k, def, locale), models } };
+      }),
+    )
     .filter((e) => e.def.auth === 'apiKey' || e.def.auth === 'none');
 }
 

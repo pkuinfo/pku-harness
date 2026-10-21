@@ -1,6 +1,7 @@
 import { StyleSheet, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
+import { useCampusAccount } from '@/core/campus/account';
 import { FadeIn } from '@/components/fade-in';
 import { GlassEdges } from '@/components/glass';
 import { Icon, type IconName } from '@/components/icon';
@@ -26,7 +27,8 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
   const c = useTheme();
   const settings = usePluginSettings(plugin.id);
   const why = registry.unavailable(plugin.id);
-  const badges = requirementBadges(plugin);
+  const { signedIn } = useCampusAccount();
+  const badges = requirementBadges(plugin, { signedIn });
   const on = !why && settings.enabled;
   return (
     <View className="min-h-16 flex-row items-center gap-3 px-4 py-3">
@@ -34,12 +36,15 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
         <Icon name={(plugin.icon as IconName | undefined) ?? 'puzzle'} size={18} color={on ? c.accent : c.textMuted} />
       </View>
       <View className="flex-1 gap-1">
-        <View className="flex-row flex-wrap items-center gap-1.5">
-          <Text variant="bodyStrong">{name}</Text>
-          {badges.map((b) => (
-            <Chip key={b} label={t(b)} />
-          ))}
-        </View>
+        <Text variant="bodyStrong">{name}</Text>
+        {/* Own row under the title: the same shape whether the name is short or wraps. */}
+        {badges.length ? (
+          <View className="flex-row flex-wrap gap-1.5">
+            {badges.map((b) => (
+              <Chip key={b} label={t(b)} />
+            ))}
+          </View>
+        ) : null}
         <Text variant="caption" tone="muted" numberOfLines={2}>
           {why ?? pluginDescription(plugin, locale)}
         </Text>

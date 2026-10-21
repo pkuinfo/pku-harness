@@ -54,6 +54,10 @@ const BADGE: Record<string, MessageKey> = {
   background: 'welcome.plugins.badges.background',
 };
 
-export function requirementBadges(p: PluginLike): MessageKey[] {
-  return (p.requires ?? []).map((c) => BADGE[c]).filter((b): b is MessageKey => !!b);
+/** What a plugin still needs from the user; 需登录 is moot once they're signed in. */
+export function requirementBadges(p: PluginLike, { signedIn = false }: { signedIn?: boolean } = {}): MessageKey[] {
+  return (p.requires ?? [])
+    .filter((c) => !(signedIn && c === 'campus-session'))
+    .map((c) => BADGE[c])
+    .filter((b): b is MessageKey => !!b);
 }

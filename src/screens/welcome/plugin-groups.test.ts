@@ -28,5 +28,6 @@ describe('plugin groups', () => {
   test('badges only for requirements worth mentioning', () => {
     expect(requirementBadges({ id: 'x', requires: ['network', 'campus-session', 'campus-network'] })).toEqual(['welcome.plugins.badges.campusSession', 'welcome.plugins.badges.campusNetwork']);
     expect(requirementBadges({ id: 'y' })).toEqual([]);
+    expect(requirementBadges({ id: 'x', requires: ['campus-session', 'campus-network'] }, { signedIn: true })).toEqual(['welcome.plugins.badges.campusNetwork']);
   });
 });

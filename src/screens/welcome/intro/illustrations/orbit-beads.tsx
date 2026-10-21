@@ -51,8 +51,9 @@ function Bead({ glow, cx, cy, o, i, near, angle, p, reveal }: { glow: string; cx
   });
   return (
     <G>
-      <AnimatedCircle animatedProps={halo} fill={`url(#${glow})`} />
-      <AnimatedCircle animatedProps={core} fill={p.bead} />
+      {/* Static geometry for the first native draw: a gradient fill on an r=0 circle throws on Android. */}
+      <AnimatedCircle animatedProps={halo} cx={cx} cy={cy} r={o.size * 3.2} fill={`url(#${glow})`} />
+      <AnimatedCircle animatedProps={core} cx={cx} cy={cy} r={o.size} fill={p.bead} />
     </G>
   );
 }
