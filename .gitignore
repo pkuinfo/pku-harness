@@ -36,12 +36,11 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 
-example
-
-# generated native folders
-/ios
-/android
-
-# Generated native projects (Continuous Native Generation)
+# Generated native projects (Continuous Native Generation): configure via app.json / plugins
 /android
 /ios
+
+# Native build output of local Expo modules (modules/*)
+modules/*/android/build/
+modules/*/android/.gradle/
+modules/*/ios/build/
