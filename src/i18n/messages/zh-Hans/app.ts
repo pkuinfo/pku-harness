@@ -9,6 +9,7 @@ export const app = {
   /** Unknown route or link (src/app/+not-found.tsx). */
   notFound: {
     title: '这里什么都没有',
+    heading: '打不开这个链接',
     message: '这个链接在 PKU Harness 里打不开，可能已经过期，或者来自更新版本的 App。',
     home: '回到首页',
   },

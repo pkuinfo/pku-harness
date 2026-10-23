@@ -12,7 +12,7 @@ export function NotFoundScreen() {
     <Screen title={t('app.notFound.title')} back>
       <EmptyState
         icon="help"
-        title={t('app.notFound.title')}
+        title={t('app.notFound.heading')}
         message={t('app.notFound.message')}
         action={<Button title={t('app.notFound.home')} icon="chat" onPress={() => router.replace('/')} />}
       />
