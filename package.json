@@ -89,7 +89,8 @@
     "lint": "expo lint",
     "typecheck": "tsc --noEmit",
     "check": "tsc --noEmit && expo lint",
-    "test": "bun test"
+    "test": "bun test",
+    "verify": "bun run check && bun test"
   },
   "private": true,
   "patchedDependencies": {

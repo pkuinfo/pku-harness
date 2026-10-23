@@ -38,6 +38,7 @@ or React Native API:
 git submodule update --init  # fetch ./plugins after cloning
 bunx expo install <pkg>      # add packages (SDK-compatible versions)
 bun run check                # typecheck + lint, run before declaring any task done
+bun run verify               # check + tests = exactly what CI runs; gate every push on it
 bun test                     # unit tests (pure TS: recurrence, plugin runtime, parsers)
 bun run android              # dev build + install on the emulator (needs JAVA_HOME=JDK 17)
 bunx expo start              # Metro only (dev client already installed)
