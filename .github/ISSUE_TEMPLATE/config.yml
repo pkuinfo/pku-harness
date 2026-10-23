@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
-  - name: 安全问题 / Security vulnerability
+  - name: Security vulnerability
     url: https://github.com/pkuinfo/pku-harness/security/advisories/new
-    about: 请私下报告，不要公开提交（见 SECURITY.md）
-  - name: 插件与校园服务接入 / Plugins
+    about: Please report privately, not in a public issue (see SECURITY.md).
+  - name: Plugins and campus services
     url: https://github.com/pkuinfo/pku-harness-plugins/issues/new/choose
-    about: 某个校园服务坏了、想接入新服务、插件开发问题，请到插件仓库
+    about: A campus service is broken, you want a new one connected, or you have a plugin development question.

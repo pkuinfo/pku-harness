@@ -1,19 +1,19 @@
-## 做了什么
+## What and why
 
-<!-- 一两句话说明改动和原因；关联 issue：Closes #… -->
+<!-- One or two sentences on the change and the reason. Link the issue: Closes #… -->
 
-## 怎么验证的
+## How it was tested
 
-<!-- 测试命令、模拟器 / 真机上的检查步骤 -->
+<!-- Commands you ran, and what you checked on an emulator or device. -->
 
-## 截图 / 录屏
+## Screenshots
 
-<!-- UI 改动请附浅色和深色两种主题的截图，注意打码 -->
+<!-- For UI changes: light and dark theme. Redact any personal data. -->
 
-## 自查
+## Checklist
 
-- [ ] `bun run check` 和 `bun test` 通过
-- [ ] UI 改动在设备上看过浅色和深色，符合 [DESIGN.md](../docs/DESIGN.md) 自查清单
-- [ ] 没有提交任何真实凭据、学号或个人数据
-- [ ] 插件改动已先提交到 plugins 仓库，这里只更新子模块指针
-- [ ] 更新了相关文档（README / docs / PLAN.md）
+- [ ] `bun run verify` passes
+- [ ] UI changes were checked on a device in light and dark themes against the [DESIGN.md](../docs/DESIGN.md) checklist
+- [ ] No real credentials, student IDs or personal data are committed
+- [ ] Plugin changes were committed to the plugins repository first; this PR only bumps the submodule
+- [ ] Related docs are updated (README, docs/, PLAN.md)

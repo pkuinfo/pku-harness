@@ -1,29 +1,29 @@
-name: 功能建议 / Feature request
-description: 对 App 本体的新想法或改进（交互、设计、Agent 能力）
+name: Feature request
+description: A new idea or improvement for the app itself (interaction, design, agent abilities)
 labels: [enhancement]
 body:
   - type: textarea
     id: problem
     attributes:
-      label: 想解决什么问题
-      description: 从使用场景说起，比如「每天早上想知道……但现在要……」
+      label: What problem should this solve?
+      description: Start from the situation, e.g. "Every morning I want to know … but today I have to …"
     validations:
       required: true
   - type: textarea
     id: proposal
     attributes:
-      label: 你设想的做法
-      description: 交互、界面草图、参考的 App 都欢迎
+      label: What do you have in mind?
+      description: Interaction, sketches and reference apps are all welcome.
   - type: dropdown
     id: area
     attributes:
-      label: 涉及部分
+      label: Area
       multiple: true
-      options: [对话 / Agent, 输入框与命令, 看板, 日程与提醒, 设置与权限, 设计与动效, 性能, 文档, 其他]
+      options: [Chat / agent, Composer and commands, Dashboard, Schedule and reminders, Settings and permissions, Design and motion, Performance, Documentation, Other]
   - type: checkboxes
     id: plugin
     attributes:
-      label: 确认
+      label: Confirm
       options:
-        - label: 这不是某个校园服务的接入需求（那类需求请到插件仓库）
+        - label: This isn't a request to connect a campus service (those go to the plugins repository).
           required: true

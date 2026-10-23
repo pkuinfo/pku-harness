@@ -1,59 +1,78 @@
-# 参与贡献 · Contributing
+# Contributing to PKU Harness
 
-感谢你愿意为 PKU Harness 出力。这里是 App 本体（harness）的仓库；**校园服务的接入请优先写成插件**，
-去 [`pkuinfo/pku-harness-plugins`](https://github.com/pkuinfo/pku-harness-plugins)（本仓库的子模块
-`./plugins`）。
+Thanks for helping. This repository is the **harness**: the app shell, the agent loop, the design
+system and the host services. Connecting a new campus service almost always belongs in the
+[plugins repository](https://github.com/pkuinfo/pku-harness-plugins) (the `plugins/` submodule
+here), usually as a `PLUGIN.md` document rather than code.
 
-Thanks for contributing. This repo is the harness (app shell, agent loop, design system). New
-campus services almost always belong in the plugins repo, not here.
+## Before you start
 
-## 先读这些
+- [AGENTS.md](AGENTS.md): code conventions, shared by people and AI coding agents.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): layers, plugin model, agent, storage.
+- [docs/AGENT-HARNESS.md](docs/AGENT-HARNESS.md): sessions, commands, composer, context, usage.
+- [docs/DESIGN.md](docs/DESIGN.md): design rules and the UI review checklist (required for UI
+  changes).
+- [docs/PLAN.md](docs/PLAN.md): roadmap and task status.
 
-- [AGENTS.md](AGENTS.md)：代码约定（给人和 AI 编码助手共用）
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)：分层、插件模型、Agent、存储
-- [docs/AGENT-HARNESS.md](docs/AGENT-HARNESS.md)：会话、命令、输入框、上下文、用量
-- [docs/DESIGN.md](docs/DESIGN.md)：设计规范（UI 改动必读，含自查清单）
-- [docs/PLAN.md](docs/PLAN.md)：路线图与任务状态
-
-## 开发环境
+## Development setup
 
 ```bash
 git clone --recurse-submodules https://github.com/pkuinfo/pku-harness.git
 cd pku-harness
-bun install            # 一律用 bun / bunx，不要用 npm / npx / yarn / pnpm
-bun run check          # 类型检查 + lint
-bun test               # 单元测试
-bun run android        # 开发版安装到模拟器 / 真机（需要 JDK 17 + Android SDK）
+bun install            # always bun / bunx; never npm, npx, yarn or pnpm
+bun run verify         # typecheck + lint + tests: exactly what CI runs
+bun run android        # development build on an emulator or device (JDK 17 + Android SDK)
 ```
 
-- Expo SDK 58：动 Expo / React Native API 之前先读对应版本文档
-  <https://docs.expo.dev/versions/v58.0.0/>，不要凭记忆。
-- 安卓模拟器如果你开着系统代理（Clash 等），启动模拟器时不要继承 `HTTP_PROXY`，否则校园服务走不了直连。
-- 没有校园网或模型 Key 也能开发：见 README 的「Testing without campus access」。
+- **Expo SDK 58 changes often.** Read the versioned docs at
+  <https://docs.expo.dev/versions/v58.0.0/> before touching an Expo or React Native API; don't
+  rely on memory.
+- **System proxies.** If you run Clash or a similar proxy, start the Android emulator without
+  inheriting `HTTP_PROXY`; campus services must be reached directly.
+- **No campus network or model key?** See "Without campus network or a model key" in the
+  [README](README.md#without-campus-network-or-a-model-key).
+- **Keep the machine responsive.** The emulator alone needs about 5 GB of RAM. Run one heavy step
+  at a time (Gradle build, emulator, full test run) and stop the Gradle daemon after builds
+  (`./gradlew --stop`).
 
-## 工作流程
+## Workflow
 
-1. 先开 issue 说明要做什么（小修小补可以直接 PR）。
-2. 从 `master` 拉分支，小步提交，提交信息用约定式：`feat(chat): …`、`fix(campus): …`、`docs: …`。
-3. 改插件：先在 `plugins/` 子模块里提交并推到 plugins 仓库，再在这里提交子模块指针的更新。
-4. 提 PR 前：`bun run check` 和 `bun test` 通过；UI 改动在模拟器上看过**浅色和深色**两种主题，并附截图。
-5. 更新 `docs/PLAN.md` 中对应任务的状态。
+1. Open an issue describing what you want to change. Small fixes can go straight to a pull
+   request.
+2. Branch from `master` and make small, focused commits with
+   [Conventional Commits](https://www.conventionalcommits.org) messages: `feat(chat): …`,
+   `fix(campus): …`, `docs: …`.
+3. For plugin changes, commit and push in the `plugins/` submodule first, then commit the
+   submodule bump here. A bump that changes SDK or cloud-protocol types needs this repository's
+   `bun run verify` too.
+4. Before opening a pull request, make sure `bun run verify` passes. For UI changes, check the
+   screen on a device in **both light and dark themes** and attach screenshots.
+5. Update the matching task in [docs/PLAN.md](docs/PLAN.md).
 
-## 代码与结构
+## Code and structure
 
-- 路由只放在 `src/app/`，页面主体在 `src/screens/`，基础组件在 `src/components/`，运行时与宿主服务在
-  `src/core/`，设计令牌在 `src/theme/`。文件名 kebab-case，一个文件一个主要导出，测试与源码同目录
-  （`*.test.ts`）。
-- 样式优先 Uniwind className；颜色、字号、间距只用主题令牌，不写字面量。
-- 纯逻辑（解析、递推、压缩、聚合）写成纯函数并配单元测试。
-- 校园协议参考 [pkucli](https://github.com/pkuinfo/pkucli)，在注释里注明来源文件。
+- Routes live only in `src/app/`, screen bodies in `src/screens/`, primitives in
+  `src/components/`, runtime and host services in `src/core/`, design tokens in `src/theme/`.
+- Kebab-case file names, one main export per file, tests next to the code (`*.test.ts`).
+- Style with Uniwind class names first; colours, font sizes and spacing come only from theme
+  tokens, never literals.
+- Write pure logic (parsers, recurrence, compaction, aggregation) as pure functions with unit
+  tests.
+- `android/` and `ios/` are generated (Continuous Native Generation): configure them through
+  `app.json` and config plugins, never by hand. Custom native code lives in `modules/`.
+- Campus protocols come from [pkucli](https://github.com/pkuinfo/pkucli); cite the source file in
+  a comment.
+- Documentation and contributor-facing text are in English. App strings are localised (Simplified
+  Chinese first, then English) through `src/i18n`.
 
-## 安全与隐私（硬性要求）
+## Security and privacy (non-negotiable)
 
-- 校园账号、密码、令牌密钥、AI Key 只存在手机的 SecureStore：不打日志、不上传、不交给远程插件或模型。
-- 提交里不能出现任何真实凭据、学号、个人数据或截图里的隐私信息。
-- 发现安全问题请按 [SECURITY.md](SECURITY.md) 私下报告，不要公开开 issue。
+- Campus accounts, passwords, authenticator secrets and AI keys live only in the phone's
+  SecureStore. Never log them, upload them, or hand them to a remote plugin or a model.
+- Commits must never contain real credentials, student IDs, personal data, or screenshots that
+  show them. Use synthetic fixtures.
+- Report security issues privately as described in [SECURITY.md](SECURITY.md).
 
-## 行为准则
+## Code of Conduct
 
-参与即表示同意遵守 [行为准则](CODE_OF_CONDUCT.md)。
+By taking part you agree to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
