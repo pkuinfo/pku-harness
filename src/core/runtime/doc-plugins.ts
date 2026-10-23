@@ -212,7 +212,7 @@ export const docPlugins = {
       installedAt: prev?.installedAt ?? now,
       updatedAt: now,
       checkedAt: now,
-      previous: prev ? { files: prev.files, hash: prev.hash, version: prev.version, decl: prev.decl } : undefined,
+      previous: prev && prev.hash !== p.hash ? { files: prev.files, hash: prev.hash, version: prev.version, decl: prev.decl } : prev?.previous,
       ...versionOf(p.doc, p.hash),
     };
     docs = [...docs.filter((x) => x.id !== d.id), d];

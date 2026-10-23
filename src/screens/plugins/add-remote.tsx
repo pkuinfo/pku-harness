@@ -11,7 +11,7 @@ import { Text } from '@/components/text';
 import type { McpServerInfo, McpTool } from '@/core/mcp/client';
 import { docPlugins, type DocPreview } from '@/core/runtime/doc-plugins';
 import { effectOf, probeRemote, remotePlugins } from '@/core/runtime/remote';
-import { useT } from '@/i18n';
+import { useLocale, useT } from '@/i18n';
 import { haptics } from '@/utils/haptics';
 
 import { effectInfo } from './effects';
@@ -22,8 +22,10 @@ const looksLikeDocument = (s: string) => /github\.com\/|raw\.githubusercontent\.
 /** What a plugin document can reach and do, shown before installing (docs/PLUGIN-LANGUAGE.md §9). */
 export function DocPermissions({ preview }: { preview: DocPreview }) {
   const t = useT();
+  const en = useLocale() === 'en' ? preview.doc.manifest.i18n?.en : undefined;
   const m = preview.doc.manifest;
-  const tools = Object.values(preview.doc.tools);
+  const toolTitle = (name: string, title: string) => en?.tools?.[name]?.title ?? title;
+  const tools = Object.entries(preview.doc.tools);
   const nothing = !m.campus?.length && !m.network?.length && !m.abilities?.length;
   return (
     <View className="gap-4">
@@ -31,25 +33,33 @@ export function DocPermissions({ preview }: { preview: DocPreview }) {
         <View className="gap-1.5">
           <View className="flex-row items-center justify-between gap-2">
             <Text variant="headline" numberOfLines={1}>
-              {m.name}
+              {en?.name ?? m.name}
             </Text>
             <Chip label={preview.verified ? t('app.plugins.doc.official') : t('app.plugins.doc.community')} tone={preview.verified ? 'accent' : 'neutral'} icon={preview.verified ? 'shield' : 'globe'} />
           </View>
           <Text variant="caption" tone="muted">
             {t('app.plugins.doc.byline', { author: m.author, version: m.version })}
           </Text>
-          <Text variant="callout">{m.description}</Text>
+          <Text variant="callout">{en?.description ?? m.description}</Text>
         </View>
       </Surface>
       <ListGroup title={t('app.plugins.doc.reaches')} footer={m.campus?.length ? t('app.plugins.doc.campusNote') : undefined}>
         {m.campus?.length ? <ListRow icon="school" title={t('app.plugins.doc.campus')} subtitle={m.campus.join('、')} /> : null}
         {m.network?.length ? <ListRow icon="globe" title={t('app.plugins.doc.network')} subtitle={m.network.join('、')} /> : null}
-        {m.abilities?.length ? <ListRow icon="wand" title={t('app.plugins.doc.abilities')} subtitle={m.abilities.join('、')} /> : null}
+        {m.abilities?.length ? (
+          <ListRow icon="wand" title={t('app.plugins.doc.abilities')} subtitle={m.abilities.map((a) => t(`app.plugins.doc.ability.${a}`)).join(' · ')} />
+        ) : null}
         {nothing ? <ListRow icon="lock" title={t('app.plugins.doc.nothing')} /> : null}
       </ListGroup>
       <ListGroup title={t('app.plugins.doc.tools', { count: tools.length })} footer={preview.verified ? undefined : t('app.plugins.doc.communityNote')}>
-        {tools.map((tool) => (
-          <ListRow key={tool.title} title={tool.title} subtitle={tool.description} titleLines={1} accessory={<Chip label={effectInfo(tool.effect, t).label} tone={effectInfo(tool.effect, t).tone} />} />
+        {tools.map(([name, tool]) => (
+          <ListRow
+            key={name}
+            title={toolTitle(name, tool.title)}
+            subtitle={tool.description}
+            titleLines={1}
+            accessory={<Chip label={effectInfo(tool.effect, t).label} tone={effectInfo(tool.effect, t).tone} />}
+          />
         ))}
       </ListGroup>
     </View>
@@ -119,6 +129,11 @@ export function AddRemotePlugin({ initialUrl = '', initialName = '', draft }: { 
   };
 
   const install = async () => {
+    // Same content as what's installed: nothing to do, just show it.
+    if (doc?.replaces && doc.replaces.hash === doc.hash) {
+      router.replace({ pathname: '/plugins/[id]', params: { id: doc.replaces.id } });
+      return;
+    }
     setBusy(true);
     try {
       const id = doc ? (await docPlugins.install(doc)).id : (await remotePlugins.install({ url, token: token || undefined, name: name || undefined })).id;
@@ -134,7 +149,7 @@ export function AddRemotePlugin({ initialUrl = '', initialName = '', draft }: { 
   return (
     <SheetScreen
       title={t('app.plugins.doc.title')}
-      primary={ready ? (doc?.replaces ? t('app.plugins.doc.reinstall') : t('app.plugins.doc.install')) : t('app.plugins.doc.check')}
+      primary={ready ? (doc?.replaces ? (doc.replaces.hash === doc.hash ? t('app.plugins.doc.installed') : t('app.plugins.doc.reinstall')) : t('app.plugins.doc.install')) : t('app.plugins.doc.check')}
       onPrimary={ready ? install : check}
       primaryDisabled={!doc && url.trim().length < 8}
       loading={busy}>

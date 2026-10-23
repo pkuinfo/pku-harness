@@ -265,9 +265,13 @@ export function PluginDetail({ id }: { id: string }) {
       {plugin.scopes.length && !plugin.remote ? (
         <Enter index={7}>
           <ListGroup title={t('app.plugins.detail.scopes')}>
-            {plugin.scopes.map((s) => (
-              <ListRow key={s} icon="globe" title={s} />
-            ))}
+            {plugin.scopes.map((s) =>
+              s.startsWith('campus:') ? (
+                <ListRow key={s} icon="school" title={t('app.plugins.doc.campusScope', { service: s.slice(7) })} subtitle={t('app.plugins.doc.campusNote')} />
+              ) : (
+                <ListRow key={s} icon="globe" title={s} />
+              ),
+            )}
           </ListGroup>
         </Enter>
       ) : null}
