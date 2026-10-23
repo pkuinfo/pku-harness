@@ -1,21 +1,25 @@
+<div align="center">
+
 # PKU Harness
+
+**An open-source, AI-native app for campus life at Peking University.**
 
 [![CI](https://github.com/pkuinfo/pku-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/pkuinfo/pku-harness/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/pkuinfo/pku-harness?color=8B0012)](https://github.com/pkuinfo/pku-harness/releases/latest)
-[![License: MIT](https://img.shields.io/badge/license-MIT-8B0012.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Expo SDK 58](https://img.shields.io/badge/Expo-SDK%2058-000020.svg)](https://docs.expo.dev/versions/v58.0.0/)
 
-**An open-source, AI-native app for campus life at Peking University.** Sign in once with your
-PKU account and hand your timetable, campus card, network fee, Treehole, courses, finance and
-room bookings to an AI assistant that runs on your phone.
+[Website](https://harness.novadiffusion.com) · [Download](https://harness.novadiffusion.com/download) · [Marketplace](https://harness.novadiffusion.com/marketplace) · [Plugins](https://github.com/pkuinfo/pku-harness-plugins) · [Architecture](docs/ARCHITECTURE.md)
+
+</div>
+
+---
+
+Sign in once with your PKU account and hand your timetable, campus card, network fee, Treehole,
+courses, finance and room bookings to an AI assistant that runs on your phone.
 
 The app itself is a **harness**: an agent loop, a design system and a set of host services. Every
 capability comes from **plugins**, and built-in and community plugins are equal.
-
-[Download](https://harness.novadiffusion.com/download) ·
-[Website](https://harness.novadiffusion.com) ·
-[Plugins](https://github.com/pkuinfo/pku-harness-plugins) ·
-[Architecture](docs/ARCHITECTURE.md)
 
 ## Highlights
 
