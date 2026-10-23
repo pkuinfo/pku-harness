@@ -140,6 +140,18 @@ export const catalog = defineCatalog(schema, {
       params: z.object({ tool: z.string(), input: z.record(z.string(), z.unknown()).nullable() }),
       description: 'Run a plugin tool directly (tool id like "wallet.cardBalance").',
     },
+    ask: {
+      params: z.object({ text: z.string() }),
+      description: 'Send a message to the AI in the chat as the user (widgets and plugin screens: "find free rooms in 二教").',
+    },
+    open: {
+      params: z.object({ url: z.string() }),
+      description: 'Open an https:// page in the browser, outside the app.',
+    },
+    navigate: {
+      params: z.object({ href: z.string() }),
+      description: 'Go to an app route or plugin screen, e.g. "/p/classrooms/rooms".',
+    },
   },
 });
 

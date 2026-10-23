@@ -6,9 +6,11 @@ import {
   ValidationProvider,
   VisibilityProvider,
 } from '@json-render/react-native';
+import { router } from 'expo-router';
 import { useMemo } from 'react';
 
-import { invokeTool } from '@/core/runtime/invoke';
+import { sendMessage } from '@/core/agent/run';
+import { invokeTool, services } from '@/core/runtime/invoke';
 
 import { registry } from './registry';
 
@@ -28,6 +30,20 @@ export function GenUIView({ spec, onSubmit }: { spec: Spec } & GenUIHandlers) {
       },
       callTool: async (params: Record<string, unknown>) => {
         await invokeTool(String(params.tool), params.input ?? {}, { actor: 'user' });
+      },
+      ask: async (params: Record<string, unknown>) => {
+        const text = String(params.text ?? '').trim();
+        if (!text) return;
+        router.navigate('/');
+        sendMessage(text);
+      },
+      open: async (params: Record<string, unknown>) => {
+        const url = String(params.url ?? '');
+        if (/^https:\/\//i.test(url)) await services.browser.open(url);
+      },
+      navigate: async (params: Record<string, unknown>) => {
+        const href = String(params.href ?? '');
+        if (href.startsWith('/')) router.push(href as never);
       },
     }),
     [store, onSubmit],

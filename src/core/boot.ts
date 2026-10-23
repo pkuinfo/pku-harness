@@ -10,6 +10,7 @@ import { installApprovalHandler } from '@/core/runtime/approvals';
 import { migrateJob, migrateWidget } from '@/core/runtime/legacy';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
+import { docPlugins } from '@/core/runtime/doc-plugins';
 import { remotePlugins } from '@/core/runtime/remote';
 import { startScheduler } from '@/core/scheduler/engine';
 import { installServices } from '@/core/services';
@@ -83,6 +84,8 @@ export function bootCore(): Promise<void> {
       installServices();
       for (const p of builtinPlugins) registry.register(p);
       await remotePlugins.load().catch((e) => console.warn('remote plugins failed to load', e));
+      // Plugin documents (PLUGIN.md): bundled ones, then installed ones; they replace same-id TS plugins.
+      await docPlugins.load().catch((e) => console.warn('plugin documents failed to load', e));
       await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load(), campusAccount.load()]);
       await migrateLegacyIds().catch((e) => console.warn('legacy id migration failed', e));
       // Cloud provider + plugin bindings (no network until something needs it).
@@ -108,6 +111,8 @@ export function boot(): Promise<void> {
       if (locale) setLocalePreference(locale);
       subscribeLocale(() => prefs.set('locale', getLocalePreference()));
       await Promise.all([chatStore.load(), seedStarterWidgets()]);
+      // Linked plugin documents update as data (at most daily; wider access waits for the user).
+      docPlugins.checkUpdates().catch((e) => console.warn('plugin document update check failed', e));
       initNotifications()
         .then(startScheduler)
         .catch((e) => console.warn('scheduler start failed', e));

@@ -15,6 +15,7 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
 import { OptionMenu } from '@/components/option-menu';
 import { Text } from '@/components/text';
+import { docPlugins } from '@/core/runtime/doc-plugins';
 import { usePlugin } from '@/core/runtime/hooks';
 import { pluginDescription, pluginName, screenTitle, settingsRowText, toolTitle, widgetText } from '@/core/runtime/localize';
 import { pluginSettings, usePluginSettings, type EffectMode } from '@/core/runtime/plugin-settings';
@@ -26,6 +27,7 @@ import { radius, springs, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { CloudSection } from './cloud-section';
+import { DocSection } from './doc-section';
 import { MODE_TONE, effectIcon, effectInfo, effectsOf, modeOptions } from './effects';
 import { PluginTile } from './plugin-tile';
 import { GROUP_TONE, STATUS_LABEL, STATUS_TONE, groupOf, isRunning } from './status';
@@ -267,6 +269,12 @@ export function PluginDetail({ id }: { id: string }) {
               <ListRow key={s} icon="globe" title={s} />
             ))}
           </ListGroup>
+        </Enter>
+      ) : null}
+
+      {docPlugins.get(plugin.id) ? (
+        <Enter index={8}>
+          <DocSection id={plugin.id} />
         </Enter>
       ) : null}
 
