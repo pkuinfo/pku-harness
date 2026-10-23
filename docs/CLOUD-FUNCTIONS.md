@@ -1,6 +1,15 @@
 # Design: plugin server functions (PKU Harness Cloud, part 2)
 
-Status: proposal, 2026-10-23. Builds on [CLOUD.md](CLOUD.md) (protocol v1: devices, tokens,
+Status: **on hold** (2026-10-23). The maintainer decided the server must stay minimal: the
+official instance is a 2-core / 4 GB VPS that is easy to break. What exists stays (stage 2:
+`/v1/fn`, `/v1/p`, server KV + crypto + declared HTTPS requests, all in the plugins repo), but it
+is **off on the official instance** (`CLOUD_FN_POLICY=allowlist` with an empty list, the
+production default). Collections, schedules, push, groups, webhooks and the worker pool are
+**not being built**. Anything that can run on the phone runs on the phone; a plugin that needs
+real server work uses its own backend (§9). Revisit only with more hardware or a self-hosted
+operator who wants it.
+
+Original proposal follows. Builds on [CLOUD.md](CLOUD.md) (protocol v1: devices, tokens,
 store, channels, mailbox, pages) and [PLUGIN-LANGUAGE.md](PLUGIN-LANGUAGE.md) (plugins as
 interpreted `PLUGIN.md` documents). Replaces the "stage 6 functions" sketch in CLOUD.md §2.6.
 

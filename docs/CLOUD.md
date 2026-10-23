@@ -2,6 +2,16 @@
 
 Status: accepted 2026-10-23, with the recommended defaults in §5 (to be revisited: hosting, domain). Written from a read-only exploration of `pku-harness`, `pku-harness/plugins`, `pkubdcard`, `pkucli/crates/campuscard` and `deepseek-harness`.
 
+## Server footprint (decision, 2026-10-23)
+
+The official instance runs on a small VPS (2 cores, 4 GB RAM) and must stay light: one Bun
+process (~50 MB) behind Caddy, SQLite on disk. It serves only what can't run on a phone: the
+blind relay for live shares (channels + mailbox), the small end-to-end-encrypted store, and the
+static viewer pages. No per-user background jobs, no push fan-out, no plugin server functions
+(see [CLOUD-FUNCTIONS.md](CLOUD-FUNCTIONS.md), on hold). Keep quotas tight (`DEFAULT_LIMITS`),
+cap the container's memory in compose, and prefer static files served by Caddy over new
+processes.
+
 ## 0. Summary
 
 - **Card sharing needs a server only as a blind relay.** The server never holds the card JWT. The sharer's phone stays the only place that can mint payment codes. It encrypts each code to the viewer with a key that sits in the share link's `#fragment`, and the relay only forwards ciphertext. If a spike shows that codes stay valid long enough, pre-generated encrypted batches can also cover times when the phone is offline.
