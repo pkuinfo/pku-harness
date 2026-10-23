@@ -74,6 +74,12 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T10.3 Marketplace (设置 → 插件 → 插件市场): registry from jsDelivr/GitHub raw, validated with the shared schema, cached offline; search + filters; bundled shown as installed, remote one-tap install, self-hosted → add sheet prefilled (2026-10-18)
 - [x] T10.4 Plugin UI contributions: SDK `HostUI` (design-system components, haptics, navigation, store version hook) + `contributes.screens` / `contributes.settings`; harness mounts them at `/p/<plugin>/<screen>` and lists rows in Settings; AI 记忆 screen moved into the memory plugin (2026-10-18)
 - [x] T10.5 Dashboard and Schedule UIs live in plugins: harness tab slots (`contributes.tabs`), modal plugin screens at `/m/<plugin>/<screen>`, richer HostUI (theme, pickers, sheet, genui, sortable list); dashboard plugin owns its tab, new schedule plugin owns the schedule tab + forms; app-owned screens deleted (2026-10-18)
+- [~] T10.6 Plugin language (docs/PLUGIN-LANGUAGE.md, spec 1): plugins as shareable `PLUGIN.md` folders interpreted by the harness, install by link, updates as data (design 2026-10-23)
+  - [ ] T10.6a SDK `lang/`: schemas, expression evaluator, stdlib, step runner, loader, link resolver, CLI (`validate` / `test` / `run`)
+  - [ ] T10.6b App: install store + update check, "Add by link" sheet + `pkuharness://plugin` deep link, permission sheet, bundled documents
+  - [ ] T10.6c Port classrooms, campus-events, canteen, notices, grades; then medium plugins (§13)
+  - [ ] T10.6d Agent authoring tools (`plugins.draft / validate / tryTool / installLocal`)
+- [ ] T10.7 Self-hosted, code-signed OTA updates (ARCHITECTURE §14; owned by the website/deploy session)
 
 - [x] T4.7 pkucli services as plugins (parallel agents, parsers tested, 158 tests): `treehole` (forum read/follow/post/reply), `grades`, `campus-events` (talks/activities), `elective` (read-only), `finance` (cwfw, campus network), `room-booking` (bdkj), `course-catalog` (dean + elective query), `calendar` official 校历 + semester sync, campus-card monthly stats, Blackboard content/assignment detail/recordings; harness adapters `bdkj`, `cwfw`, `elective` via the adapter registry (2026-10-18). Live verification in progress
 - [x] T4.8 IAAA 手机令牌 authenticator: bind TOTP, auto-fill OTP in sign-ins and course-token exchanges, dashboard widget with hourglass. Bound on the real account; cwfw sign-in auto-filled the code (finance.rewards live); bind success moment + falling-grain hourglass (2026-10-19)

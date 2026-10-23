@@ -132,6 +132,12 @@ definePlugin({
 - `ctx` gives a plugin: `campus` (authenticated HTTP to campus services), `store`
   (namespaced KV), `notify`, `scheduler`, `log`.
 
+**Plugin documents (spec v1, [PLUGIN-LANGUAGE.md](PLUGIN-LANGUAGE.md)).** Campus integrations
+are moving from TypeScript to shareable `PLUGIN.md` folders written in the plugin language and
+interpreted by the harness (`@pku-harness/sdk` `lang/`). They are installed by link, update as
+data, and compile to the same `PluginDef`, so everything below (tools, effects, permissions,
+widgets) applies unchanged. TypeScript stays for the harness's own features and host abilities.
+
 ## 5. Agent
 
 - **Model access is a plugin too.** A *provider plugin* contributes model access through a
@@ -324,3 +330,29 @@ pku-harness/
 
 iOS build, hosted model service, plugin marketplace backend, payments inside the app,
 web target. The interfaces above leave room for each.
+
+## 14. Distribution and updates
+
+Decided 2026-10-23.
+
+| What changed | How it reaches users |
+|---|---|
+| Plugin document (`PLUGIN.md`, PLUGIN-LANGUAGE.md §10) | The app re-fetches its link; same declarations → applied, wider access → user accepts |
+| Remote (MCP) plugin | Its server updates; the app calls it live |
+| Marketplace listing | Fetched live (registry.json + the website's index) |
+| App JS (harness, TypeScript plugins) | **Over-the-air update** (expo-updates), applied on next launch |
+| Native code (`modules/`, Expo packages, permissions, `app.json`) | New APK / store release |
+
+An OTA update is code running in the app that holds the student's IAAA password, so the channel
+is **self-hosted and code-signed** (the website/deploy session owns the server, on our host
+`rainyun`, as a Docker service behind Caddy):
+
+- The update server speaks the expo-updates protocol v1 and serves only signed manifests;
+  assets are immutable, content-addressed files.
+- Updates are built by CI from a public commit and signed with a key only maintainers hold. The
+  app embeds the certificate and refuses anything unsigned or signed by another key. (EAS Update
+  needs a paid plan for signing; we don't depend on it.)
+- `runtimeVersion` changes with every native change, so an update never reaches a binary that
+  can't run it.
+- Rollback: a signed `rollBackToEmbedded` directive or a re-published older update.
+
