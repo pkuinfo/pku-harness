@@ -6,6 +6,12 @@ export const app = {
     schedule: '日程',
     settings: '设置',
   },
+  /** Unknown route or link (src/app/+not-found.tsx). */
+  notFound: {
+    title: '这里什么都没有',
+    message: '这个链接在 PKU Harness 里打不开，可能已经过期，或者来自更新版本的 App。',
+    home: '回到首页',
+  },
   /** Shared bits of host UI (primitives in src/components). */
   ui: {
     back: '返回',

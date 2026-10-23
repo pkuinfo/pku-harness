@@ -63,7 +63,14 @@ export function cleanTitle(raw: string): string | null {
   if (!t) return null;
   const chars = [...t];
   // Chinese titles are ≤ 12 characters by request; English ones are ≤ 5 words, cut on a word.
-  if (/[\u3400-\u9fff]/.test(t)) return chars.length > 20 ? chars.slice(0, 20).join('') : t;
+  if (/[\u3400-\u9fff]/.test(t)) {
+    if (chars.length <= 20) return t;
+    // Mixed titles ("理教 tomorrow afternoon"): never cut inside a Latin word.
+    const head = chars.slice(0, 20).join('');
+    const mid = /[A-Za-z]/.test(chars[19]!) && /[A-Za-z]/.test(chars[20]!);
+    const space = head.lastIndexOf(' ');
+    return (mid && space > 0 ? head.slice(0, space) : head).trimEnd();
+  }
   if (chars.length <= 48) return t;
   const head = chars.slice(0, 48).join('');
   const space = head.lastIndexOf(' ');

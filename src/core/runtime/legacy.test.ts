@@ -2,7 +2,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { Job, Widget } from '@pku-harness/sdk';
 
-import { buildAliases, migrateJob, migrateLegacySettings, migrateWidget } from './legacy';
+import { buildAliases, duplicatePluginWidgets, migrateJob, migrateLegacySettings, migrateWidget } from './legacy';
 
 const tool = { title: 't', description: 'd', effect: 'read' } as never;
 const wallet = {
@@ -95,5 +95,18 @@ describe('stored widgets and jobs', () => {
     expect(out?.action).toMatchObject({ type: 'check', tool: 'wallet.cardBalance', condition: { path: 'balance', op: 'lt', value: 100 } });
     expect(migrateJob(out!, aliases)).toBeNull();
     expect(migrateJob({ id: 'n', action: { type: 'notify' } } as unknown as Job, aliases)).toBeNull();
+  });
+});
+
+describe('duplicate plugin widgets', () => {
+  const pw = (id: string, position: number, widget: string, config?: Record<string, unknown>): Widget =>
+    ({ id, title: id, size: 'sm', spec: {}, bindings: {}, source: { plugin: 'wallet', widget, config }, position, createdAt: 0, updatedAt: 0 }) as Widget;
+  test('later identical copies are reported, first kept; configs compare by value', () => {
+    const ws = [pw('b', 2, 'card'), pw('a', 1, 'card'), pw('c', 3, 'netfee'), pw('d', 4, 'netfee', { x: 1, y: 2 }), pw('e', 5, 'netfee', { y: 2, x: 1 })];
+    expect(duplicatePluginWidgets(ws)).toEqual(['b', 'e']);
+  });
+  test('AI-built widgets (no source) are never touched', () => {
+    const ai = { id: 'x', title: 'x', size: 'sm', spec: {}, bindings: {}, position: 1, createdAt: 0, updatedAt: 0 } as Widget;
+    expect(duplicatePluginWidgets([ai, { ...ai, id: 'y' }])).toEqual([]);
   });
 });

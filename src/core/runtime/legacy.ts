@@ -101,3 +101,28 @@ export function migrateJob(job: Job, aliases: LegacyAliases): Job | null {
   const tool = aliases.tools.get(job.action.tool);
   return tool ? { ...job, action: { ...job.action, tool } } : null;
 }
+
+/**
+ * Plugin widgets that repeat an earlier one (same plugin, widget and config): ids of the later
+ * copies, by dashboard position. A user who had both an old widget and its successor (e.g.
+ * `campus-card.balance` and `wallet.card`) ends up with two identical cards after migration.
+ */
+export function duplicatePluginWidgets(widgets: readonly Widget[]): string[] {
+  const seen = new Set<string>();
+  const dupes: string[] = [];
+  for (const w of [...widgets].sort((a, b) => a.position - b.position)) {
+    if (!w.source) continue;
+    const key = `${w.source.plugin}.${w.source.widget}|${stableJson(w.source.config ?? {})}`;
+    if (seen.has(key)) dupes.push(w.id);
+    else seen.add(key);
+  }
+  return dupes;
+}
+
+const stableJson = (v: unknown): string =>
+  v && typeof v === 'object' && !Array.isArray(v)
+    ? `{${Object.keys(v as Record<string, unknown>)
+        .sort()
+        .map((k) => `${JSON.stringify(k)}:${stableJson((v as Record<string, unknown>)[k])}`)
+        .join(',')}}`
+    : JSON.stringify(v);

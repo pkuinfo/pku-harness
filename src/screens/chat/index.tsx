@@ -259,7 +259,7 @@ export function Chat() {
 
       <Animated.View style={lift} onLayout={(e) => setComposerHeight(Math.round(e.nativeEvent.layout.height))}>
         <EditBanner />
-        <Composer glass={empty} />
+        <Composer />
       </Animated.View>
       <View style={{ height: bar }} />
     </View>

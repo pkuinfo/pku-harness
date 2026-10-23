@@ -1,3 +1,6 @@
+diff --git a/node_modules/uniwind/.bun-tag-6f5712997ec27bb4 b/.bun-tag-6f5712997ec27bb4
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/node_modules/uniwind/.bun-tag-9f6361e61612ca6a b/.bun-tag-9f6361e61612ca6a
 new file mode 100644
 index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
@@ -211,6 +214,50 @@ index 6fcad21b91dae2d029671aca1a6588a031831236..2774958d26eef79427d29df5c5e04677
 +        return require('react-native').usePressability
 +    },
  }
+diff --git a/src/components/native/useStyle.ts b/src/components/native/useStyle.ts
+index b7d1aafc07c63927e97eeb10c3ebde70e1aa067e..9df93778efeb919b6e12250ca03638f275dfd4ec 100644
+--- a/src/components/native/useStyle.ts
++++ b/src/components/native/useStyle.ts
+@@ -1,4 +1,5 @@
+ import { useLayoutEffect, useReducer } from 'react'
++import { StyleDependency } from '../../common/consts'
+ import { useUniwindContext } from '../../core/context'
+ import { UniwindListener } from '../../core/listener'
+ import { UniwindStore } from '../../core/native'
+@@ -10,19 +11,24 @@ export const useStyle = (className: string | undefined, componentProps: Record<s
+     const [_, rerender] = useReducer(() => ({}), {})
+     const styleState = UniwindStore.getStyles(className, componentProps, state, uniwindContext)
+ 
+-    const renderedSnapshot = UniwindListener.getSnapshot(styleState.dependencies)
++    // pku-harness patch: always follow theme changes. Upstream subscribes in release builds only
++    // when the compiled style lists a dependency, so theme-variable classes (`bg-surface`, …) of a
++    // component that doesn't otherwise re-render kept the old theme after a light/dark switch.
++    const dependencies = styleState.dependencies.includes(StyleDependency.Theme)
++        ? styleState.dependencies
++        : [...styleState.dependencies, StyleDependency.Theme]
+ 
+-    useLayoutEffect(() => {
+-        if (__DEV__ || styleState.dependencies.length > 0) {
+-            const dispose = UniwindListener.subscribe(rerender, styleState.dependencies)
++    const renderedSnapshot = UniwindListener.getSnapshot(dependencies)
+ 
+-            // Activity and Suspense can reconnect effects without rendering.
+-            if (renderedSnapshot !== UniwindListener.getSnapshot(styleState.dependencies)) {
+-                rerender()
+-            }
++    useLayoutEffect(() => {
++        const dispose = UniwindListener.subscribe(rerender, dependencies)
+ 
+-            return dispose
++        // Activity and Suspense can reconnect effects without rendering.
++        if (renderedSnapshot !== UniwindListener.getSnapshot(dependencies)) {
++            rerender()
+         }
++
++        return dispose
+     }, [styleState.dependencySum])
+ 
+     return styleState.styles
 diff --git a/uniwind.css b/uniwind.css
 index 13d20cb943641b51cb94ccb9764b53b11e49ae06..d673d1706f23ac351e0d227476d942d8dcd2ac09 100644
 --- a/uniwind.css

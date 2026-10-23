@@ -7,6 +7,11 @@ export const app: Messages['app'] = {
     schedule: 'Schedule',
     settings: 'Settings',
   },
+  notFound: {
+    title: 'Nothing here',
+    message: 'PKU Harness can’t open this link. It may have expired, or it needs a newer version of the app.',
+    home: 'Go home',
+  },
   ui: {
     back: 'Back',
     show: 'Show',

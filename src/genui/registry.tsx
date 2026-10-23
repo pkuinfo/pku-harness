@@ -238,7 +238,7 @@ const components: Components<typeof catalog> = {
       value={typeof props.value === 'number' ? props.value : props.value == null ? null : Number(props.value)}
       prefix={props.prefix ?? ''}
       suffix={props.suffix ?? ''}
-      decimals={props.decimals ?? 2}
+      decimals={props.decimals ?? undefined}
       delta={props.delta ?? undefined}
       deltaTone={props.deltaTone === 'neutral' ? 'neutral' : (props.deltaTone ?? undefined)}
       caption={props.caption ?? undefined}

@@ -5,6 +5,7 @@ import { useTheme, type TypographyVariant } from '@/theme';
 import { AnimatedNumber } from './animated-number';
 import { Chip, type ChipTone } from './chip';
 import { Icon, type IconName } from './icon';
+import { formatStat, statDecimals } from './stat-format';
 import { Text } from './text';
 
 /** Label + hero number + optional delta chip. Building block of dashboard widgets. */
@@ -14,7 +15,7 @@ export function Stat({
   value,
   prefix = '',
   suffix = '',
-  decimals = 2,
+  decimals,
   size = 'numberL',
   delta,
   deltaTone,
@@ -26,6 +27,7 @@ export function Stat({
   value: number | null;
   prefix?: string;
   suffix?: string;
+  /** Default: two for money, none for whole numbers (see statDecimals). */
   decimals?: number;
   size?: TypographyVariant;
   delta?: string;
@@ -43,7 +45,7 @@ export function Stat({
         </Text>
       </View>
       {typeof value === 'number' && Number.isFinite(value) ? (
-        <AnimatedNumber value={value} variant={size} format={(n) => `${prefix}${n.toFixed(decimals)}${suffix}`} />
+        <AnimatedNumber value={value} variant={size} format={(n) => formatStat(n, { prefix, suffix, decimals: decimals ?? statDecimals(value, prefix, suffix) })} />
       ) : (
         <Text variant={size} tone="faint">
           —

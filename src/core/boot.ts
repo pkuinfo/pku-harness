@@ -7,7 +7,7 @@ import { seedStarterWidgets } from '@/core/dashboard/starter';
 import { widgetStore } from '@/core/dashboard/store';
 import { initNotifications } from '@/core/notify';
 import { installApprovalHandler } from '@/core/runtime/approvals';
-import { migrateJob, migrateWidget } from '@/core/runtime/legacy';
+import { duplicatePluginWidgets, migrateJob, migrateWidget } from '@/core/runtime/legacy';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import { docPlugins } from '@/core/runtime/doc-plugins';
@@ -70,6 +70,8 @@ async function migrateLegacyIds() {
     const next = migrateWidget(w, aliases);
     if (next) await widgetStore.put(next);
   }
+  // An old widget and its successor both on the dashboard become two identical cards: keep one.
+  for (const id of duplicatePluginWidgets(widgetStore.list())) await widgetStore.remove(id);
   for (const j of jobStore.list()) {
     const next = migrateJob(j, aliases);
     if (next) await jobStore.put(next);

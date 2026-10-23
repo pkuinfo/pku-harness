@@ -49,7 +49,7 @@ const CURVE = { borderCurve: 'continuous' } as const;
  * editor, `+` / model pill / context ring / counter / send-stop, queue chips and the command menu
  * above. Reads the active session itself; the draft is per session and survives restarts.
  */
-export function Composer({ glass = false }: { glass?: boolean }) {
+export function Composer() {
   const c = useTheme();
   const t = useT();
   const reduced = useReducedMotion();
@@ -309,7 +309,9 @@ export function Composer({ glass = false }: { glass?: boolean }) {
       <CommandMenu draft={text} busy={busy} onRun={runCommand} onComplete={completeCommand} />
       <Animated.View
         layout={reduced ? undefined : growFromBottom}
-        className={cx('overflow-hidden rounded-lg border-[0.5px] border-edge', glass ? 'bg-surface' : 'bg-surface-2')}
+        // Opaque: messages and suggestions scroll under the composer (keyboard open), and a
+        // translucent surface let their text show through the input.
+        className="overflow-hidden rounded-lg border-[0.5px] border-edge bg-elevated"
         style={CURVE}>
         {attachments.length || pending ? <AttachmentTray items={attachments} pending={pending} onOpen={setPreview} onRemove={removeAttachment} /> : null}
 

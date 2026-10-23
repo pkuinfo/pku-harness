@@ -43,6 +43,9 @@ describe('titles and previews', () => {
     expect(cleanTitle('"Weekly plan"\nmore')).toBe('Weekly plan');
     expect(cleanTitle('  ')).toBeNull();
     expect(cleanTitle('Title: Campus card balance and network fee reminders for next week')).toBe('Campus card balance and network fee reminders');
+    // Mixed Chinese/English: cut on a space, not inside a word.
+    expect(cleanTitle('理教 tomorrow afternoon free rooms')).toBe('理教 tomorrow');
+    expect(cleanTitle('明日二教上午空教室查询')).toBe('明日二教上午空教室查询');
   });
 });
 
