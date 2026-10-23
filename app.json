@@ -102,7 +102,8 @@
           "supportsRTL": false
         }
       ],
-      "./config-plugins/with-debug-user-ca"
+      "./config-plugins/with-debug-user-ca",
+      "./config-plugins/with-release-signing"
     ],
     "experiments": {
       "typedRoutes": true,
