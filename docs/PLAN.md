@@ -113,6 +113,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 ## M12 Plugin batch 2 (in progress, 2026-10-21)
 - [~] T12.1 Money & utilities: cwfw expansion (salaries/rewards, tuition, tax), dorm electricity / water / bath balances + cashier recharge
 - [x] T12.1a Plugin `wallet` (校园钱包): campus-card, netfee and utilities merged into one plugin with a hub screen (every balance as a card, pull to refresh, payment code + top-ups one tap away); SDK `PluginDef.legacy` keeps old plugin / tool / widget ids working (registry aliases, one-time settings carry-over, boot rewrite of stored widgets and checks), tested (2026-10-22). Finance stays separate.
+- [x] T12.1b Finance 0.3: 13 more read-only queries. cwfw: monthly scholarships (个人工资), payments to my bank card (我的入卡), reimbursement summary, advances, foreign remittances, FX rates, payroll issued, portal menu; cwpay: pending bills, project catalog, order detail + e-invoice link, spending totals, platform notice. Fixed tuitionFees erroring when nothing is owed. Mirrored in pkucli (`cwfw` subcommands, new `cwpay` crate) (2026-10-23). 到款查询 does not exist for student accounts; use rewards + cardDeposits.
 - [~] T12.2 Blackboard depth: assignment submission (host multipart + file picker), grades, due-date → to-dos, 智云课堂
 - [~] T12.3 Library: loans + renew, seat reservation, catalog search, hours
 - [~] T12.4 Campus life: notices (official sites / info-spider), shuttle timetables, canteens, portal apps
