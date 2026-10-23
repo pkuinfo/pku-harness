@@ -4,6 +4,8 @@ import { Platform } from 'react-native';
 
 import { t, type MessageKey } from '@/i18n';
 
+import { stripRepeatedLabel } from './label';
+
 /**
  * Local notifications (docs/ARCHITECTURE.md §8). Everything that shows a notification goes
  * through here so channels, permissions and the foreground handler stay in one place.
@@ -121,7 +123,8 @@ export type NotifyContent = {
 
 const content = (c: NotifyContent): Notifications.NotificationContentInput => ({
   title: c.title,
-  body: c.body,
+  // Agent answers and templates often restate the title ("Fact" / "Fact: …").
+  body: stripRepeatedLabel(c.title, c.body),
   data: { ...c.data, ...(c.url ? { url: c.url } : null) },
   sound: 'default',
   interruptionLevel: c.urgency ?? (c.channel === 'reminders' || c.channel === 'alerts' || c.channel == null ? 'timeSensitive' : 'active'),
