@@ -29,6 +29,8 @@ const CAPABILITY_LABEL: Record<Capability, MessageKey> = {
   background: 'app.plugins.capability.background',
   shell: 'app.plugins.capability.shell',
   filesystem: 'app.plugins.capability.filesystem',
+  cloud: 'app.plugins.capability.cloud',
+  ongoing: 'app.plugins.capability.ongoing',
 };
 
 export type ProviderEntry = { id: string; pluginId: string; def: ProviderDef };

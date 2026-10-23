@@ -261,6 +261,8 @@ export const app: Messages['app'] = {
       background: 'background running',
       shell: 'a shell',
       filesystem: 'a file system',
+      cloud: 'a cloud service',
+      ongoing: 'an ongoing notification',
     },
     effects: {
       read: 'Read',

@@ -264,6 +264,8 @@ export const app = {
       background: '后台运行',
       shell: '命令行',
       filesystem: '文件系统',
+      cloud: '云服务',
+      ongoing: '持续运行通知',
     },
     effects: {
       read: '读取',

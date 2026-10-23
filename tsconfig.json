@@ -12,6 +12,9 @@
       "@pku-harness/sdk": [
         "./plugins/packages/sdk/src/index.ts"
       ],
+      "@pku-harness/cloud-protocol": [
+        "./plugins/packages/cloud-protocol/src/index.ts"
+      ],
       "@pku-harness/plugins": [
         "./plugins/plugins/index.ts"
       ],
