@@ -287,7 +287,7 @@ export const app = {
       coreTitle: '系统能力',
       coreSubtitle: '应用本身的一部分，始终开启',
       enable: '启用插件',
-      settings: '设置',
+      settings: '打开',
       tabSlot: '作为「{tab}」标签页显示',
       widgets: '看板组件 · {count}',
       widgetsFooter: '在对话里让 AI 放到看板上，或从看板的组件库添加。',

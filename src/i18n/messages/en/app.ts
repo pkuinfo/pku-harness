@@ -284,7 +284,7 @@ export const app: Messages['app'] = {
       coreTitle: 'System plugin',
       coreSubtitle: 'Part of the app, always on',
       enable: 'Enable plugin',
-      settings: 'Settings',
+      settings: 'Open',
       tabSlot: 'Shown as the {tab} tab',
       widgets: 'Dashboard widgets · {count}',
       widgetsFooter: 'Ask in chat to put one on your dashboard, or add it from the dashboard’s widget gallery.',
