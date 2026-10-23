@@ -2,6 +2,7 @@ import { awaitSmsCode } from '@/core/campus/sms';
 import * as Crypto from 'expo-crypto';
 import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
+import { router } from 'expo-router';
 import { Linking } from 'react-native';
 import { z } from 'zod';
 
@@ -12,6 +13,7 @@ import { bindFinish, bindStart, currentCodeAsync, otpStatus, unbindLocal } from 
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';
 import { deliveryReadiness, getNotificationPermission, openBatteryOptimizationSettings, requestExactAlarmPermission, requestNotificationPermission } from '@/core/notify';
+import { docPlugins } from '@/core/runtime/doc-plugins';
 import { services } from '@/core/runtime/invoke';
 import { pluginName, toolTitle, widgetText } from '@/core/runtime/localize';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
@@ -74,6 +76,17 @@ const host: HostServices = {
     tool: (id) => {
       const e = registry.tool(id);
       return e ? { id: e.id, pluginId: e.pluginId, title: toolTitle(registry.get(e.pluginId), e.name, e.def.title), effect: e.def.effect } : undefined;
+    },
+  },
+  docs: {
+    review: async ({ link, files }) => {
+      if (files) router.push({ pathname: '/plugins/add', params: { draft: docPlugins.parkDraft(files) } });
+      else if (link) router.push({ pathname: '/plugins/add', params: { link } });
+      return { opened: true };
+    },
+    source: (id) => {
+      const d = docPlugins.get(id);
+      return d ? { link: d.link, version: d.version, files: d.files } : null;
     },
   },
   remote: {

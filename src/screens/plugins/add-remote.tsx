@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 
 import { Chip } from '@/components/chip';
@@ -61,16 +61,28 @@ export function DocPermissions({ preview }: { preview: DocPreview }) {
  * folder, raw URL, pkuharness://plugin) is fetched, validated and reviewed before install; any
  * other URL is treated as an MCP endpoint, as before.
  */
-export function AddRemotePlugin({ initialUrl = '', initialName = '' }: { initialUrl?: string; initialName?: string }) {
+export function AddRemotePlugin({ initialUrl = '', initialName = '', draft }: { initialUrl?: string; initialName?: string; draft?: string }) {
   const t = useT();
   const [url, setUrl] = useState(initialUrl);
   const [token, setToken] = useState('');
   const [name, setName] = useState(initialName);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(!!draft);
   const [error, setError] = useState<string | null>(null);
   const [probe, setProbe] = useState<{ server: McpServerInfo | null; tools: McpTool[] } | null>(null);
   const [doc, setDoc] = useState<DocPreview | null>(null);
-  const isDoc = looksLikeDocument(url);
+  const isDoc = looksLikeDocument(url) || !!draft;
+
+  // A draft the AI wrote (plugins.install { files }): review it right away; links wait for "Check".
+  useEffect(() => {
+    if (!draft) return;
+    const files = docPlugins.takeDraft(draft);
+    (files ? docPlugins.previewFiles(files) : Promise.reject(new Error(t('app.plugins.doc.notFound'))))
+      .then(
+        (p) => setDoc(p),
+        (e: unknown) => setError(e instanceof Error ? e.message : String(e)),
+      )
+      .finally(() => setBusy(false));
+  }, [draft, t]);
 
   const reset = () => {
     setProbe(null);
@@ -124,11 +136,12 @@ export function AddRemotePlugin({ initialUrl = '', initialName = '' }: { initial
       title={t('app.plugins.doc.title')}
       primary={ready ? (doc?.replaces ? t('app.plugins.doc.reinstall') : t('app.plugins.doc.install')) : t('app.plugins.doc.check')}
       onPrimary={ready ? install : check}
-      primaryDisabled={url.trim().length < 8}
+      primaryDisabled={!doc && url.trim().length < 8}
       loading={busy}>
       <Text variant="callout" tone="muted">
         {t('app.plugins.doc.intro')}
       </Text>
+      {draft ? null : (
       <Field
         label={t('app.plugins.doc.link')}
         value={url}
@@ -141,6 +154,7 @@ export function AddRemotePlugin({ initialUrl = '', initialName = '' }: { initial
         autoCorrect={false}
         keyboardType="url"
       />
+      )}
       {!isDoc && !doc ? (
         <Field label={t('app.plugins.addRemote.token')} value={token} onChangeText={setToken} placeholder="Bearer token" secureTextEntry autoCapitalize="none" />
       ) : null}

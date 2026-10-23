@@ -36,8 +36,9 @@ export type InstalledDoc = Version & {
 };
 
 export type DocPreview = {
-  link: string;
-  base: string;
+  /** Canonical link; null for a local draft (written with the AI or pasted). */
+  link: string | null;
+  base: string | null;
   doc: PluginDocument;
   hash: string;
   decl: DocDeclarations;
@@ -47,6 +48,8 @@ export type DocPreview = {
 };
 
 const store = kv('doc-plugins');
+/** Drafts handed to the add sheet by the agent (files can't travel in a route URL). */
+const drafts = new Map<string, Record<string, string>>();
 let docs: InstalledDoc[] = [];
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((l) => l());
@@ -180,6 +183,23 @@ export const docPlugins = {
     return { link: canonical, base, doc, hash, decl: declarations(doc), verified: isVerified(canonical, 'link'), replaces };
   },
 
+  /** Validate a local draft (files) for the permission sheet. */
+  async previewFiles(files: Record<string, string>): Promise<DocPreview> {
+    const doc = await parse(files);
+    const replaces = docs.find((d) => d.id === doc.manifest.id);
+    const other = registry.get(doc.manifest.id);
+    if (other && !replaces) throw new Error(tNow('app.plugins.doc.idTaken', { id: doc.manifest.id, name: other.name }));
+    return { link: null, base: null, doc, hash: await sha256(fingerprintText(doc.files)), decl: declarations(doc), verified: false, replaces };
+  },
+
+  /** Park a draft for the add sheet; returns the handle for `/plugins/add?draft=`. */
+  parkDraft(files: Record<string, string>) {
+    const id = Math.random().toString(36).slice(2, 10);
+    drafts.set(id, files);
+    return id;
+  },
+  takeDraft: (id: string) => drafts.get(id),
+
   async install(p: DocPreview) {
     const now = Date.now();
     const prev = docs.find((d) => d.id === p.doc.manifest.id);
@@ -187,7 +207,7 @@ export const docPlugins = {
       id: p.doc.manifest.id,
       link: p.link,
       base: p.base,
-      source: 'link',
+      source: p.link ? 'link' : 'local',
       verified: p.verified,
       installedAt: prev?.installedAt ?? now,
       updatedAt: now,
