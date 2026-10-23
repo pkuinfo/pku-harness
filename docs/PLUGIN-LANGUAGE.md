@@ -167,7 +167,7 @@ by the website's marketplace scanner.
 | `cloud` | CloudManifest | no | As in CLOUD.md §2.2. |
 | `i18n` | `{ en: {...} }` | no | Same overlay shape as `PluginTranslation`. |
 | `remote` | `{ mcp: URL, auth?: none|bearer }` | no | A remote MCP plugin described by a `PLUGIN.md` (no tools; the server's tools are used). Replaces `pku-harness.plugin.json`. |
-| `server` | object | no | Server functions, collections and schedules run by the cloud server ([CLOUD-FUNCTIONS.md](CLOUD-FUNCTIONS.md)). Implies `cloud.uses: [functions]`; `cloud.disclosure` (what leaves the device) is then required. |
+| `server` | object | no | Server functions, collections and schedules run by the cloud server ([CLOUD-FUNCTIONS.md](CLOUD-FUNCTIONS.md)). Implies `cloud.uses: [functions]`; `cloud.disclosure` (what leaves the device) is then required. **Off on the official server for now** (CLOUD-FUNCTIONS.md is on hold): keep plugins phone-side, or use your own backend (CLOUD-FUNCTIONS §9). |
 
 The Markdown body becomes the plugin's `instructions` (sent to the model in the plugin's prompt
 section). Keep it short: when to use which tool, what the numbers mean.
@@ -362,7 +362,7 @@ the same interpreter with its own set (collections, push, channels; CLOUD-FUNCTI
 - **Widgets** are the dashboard's existing AI-built format: `{ title, sizes?, spec, bindings }`
   where `spec` is a generative-UI spec (`src/genui` catalog) and `bindings` map JSON pointers to
   `{ tool, args?, path?, ttlMinutes? }` read tools of this plugin, or `{ fn, … }` read server
-  functions of this plugin (shared data across users; the compiler backs each with a read tool
+  functions of this plugin (shared data across users; off on the official server for now; the compiler backs each with a read tool
   `fn_<name>`, and a missing cloud consent shows as an error, never a sheet). Lists use the
   catalog's element-level `repeat: { statePath, key }` with `{ "$item": "field" }`. The dashboard's widget gallery
   lists them next to built-in widgets; `dashboard.addPluginWidget` places them.
