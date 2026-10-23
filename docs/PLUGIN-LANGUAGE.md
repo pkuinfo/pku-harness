@@ -267,6 +267,8 @@ read:
 - Arrow functions `(a, b) => expr` (single expression), only as arguments or in `functions`.
 - Method calls on a fixed allowlist (below). No `new`, no assignment, no globals, no
   `constructor` / `__proto__` / `prototype`. Evaluation is bounded (100 000 operations per run).
+- A name that was never bound is an error (catches typos). Bind optional values first, e.g.
+  `- let: failure` / `value: "null"` before a `try` that may set it.
 
 Standard library (functions, and the same as methods where it reads better):
 
@@ -330,7 +332,7 @@ fixed effect; the tool calling it must declare at least that effect.
 
 | Ability | Ops | Effect | Notes |
 |---|---|---|---|
-| `verify` | `treehole(request)` | read | §6.6 |
+| `verify` | `treehole({ request, code?, via? })` (read), `treeholeSendCode()` (write) | | §6.6 |
 | `otp` | `code()` | read | Current IAAA OTP if the authenticator is bound |
 | `todos` | `list add update setDone remove` | write (list: read) | The user's to-dos |
 | `timetable` | `get upsert remove` | write (get: read) | Courses |
@@ -339,11 +341,13 @@ fixed effect; the tool calling it must declare at least that effect.
 | `campusPage` | `open(service)` | read | Opens a campus site already signed in |
 | `sms` | `awaitCode()` | read | One-tap SMS code (user-mediated) |
 | `files` | `pick({types})` | read | User picks a file; returns a handle for `request.multipart` |
-| `crypto` | `sha256(text)`, `hmacSha256(key, text)` | read | For request signing (`request.sign`) |
-| `notify` | `now(title, body)` | write | A local notification |
+| `crypto` | `sha256(text)` | read | For request signing |
 
-New abilities are added to the harness (TypeScript), reviewed once, and then every plugin can
-use them. This is the extension point for things the language can't express safely.
+New abilities are added to the harness (TypeScript, `@pku-harness/sdk` `lang/abilities.ts`),
+reviewed once, and then every plugin can use them. This is the extension point for things the
+language can't express safely. The ability table is injected by the host: the cloud server runs
+the same interpreter with its own set (collections, push, channels; CLOUD-FUNCTIONS.md), where
+`secrets.NAME` is visible only inside request templates.
 
 ## 8. UI: widgets, screens, commands
 
