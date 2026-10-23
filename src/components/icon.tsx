@@ -57,6 +57,7 @@ export const icons = {
   calendarClock: { ios: 'calendar.badge.clock', android: 'event_upcoming' },
   calendar: { ios: 'calendar', android: 'calendar_today' },
   server: { ios: 'server.rack', android: 'dns' },
+  cloud: { ios: 'icloud', android: 'cloud' },
   search: { ios: 'magnifyingglass', android: 'search' },
   store: { ios: 'bag', android: 'storefront' },
   share: { ios: 'square.and.arrow.up', android: 'share' },

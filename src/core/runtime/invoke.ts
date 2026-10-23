@@ -1,3 +1,5 @@
+import { cloudFor } from '@/core/cloud/bind';
+import { scrubOutput, scrubShareLinks } from '@/core/cloud/secret-link';
 import { kv } from '@/core/store/kv';
 import { t } from '@/i18n';
 
@@ -89,12 +91,16 @@ export async function invokeTool(
       turn,
       kv: kv(`plugin:${entry.pluginId}`),
       services,
+      // Bound to this plugin; a person tapping may be shown the consent sheet, the agent may not.
+      cloud: cloudFor(entry.pluginId, { interactive: opts.actor === 'user' }),
       signal: opts.signal,
     });
     if (entry.def.effect !== 'read') writeListeners.forEach((l) => l(entry.pluginId, id));
-    return out;
+    // Share links never reach the model or stored job results (docs/CLOUD.md §2.8); a screen
+    // calling as the user may get its SecretLink objects back.
+    return scrubOutput(out, { keepLinks: opts.actor === 'user' });
   } catch (e) {
     if (e instanceof ToolError) throw e;
-    throw new ToolError(e instanceof Error ? e.message : String(e), 'failed');
+    throw new ToolError(scrubShareLinks(e instanceof Error ? e.message : String(e)), 'failed');
   }
 }

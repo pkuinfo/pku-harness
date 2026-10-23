@@ -25,6 +25,7 @@ import { useLocale, useT } from '@/i18n';
 import { radius, springs, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
+import { CloudSection } from './cloud-section';
 import { MODE_TONE, effectIcon, effectInfo, effectsOf, modeOptions } from './effects';
 import { PluginTile } from './plugin-tile';
 import { GROUP_TONE, STATUS_LABEL, STATUS_TONE, groupOf, isRunning } from './status';
@@ -221,6 +222,13 @@ export function PluginDetail({ id }: { id: string }) {
               />
             ))}
           </ListGroup>
+        </Enter>
+      ) : null}
+
+      {/* Shown even when the plugin is unavailable for lack of a provider: it's where to fix that. */}
+      {plugin.cloud && settings.enabled ? (
+        <Enter index={5}>
+          <CloudSection plugin={plugin} />
         </Enter>
       ) : null}
 

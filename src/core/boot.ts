@@ -1,6 +1,8 @@
 import { aiConfig } from '@/core/agent/provider';
 import { campusAccount } from '@/core/campus/account';
 import { chatStore } from '@/core/agent/session/chat-store';
+import { initCloud } from '@/core/cloud/runtime';
+import { installLogScrubber } from '@/core/cloud/secret-link';
 import { seedStarterWidgets } from '@/core/dashboard/starter';
 import { widgetStore } from '@/core/dashboard/store';
 import { initNotifications } from '@/core/notify';
@@ -77,11 +79,14 @@ async function migrateLegacyIds() {
 export function bootCore(): Promise<void> {
   if (!core) {
     core = (async () => {
+      installLogScrubber();
       installServices();
       for (const p of builtinPlugins) registry.register(p);
       await remotePlugins.load().catch((e) => console.warn('remote plugins failed to load', e));
       await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load(), campusAccount.load()]);
       await migrateLegacyIds().catch((e) => console.warn('legacy id migration failed', e));
+      // Cloud provider + plugin bindings (no network until something needs it).
+      await initCloud().catch((e) => console.warn('cloud init failed', e));
     })();
   }
   return core;

@@ -1,7 +1,7 @@
 import { requireOptionalNativeModule } from 'expo';
 import { router } from 'expo-router';
 import { useMemo, useSyncExternalStore, type ReactNode } from 'react';
-import { View } from 'react-native';
+import { Share, View } from 'react-native';
 
 import type { Spec } from '@json-render/core';
 
@@ -33,6 +33,8 @@ import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { WeekdayPicker } from '@/components/weekday-picker';
 import { sendMessage } from '@/core/agent/run';
+import { cloudFor } from '@/core/cloud/bind';
+import { revealLink } from '@/core/cloud/secret-link';
 import { formatAgo, refreshAll, useBindings, useToolData, useWidgetData } from '@/core/dashboard/live-hooks';
 import { widgetStore } from '@/core/dashboard/store';
 import { usePlugin } from '@/core/runtime/hooks';
@@ -95,6 +97,8 @@ function PluginWidget({ source: stored, size }: { source: { plugin: string; widg
   const plugin = usePlugin(source.plugin);
   const settings = usePluginSettings(source.plugin);
   const store = useMemo(() => kv(`plugin:${source.plugin}`), [source.plugin]);
+  // Not interactive: a widget renders without a tap, so it must not pop the consent sheet.
+  const cloud = useMemo(() => (plugin?.cloud ? cloudFor(plugin.id, { interactive: false }) : undefined), [plugin]);
   const contribution = plugin?.contributes?.widgets?.[source.widget];
   if (!plugin || !contribution) return <WidgetNotice icon="puzzle" text={t('app.widgets.notFound', { id: `${source.plugin}/${source.widget}` })} />;
   if (!settings.enabled || registry.unavailable(plugin.id)) return <WidgetNotice icon="puzzle" text={t('app.widgets.unavailable', { name: pluginName(plugin, locale) })} />;
@@ -108,6 +112,7 @@ function PluginWidget({ source: stored, size }: { source: { plugin: string; widg
         invoke={(tool, input) => invokeTool(tool, input ?? {}, { actor: 'user' })}
         size={size}
         config={source.config ?? {}}
+        cloud={cloud}
       />
     </ErrorBoundary>
   );
@@ -212,4 +217,9 @@ export const hostUI: HostUI = {
   formatAgo,
   useSecureDisplay,
   clipboard: clipboardModule ? { setString: (text) => clipboardModule.setStringAsync(text, {}).then(() => undefined) } : undefined,
+  // Only the host turns a SecretLink into text, straight into the system share sheet.
+  shareLink: async (link, opts) => {
+    const url = revealLink(link);
+    await Share.share(opts?.message ? { message: `${opts.message}\n${url}` } : { message: url });
+  },
 };

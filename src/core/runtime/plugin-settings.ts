@@ -12,6 +12,8 @@ export type EffectMode = 'auto' | 'ask' | 'off';
 export type PluginSettings = {
   enabled: boolean;
   modes: Record<ToolEffect, EffectMode>;
+  /** PKU Harness Cloud consent (docs/CLOUD.md §2.5); absent = never asked. */
+  cloud?: { granted: boolean; at: number };
 };
 
 /** Product decision (docs/ARCHITECTURE.md §5): after onboarding consent, everything runs directly. */

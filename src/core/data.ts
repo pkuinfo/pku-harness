@@ -4,6 +4,8 @@ import * as Notifications from 'expo-notifications';
 import { sessionStore } from '@/core/agent/session/chat-store';
 import { signOut } from '@/core/campus/account';
 import { aiConfig } from '@/core/agent/provider';
+import { cloudProvider } from '@/core/cloud/provider';
+import { wipeCloud } from '@/core/cloud/runtime';
 import { seedStarterWidgets } from '@/core/dashboard/starter';
 import { widgetStore } from '@/core/dashboard/store';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
@@ -39,6 +41,8 @@ export async function resetData() {
   await signOut().catch(() => {});
   await BackgroundTask.unregisterTaskAsync(BACKGROUND_TASK).catch(() => {});
   for (const m of remotePlugins.list()) await remotePlugins.uninstall(m.id);
+  // Cloud first: delete this device's data at the provider while its keys still exist.
+  await wipeCloud().catch(() => {});
   const db = await getDb();
   await db.withTransactionAsync(async () => {
     for (const table of ['kv', 'messages', 'sessions', 'usage', 'widgets', 'jobs', 'todos', 'cache']) await db.execAsync(`DELETE FROM ${table}`);
@@ -46,6 +50,6 @@ export async function resetData() {
   for (const key of ['ai.apiKey', 'campus.username', 'campus.password', 'campus.otpSecret'] as const) await secrets.delete(key).catch(() => {});
   for (const p of registry.providers()) await secrets.delete(`ai.${p.id}.apiKey`).catch(() => {});
   sessionStore.reset();
-  await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load()]);
+  await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load(), cloudProvider.load()]);
   await seedStarterWidgets();
 }
