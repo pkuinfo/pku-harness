@@ -100,7 +100,8 @@
           ],
           "supportsRTL": false
         }
-      ]
+      ],
+      "./config-plugins/with-debug-user-ca"
     ],
     "experiments": {
       "typedRoutes": true,
