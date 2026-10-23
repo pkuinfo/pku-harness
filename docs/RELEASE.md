@@ -41,16 +41,18 @@ gh secret set PKU_HARNESS_KEY_PASSWORD --env release -R pkuinfo/pku-harness
 
 ## Cutting a release
 
-1. Bump `expo.version` in `app.json` (e.g. `1.0.0` → `1.1.0`) in a commit on `master`; let CI
-   pass. Versions come only from committed files, so the OTA runtime fingerprint can be resolved
-   from the same commit.
+1. In **one commit** on `master`, bump `expo.version` (e.g. `1.0.0` → `1.1.0`) **and**
+   `expo.android.versionCode` (an integer, +1 per release: Android only upgrades to a larger
+   versionCode) in `app.json`; let CI pass. Versions come only from committed files, so the OTA
+   runtime fingerprint can be resolved from the same commit. The workflow refuses a tag that
+   doesn't match `expo.version` or a versionCode not greater than the latest release's.
 2. Tag that commit and push the tag:
    ```bash
    git tag v1.1.0 && git push origin v1.1.0
    ```
 3. Approve the `release` environment when GitHub asks. The workflow runs `bun run verify`,
    generates `android/` (`expo prebuild`), builds `assembleRelease` for arm64, refuses a
-   debug-signed APK, and creates the release with the APK and notes: SHA-256, the signing
+   debug-signed APK, and creates the release with the APK and notes: versionCode, SHA-256, the signing
    certificate's SHA-256, the runtime fingerprint (to match OTA updates) and the commit.
 
 To try the pipeline without publishing anything, run the workflow manually (Actions → Release
