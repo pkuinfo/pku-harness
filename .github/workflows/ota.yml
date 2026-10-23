@@ -1,0 +1,63 @@
+name: OTA update
+# Publishes a signed over-the-air update (JS + assets) from a public master commit to the static
+# update server. Manual only; the `ota` environment holds the signing key and upload key and
+# requires a maintainer's approval. See docs/OTA.md.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [publish, rollback]
+        default: publish
+      channel:
+        type: choice
+        options: [production, preview]
+        default: production
+      runtime_version:
+        description: Rollback only - the runtime version to send back to its embedded update
+        required: false
+
+concurrency: ota
+permissions:
+  contents: read
+
+jobs:
+  ota:
+    if: github.ref == 'refs/heads/master'
+    runs-on: ubuntu-latest
+    environment: ota
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      # Never ship a commit that fails the normal checks.
+      - run: bun run check
+      - run: bun test
+
+      - name: Build and sign
+        if: inputs.action == 'publish'
+        env:
+          OTA_SIGNING_KEY: ${{ secrets.OTA_SIGNING_KEY }}
+          CHANNEL: ${{ inputs.channel }}
+        run: bun scripts/ota/publish.ts --channel "$CHANNEL" --platform android
+
+      - name: Sign rollback directive
+        if: inputs.action == 'rollback'
+        env:
+          OTA_SIGNING_KEY: ${{ secrets.OTA_SIGNING_KEY }}
+          CHANNEL: ${{ inputs.channel }}
+          RUNTIME_VERSION: ${{ inputs.runtime_version }}
+        run: bun scripts/ota/rollback.ts --channel "$CHANNEL" --platform android --runtime-version "$RUNTIME_VERSION"
+
+      - name: Upload
+        env:
+          OTA_SSH: ${{ vars.OTA_SSH }}
+          SSH_KEY: ${{ secrets.OTA_SSH_KEY }}
+          KNOWN_HOSTS: ${{ secrets.OTA_SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/ota && chmod 600 ~/.ssh/ota
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          OTA_SSH_KEY_FILE=~/.ssh/ota bun scripts/ota/sync.ts

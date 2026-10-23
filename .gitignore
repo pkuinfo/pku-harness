@@ -44,3 +44,4 @@ yarn-error.*
 modules/*/android/build/
 modules/*/android/.gradle/
 modules/*/ios/build/
+/.ota/

@@ -1,0 +1,55 @@
+# PKU Harness OTA update server: static, served by Caddy. No process runs; CI uploads
+# pre-signed files (scripts/ota/). Import inside a site block, before its catch-all handle:
+#
+#   harness.novadiffusion.com {
+#   	import /etc/caddy/pkuharness-updates.caddy
+#   	handle { reverse_proxy 127.0.0.1:3100 }
+#   }
+#
+# Protocol: https://docs.expo.dev/technical-specs/expo-updates-1/  Layout: docs/OTA.md.
+handle_path /updates/* {
+	root * {$OTA_ROOT:/srv/pkuharness-updates}
+
+	map {header.expo-channel-name} {ota_channel} {
+		~^(production|preview)$ "${1}"
+		default production
+	}
+
+	@manifest {
+		path /manifest
+		header_regexp platform Expo-Platform ^(android|ios)$
+		header_regexp runtime Expo-Runtime-Version ^([A-Za-z0-9._-]{1,128})$
+	}
+	handle @manifest {
+		header {
+			expo-protocol-version 1
+			expo-sfv-version 0
+			cache-control "private, max-age=0"
+		}
+		@found file /manifests/{ota_channel}/{re.platform.1}/{re.runtime.1}.multipart
+		handle @found {
+			rewrite * {file_match.relative}
+			header >content-type "multipart/mixed; boundary=pkuharness-ota-boundary"
+			file_server
+		}
+		# No update published for this runtime/channel yet: an empty multipart response.
+		handle {
+			respond 204
+		}
+	}
+
+	handle /manifest {
+		respond "expo-platform (android|ios) and expo-runtime-version headers are required" 400
+	}
+
+	handle /assets/* {
+		header cache-control "public, max-age=31536000, immutable"
+		@bundle path *.bundle
+		header @bundle >content-type application/javascript
+		file_server
+	}
+
+	handle {
+		respond 404
+	}
+}
