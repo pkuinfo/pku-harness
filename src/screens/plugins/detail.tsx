@@ -13,20 +13,19 @@ import { ListGroup, ListRow } from '@/components/list-group';
 import { NativeSwitch } from '@/components/native-switch';
 import { PressableScale } from '@/components/pressable-scale';
 import { Screen } from '@/components/screen';
-import { Segmented } from '@/components/segmented';
+import { OptionMenu } from '@/components/option-menu';
 import { Text } from '@/components/text';
 import { usePlugin } from '@/core/runtime/hooks';
 import { pluginDescription, pluginName, screenTitle, settingsRowText, toolTitle, widgetText } from '@/core/runtime/localize';
-import { pluginSettings, usePluginSettings } from '@/core/runtime/plugin-settings';
+import { pluginSettings, usePluginSettings, type EffectMode } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import { remotePlugins } from '@/core/runtime/remote';
 import type { PluginDef } from '@/core/runtime/types';
 import { useLocale, useT } from '@/i18n';
 import { radius, springs, useTheme } from '@/theme';
-import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
 
-import { effectInfo, effectsOf, modeOptions } from './effects';
+import { MODE_TONE, effectIcon, effectInfo, effectsOf, modeOptions } from './effects';
 import { PluginTile } from './plugin-tile';
 import { GROUP_TONE, STATUS_LABEL, STATUS_TONE, groupOf, isRunning } from './status';
 import { usePluginStatus } from './use-plugin-status';
@@ -41,6 +40,18 @@ function openScreen(plugin: PluginDef, screen: string) {
     pathname: plugin.contributes?.screens?.[screen]?.presentation === 'modal' ? '/m/[plugin]/[screen]' : '/p/[plugin]/[screen]',
     params: { plugin: plugin.id, screen },
   });
+}
+
+/** Current permission as a compact pill: status dot + label + ▾ (opens the menu). */
+function ModePill({ mode, label }: { mode: EffectMode; label: string }) {
+  const c = useTheme();
+  return (
+    <View className="flex-row items-center gap-1.5 rounded-full bg-surface-3 py-1.5 pl-2.5 pr-2">
+      <View className="size-1.5 rounded-full" style={{ backgroundColor: c[MODE_TONE[mode]] }} />
+      <Text variant="callout">{label}</Text>
+      <Icon name="chevronDown" size={14} color={c.textFaint} />
+    </View>
+  );
 }
 
 /** A section whose rows are revealed on demand (long tool lists). */
@@ -100,6 +111,7 @@ export function PluginDetail({ id }: { id: string }) {
   }
   const name = pluginName(plugin, locale);
   const effects = effectsOf(plugin);
+  const modes = modeOptions(t).map((o) => ({ ...o, tint: c[MODE_TONE[o.value]] }));
   const tools = Object.entries(plugin.tools);
   const widgets = Object.entries(plugin.contributes?.widgets ?? {});
   const settingsRows = plugin.contributes?.settings ?? [];
@@ -190,27 +202,25 @@ export function PluginDetail({ id }: { id: string }) {
 
       {effects.length && settings.enabled && !why ? (
         <Enter index={4}>
-          <View className="gap-2">
-            <Text variant="micro" tone="faint" className="px-4">
-              {t('app.plugins.detail.whenAgent').toUpperCase()}
-            </Text>
-            <View className="overflow-hidden rounded-lg bg-surface" style={CURVE}>
-              {effects.map((e, i) => (
-                <View key={e} className={cx('gap-3 p-4', i > 0 && 'border-t-[0.5px] border-edge')}>
-                  <View className="flex-row items-center gap-2">
-                    <Chip label={effectInfo(e, t).label} tone={effectInfo(e, t).tone} />
-                    <Text variant="caption" tone="muted" className="flex-1">
-                      {effectInfo(e, t).hint}
-                    </Text>
-                  </View>
-                  <Segmented options={modeOptions(t)} value={settings.modes[e]} onChange={(m) => pluginSettings.update(id, { modes: { ...settings.modes, [e]: m } })} />
-                </View>
-              ))}
-            </View>
-            <Text variant="caption" tone="faint" className="px-4">
-              {t('app.plugins.detail.tapNote')}
-            </Text>
-          </View>
+          <ListGroup title={t('app.plugins.detail.whenAgent')} footer={t('app.plugins.detail.tapNote')}>
+            {effects.map((e) => (
+              <ListRow
+                key={e}
+                icon={effectIcon(e)}
+                title={effectInfo(e, t).label}
+                subtitle={effectInfo(e, t).hint}
+                accessory={
+                  <OptionMenu
+                    value={settings.modes[e]}
+                    options={modes}
+                    accessibilityLabel={t('app.plugins.detail.modeA11y', { effect: effectInfo(e, t).label })}
+                    onChange={(m) => pluginSettings.update(id, { modes: { ...settings.modes, [e]: m } })}>
+                    <ModePill mode={settings.modes[e]} label={modes.find((o) => o.value === settings.modes[e])?.label ?? ''} />
+                  </OptionMenu>
+                }
+              />
+            ))}
+          </ListGroup>
         </Enter>
       ) : null}
 

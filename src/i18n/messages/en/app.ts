@@ -274,8 +274,11 @@ export const app: Messages['app'] = {
     },
     modes: {
       auto: 'Allow',
-      ask: 'Ask',
-      off: 'Block',
+      autoHint: 'The AI just does it',
+      ask: 'Ask first',
+      askHint: 'You confirm each time',
+      off: 'Never',
+      offHint: 'The AI can’t do this',
     },
     detail: {
       notFound: 'Plugin not found',
@@ -292,7 +295,8 @@ export const app: Messages['app'] = {
       signInSubtitle: 'This plugin uses your campus sign-in. Your password stays on this phone.',
       expand: 'Show',
       collapse: 'Hide',
-      whenAgent: 'When the AI acts for you',
+      whenAgent: 'What the AI may do',
+      modeA11y: '{effect}: permission',
       tapNote: 'These limits don’t apply to anything you tap yourself.',
       scopes: 'Access',
       remote: 'Remote service',

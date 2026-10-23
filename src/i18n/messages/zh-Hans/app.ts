@@ -277,8 +277,11 @@ export const app = {
     },
     modes: {
       auto: '直接执行',
+      autoHint: 'AI 直接完成，不打扰你',
       ask: '每次询问',
+      askHint: '每次先请你确认',
       off: '禁止',
+      offHint: 'AI 不能这样做',
     },
     detail: {
       notFound: '找不到这个插件',
@@ -295,7 +298,8 @@ export const app = {
       signInSubtitle: '这个插件需要校园账号登录，密码只保存在本机。',
       expand: '展开',
       collapse: '收起',
-      whenAgent: 'AI 代你操作时',
+      whenAgent: 'AI 可以做什么',
+      modeA11y: '{effect}：权限',
       tapNote: '你在界面上亲手点击的操作不受这里限制。',
       scopes: '访问范围',
       remote: '远程服务',

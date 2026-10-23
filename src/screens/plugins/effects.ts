@@ -16,13 +16,23 @@ export const effectInfo = (e: ToolEffect, t: Translate) => ({
   tone: TONE[e],
 });
 
+const EFFECT_ICON: Record<ToolEffect, IconName> = { read: 'eye', write: 'edit', money: 'wallet', public: 'globe' };
+export const effectIcon = (e: ToolEffect) => EFFECT_ICON[e];
+
 export const EFFECT_ORDER: ToolEffect[] = ['read', 'write', 'money', 'public'];
 
-export const modeOptions = (t: Translate): { label: string; value: EffectMode }[] => [
-  { label: t('app.plugins.modes.auto'), value: 'auto' },
-  { label: t('app.plugins.modes.ask'), value: 'ask' },
-  { label: t('app.plugins.modes.off'), value: 'off' },
-];
+const MODE_ICON: Record<EffectMode, IconName> = { auto: 'bolt', ask: 'help', off: 'lock' };
+/** Theme colour per mode: the pill's dot and the menu icon share it. */
+export const MODE_TONE = { auto: 'up', ask: 'warn', off: 'textFaint' } as const satisfies Record<EffectMode, string>;
+
+/** Allow / Ask first / Never, each with a one-line description (the permission menu). */
+export const modeOptions = (t: Translate): { label: string; description: string; icon: IconName; value: EffectMode }[] =>
+  (['auto', 'ask', 'off'] as const).map((value) => ({
+    value,
+    label: t(`app.plugins.modes.${value}`),
+    description: t(`app.plugins.modes.${value}Hint`),
+    icon: MODE_ICON[value],
+  }));
 
 /** Effects a plugin actually uses, in display order. */
 export function effectsOf(plugin: PluginDef): ToolEffect[] {
