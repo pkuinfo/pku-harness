@@ -78,6 +78,23 @@ export const icons = {
   undo: { ios: 'arrow.uturn.backward', android: 'undo' },
   pin: { ios: 'pin', android: 'push_pin' },
   drop: { ios: 'drop', android: 'water_drop' },
+  // Plugin tiles: one distinct, meaningful icon per plugin (the grid never repeats one).
+  wallet: { ios: 'wallet.bifold', android: 'account_balance_wallet' },
+  brain: { ios: 'brain', android: 'psychology' },
+  wand: { ios: 'wand.and.stars', android: 'auto_fix_high' },
+  ballot: { ios: 'checkmark.rectangle.stack', android: 'how_to_vote' },
+  school: { ios: 'graduationcap', android: 'school' },
+  sync: { ios: 'arrow.triangle.2.circlepath', android: 'sync' },
+  catalog: { ios: 'books.vertical', android: 'library_books' },
+  timetable: { ios: 'tablecells', android: 'calendar_view_week' },
+  library: { ios: 'building.columns', android: 'local_library' },
+  building: { ios: 'building.2', android: 'apartment' },
+  medal: { ios: 'rosette', android: 'workspace_premium' },
+  food: { ios: 'fork.knife', android: 'restaurant' },
+  bus: { ios: 'bus', android: 'directions_bus' },
+  ticket: { ios: 'ticket', android: 'local_activity' },
+  room: { ios: 'door.left.hand.open', android: 'meeting_room' },
+  calendarRange: { ios: 'calendar.circle', android: 'date_range' },
 } as const;
 
 export type IconName = keyof typeof icons;
