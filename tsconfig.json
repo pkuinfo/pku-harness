@@ -36,6 +36,7 @@
     "plugins/templates",
     "plugins/scripts",
     "plugins/node_modules",
-    "plugins/plugins/*/web"
+    "plugins/plugins/*/web",
+    "plugins/packages/cloud-server"
   ]
 }
