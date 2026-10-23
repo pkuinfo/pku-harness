@@ -23,12 +23,14 @@ import { fonts, radius, typography, useTheme } from '@/theme';
 type Filter = 'all' | 'builtin' | 'remote';
 
 /**
- * Registry entries are written in Chinese. A built-in entry is the same plugin the app ships,
- * so its name and description come from the plugin's own English overlay when there is one.
+ * Registry entries are written in Chinese with an English overlay (`i18n.en`). A built-in entry is
+ * the same plugin the app ships, so its text comes from the installed plugin when there is one.
  */
 function entryText(entry: RegistryEntry, locale: Locale) {
   const plugin = entry.kind === 'builtin' ? registry.get(entry.id) : undefined;
-  return plugin ? { name: pluginName(plugin, locale), description: pluginDescription(plugin, locale) } : { name: entry.name, description: entry.description };
+  if (plugin) return { name: pluginName(plugin, locale), description: pluginDescription(plugin, locale) };
+  const en = locale === 'en' ? entry.i18n?.en : undefined;
+  return { name: en?.name ?? entry.name, description: en?.description ?? entry.description };
 }
 
 function EntryCard({ entry, installed }: { entry: RegistryEntry; installed: boolean }) {
