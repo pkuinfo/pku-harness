@@ -7,6 +7,7 @@ import { z } from 'zod';
 
 import '@/core/campus/adapters';
 import { campusAccount, campusHandoff, pluginCampusRequest } from '@/core/campus/account';
+import { ongoingService } from '@/core/cloud/ongoing';
 import { bindFinish, bindStart, currentCodeAsync, otpStatus, unbindLocal } from '@/core/campus/otp';
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';
@@ -181,6 +182,8 @@ const host: HostServices = {
       return { opened: true };
     },
   },
+  // Android foreground service for long background activities (capability 'ongoing').
+  ongoing: ongoingService,
   timetable: {
     get: () => timetable.get(),
     newId: () => timetable.newId(),

@@ -77,7 +77,8 @@
           "android": {
             "foregroundService": {
               "types": [
-                "shortService"
+                "shortService",
+                "dataSync"
               ]
             }
           }
