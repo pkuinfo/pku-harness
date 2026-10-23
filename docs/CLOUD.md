@@ -158,7 +158,7 @@ Edit to `registry/schema.ts`: add `cloud: { uses, e2e, disclosure, backend? }` s
 
 Plugins repo, new packages:
 - **`packages/cloud-protocol`** (`@pku-harness/cloud-protocol`): zod wire schemas for every endpoint below, the `Envelope` type (`{ v: 1, n: <24-byte nonce b64>, c: <ciphertext b64> }`) and the crypto helpers. It uses `@noble/curves` (Ed25519, X25519), `@noble/hashes` (HKDF, SHA-256) and `@noble/ciphers` (XChaCha20-Poly1305): pure JavaScript, audited, and working on Hermes, in WeChat's webview and on Bun. App, server and viewer pages all import **the same file**, so encryption cannot drift between them.
-- **`packages/campus-card`** (`@pku-harness/campus-card`): the code-fetch, mode and turnover helpers moved out of `wallet/src/card/api.ts`, so `wallet` and `card-share` share them without a cross-plugin import. The app adds a tsconfig path, like `@pku-harness/sdk`.
+- **`plugins/shared/campus-card.ts`**: the code-fetch, mode and turnover helpers moved out of `wallet/src/card/api.ts`, so `wallet` and `card-share` share them through a relative import (code shared by bundled plugins lives in `plugins/shared/`, not in a new package). No app config is needed.
 
 ### 2.3 Wire protocol v1 (served by every provider)
 
@@ -240,7 +240,7 @@ Versioning:
 ### 3.1 Reference server: `plugins/packages/cloud-server` (`@pku-harness/cloud-server`)
 
 Reasons for this location:
-- Plugin authors write `server/` and `web/` in the same workspace and run `bun run cloud:dev`.
+- Plugin authors write `server/` and `web/` in the same workspace and run the server with `bun run --filter @pku-harness/cloud-server dev`.
 - The server imports `cloud-protocol` and the plugins' `server/` and `web/dist` directly, with no extra submodule.
 
 Stack: **Bun + Hono + `bun:sqlite` (WAL)**. Postgres comes later behind a `Storage` interface. Litestream handles backups. We pick Bun over porting pkubdcard's Go because one zod contract then serves app, server and viewer.
@@ -291,7 +291,7 @@ src/index.ts            definePlugin: id 'card-share', name '付款码共享', r
                           disclosure:{ zh:['分享期间，加密后的付款码经云服务转发给你分享的人；服务器无法解密',
                                            '服务器能看到：分享的开始/结束时间、查看者的 IP'] } },
                         defaultModes: { read:'auto', write:'auto', money:'ask' }
-src/source.ts           CodeSource interface: real (via @pku-harness/campus-card) + mock (dev/tests)
+src/source.ts           CodeSource interface: real (via plugins/shared/campus-card.ts) + mock (dev/tests)
 src/session.ts          ShareSession: channel ↔ code loop, gates (PIN, masked name), spend cap, events, persistence (kv)
 src/cap.ts              spend-cap evaluation over turnover records (pure, tested)
 src/protocol.ts         zod frames: want | code{code,issuedAt,seq,balance?} | gate{pin|name} | gate_result | revoked | status
@@ -326,7 +326,7 @@ web/                    Vite + Preact + Tailwind, ported from pkubdcard/web/src 
 
 **Relation to wallet**
 - wallet keeps the own-code screen and never needs cloud consent (least privilege).
-- Its code helpers move to `packages/campus-card`, which both plugins import.
+- Its code helpers move to `plugins/shared/campus-card.ts`, which both plugins import.
 - Payment codes remain never-a-tool-result in both plugins.
 
 ---
@@ -361,7 +361,7 @@ Record the results in `docs/CLOUD.md`. This decides whether batch mode and one-s
 12. `feat(host): services.ongoing foreground service (dataSync)`.
 
 **Stage 4. card-share**
-13. `refactor(wallet): extract @pku-harness/campus-card`. Pure move; wallet tests stay green.
+13. `refactor(wallet): extract plugins/shared/campus-card.ts`. Pure move; wallet tests stay green.
 14. `feat(card-share): session engine with mock source + tools`.
 15. `feat(card-share): create / active / in-app view screens`.
 16. `feat(card-share): web viewer (port of pkubdcard UseFlow)`.
@@ -379,7 +379,7 @@ Record the results in `docs/CLOUD.md`. This decides whether batch mode and one-s
 **Stage 7.** workerd isolates for unreviewed community functions; files; external-backend pseudonyms; multi-device pairing.
 
 ### Local testing
-- **Server:** `cd plugins && bun run cloud:dev` (port 8787). bun tests drive Hono `app.request()` and real WebSockets on an ephemeral port.
+- **Server:** `cd plugins/packages/cloud-server && bun run dev` (port 8787; set `CLOUD_PUBLIC_URL` to the origin clients use). bun tests drive Hono `app.request()` and real WebSockets on an ephemeral port.
 - **Emulator:** Settings → 云服务 → 自建 `http://10.0.2.2:8787` (debug cleartext is already allowed). Turn on the card-share **mock source** (dev toggle in the plugin's settings row). Then:
   1. Create a share on `emulator-5554`.
   2. Read the link from the share sheet or with `adb logcat` in dev builds only.

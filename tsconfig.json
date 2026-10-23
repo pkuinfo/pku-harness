@@ -35,6 +35,7 @@
     "plugins/examples",
     "plugins/templates",
     "plugins/scripts",
-    "plugins/node_modules"
+    "plugins/node_modules",
+    "plugins/plugins/*/web"
   ]
 }
