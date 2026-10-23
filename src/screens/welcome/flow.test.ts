@@ -96,7 +96,7 @@ describe('permissions step', () => {
 });
 
 describe('suggestions', () => {
-  const all = new Set(['campus-card', 'course-sync', 'netfee', 'courses']);
+  const all = new Set(['wallet', 'course-sync', 'courses']);
   test('none without an AI service', () => {
     expect(suggestionsFor({ ai: false, campus: true, enabled: all })).toEqual([]);
   });
@@ -111,8 +111,9 @@ describe('suggestions', () => {
     expect(s).not.toContain('welcome.done.suggest.balance');
   });
   test('respects disabled plugins', () => {
-    const s = suggestionsFor({ ai: true, campus: true, enabled: new Set(['netfee']) });
-    expect(s[0]).toBe('welcome.done.suggest.netFee');
+    const s = suggestionsFor({ ai: true, campus: true, enabled: new Set(['courses']) });
+    expect(s[0]).toBe('welcome.done.suggest.homework');
+    expect(s).not.toContain('welcome.done.suggest.balance');
     expect(s).toHaveLength(3);
   });
 });

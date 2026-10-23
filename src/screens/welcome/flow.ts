@@ -114,9 +114,9 @@ export function suggestionsFor(s: SetupState): MessageKey[] {
   if (!s.ai) return [];
   const out: MessageKey[] = [];
   const on = (id: string) => s.enabled.has(id);
-  if (s.campus && on('campus-card')) out.push('welcome.done.suggest.balance');
+  if (s.campus && on('wallet')) out.push('welcome.done.suggest.balance');
   if (s.campus && on('course-sync')) out.push('welcome.done.suggest.timetable');
-  else if (s.campus && on('netfee')) out.push('welcome.done.suggest.netFee');
+  else if (s.campus && on('wallet')) out.push('welcome.done.suggest.netFee');
   if (s.campus && on('courses') && out.length < 3) out.push('welcome.done.suggest.homework');
   const general: MessageKey[] = ['welcome.done.suggest.week', 'welcome.done.suggest.remind', 'welcome.done.suggest.dashboard'];
   for (const g of general) {

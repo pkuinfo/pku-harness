@@ -2,7 +2,7 @@ import * as Crypto from 'expo-crypto';
 
 import { t } from '@/i18n';
 
-import { APP_HEADERS, campusFetch, form, FORM } from './http';
+import { APP_HEADERS, campusFetch, form, FORM, resetSession } from './http';
 import { currentCodeAsync } from './otp';
 import { encryptPkcs1 } from './rsa';
 import { askVerification } from './verify';
@@ -64,7 +64,24 @@ export async function iaaaSendCode(app: IaaaApp, username: string): Promise<stri
  * Sign in to an IAAA app, adapting to the account's second factor: when IAAA wants an SMS,
  * email or 手机令牌 code, send it (SMS/email) and ask the user through the verification prompt.
  */
-export async function iaaaSignIn(app: IaaaApp, username: string, password: string, service: string): Promise<string> {
+export function iaaaSignIn(app: IaaaApp, username: string, password: string, service: string): Promise<string> {
+  // One IAAA flow at a time: every service signs in through the shared 'iaaa' jar, and two
+  // overlapping sign-ins (the wallet loading the Campus Card and the bath card together) used to
+  // reset it under each other ("No campus HTTP session 'iaaa'"). A verification prompt waiting
+  // for the user holds the lock; later sign-ins queue behind it.
+  const run = signInLock.then(
+    () => signInLocked(app, username, password, service),
+    () => signInLocked(app, username, password, service),
+  );
+  signInLock = run.catch(() => undefined);
+  return run;
+}
+
+let signInLock: Promise<unknown> = Promise.resolve();
+
+async function signInLocked(app: IaaaApp, username: string, password: string, service: string): Promise<string> {
+  // A fresh jar for each sign-in (callers no longer reset it themselves, outside the lock).
+  await resetSession('iaaa');
   const check = await iaaaPrecheck(app, username).catch(() => ({ mode: 'none' as const, otpBound: true }));
   if (check.mode === 'none') return iaaaLogin(app, username, password);
   if (check.mode === 'otp' && !check.otpBound) throw new IaaaError(t('app.campus.errors.otpUnbound'), 'OTP_UNBOUND');

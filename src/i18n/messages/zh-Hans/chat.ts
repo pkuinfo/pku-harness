@@ -298,6 +298,8 @@ export const chat = {
     resendIn: '{count} 秒后可重新发送',
     resendIn_one: '{count} 秒后可重新发送',
     resend: '重新发送验证码',
+    autofillHint: '短信到达后点“允许”，验证码会自动填好',
+    autofilled: '已从短信自动填入验证码',
     verify: '验证',
   },
 };

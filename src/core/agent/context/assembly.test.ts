@@ -5,8 +5,8 @@ import { asksToRemember, believedFacts, byStability, languageLine, languageSnaps
 
 describe('stability order', () => {
   test('core, then bundled, then remote; by id within a tier', () => {
-    const plugins = [{ id: 'treehole' }, { id: 'zz-mcp', remote: {} }, { id: 'ui', core: true }, { id: 'campus-card' }, { id: 'memory', core: true }, { id: 'aa-mcp', remote: {} }];
-    expect([...plugins].sort(byStability).map((p) => p.id)).toEqual(['memory', 'ui', 'campus-card', 'treehole', 'aa-mcp', 'zz-mcp']);
+    const plugins = [{ id: 'treehole' }, { id: 'zz-mcp', remote: {} }, { id: 'ui', core: true }, { id: 'wallet' }, { id: 'memory', core: true }, { id: 'aa-mcp', remote: {} }];
+    expect([...plugins].sort(byStability).map((p) => p.id)).toEqual(['memory', 'ui', 'treehole', 'wallet', 'aa-mcp', 'zz-mcp']);
     expect(stabilityTier({ id: 'x', core: true, remote: {} })).toBe(2);
   });
 });

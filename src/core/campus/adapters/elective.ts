@@ -60,7 +60,6 @@ const sidaOf = (body: string) => /\?sida=(\S{32})&sttp=/.exec(body)?.[1] ?? null
 
 async function login(program: Program | undefined) {
   const { username, password } = await credentials();
-  await resetSession('iaaa');
   const token = await iaaaSignIn(APP, username, password, serviceName('elective'));
   await resetSession('elective');
   current = null;

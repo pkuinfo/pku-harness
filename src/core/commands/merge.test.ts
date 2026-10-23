@@ -9,9 +9,9 @@ const prompt = (pluginId: string, name: string, p = 'hi {{input}}', extra = {}):
 
 describe('mergeCommands', () => {
   test('built-ins first, plugin commands keep bare names when free', () => {
-    const out = mergeCommands([builtin('new')], [prompt('campus-card', 'balance')], async () => undefined);
+    const out = mergeCommands([builtin('new')], [prompt('wallet', 'balance')], async () => undefined);
     expect(out.map((c) => c.name)).toEqual(['new', 'balance']);
-    expect(out[1]).toMatchObject({ group: 'plugin', pluginId: 'campus-card' });
+    expect(out[1]).toMatchObject({ group: 'plugin', pluginId: 'wallet' });
   });
   test('collision with a built-in becomes plugin:name', () => {
     const out = mergeCommands([builtin('new'), builtin('help')], [prompt('foo', 'help')], async () => undefined);

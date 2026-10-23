@@ -2,6 +2,7 @@ import CampusHttpModule from '../../../modules/campus-http';
 
 import { t, type MessageKey } from '@/i18n';
 
+import { buildAliases, type LegacyAliases } from './legacy';
 import { modelText, providerText } from './localize';
 import type { Capability, CommandContribution, PluginDef, ProviderDef, ToolDef } from './types';
 
@@ -37,8 +38,11 @@ export type CommandEntry = { pluginId: string; name: string; def: CommandContrib
 const plugins = new Map<string, PluginDef>();
 const listeners = new Set<() => void>();
 let version = 0;
+/** Old ids of replaced plugins (`PluginDef.legacy`); rebuilt whenever the plugin set changes. */
+let aliases: LegacyAliases = buildAliases([]);
 
 function emit() {
+  aliases = buildAliases([...plugins.values()]);
   version++;
   listeners.forEach((l) => l());
 }
@@ -52,25 +56,36 @@ export const registry = {
     plugins.delete(id);
     emit();
   },
+  /** A plugin by id; an old id of a replaced plugin resolves to its successor. */
   get(id: string) {
-    return plugins.get(id);
+    return plugins.get(id) ?? plugins.get(aliases.plugins.get(id) ?? '');
   },
+  /** The current id for `id` (itself unless it names a replaced plugin). */
+  canonicalId(id: string): string {
+    return plugins.has(id) ? id : (aliases.plugins.get(id) ?? id);
+  },
+  /** Alias tables for stored-data migrations (boot) and settings. */
+  aliases: () => aliases,
   list(): PluginDef[] {
     return [...plugins.values()];
   },
   /** Why a plugin can't run on this device (in the app language), or null. */
   unavailable(id: string): string | null {
-    const missing = (plugins.get(id)?.requires ?? []).filter((c) => !HOST_CAPABILITIES.has(c));
+    const missing = (this.get(id)?.requires ?? []).filter((c) => !HOST_CAPABILITIES.has(c));
     return missing.length ? t('app.plugins.unsupported', { list: missing.map((c) => t(CAPABILITY_LABEL[c])).join(t('app.ui.listSep')) }) : null;
   },
-  /** Resolve `<plugin>.<tool>`. */
+  /**
+   * Resolve `<plugin>.<tool>`. Old ids of replaced tools (stored jobs, widgets, screens) resolve
+   * to the new tool; the entry then carries the new id.
+   */
   tool(id: string): ToolEntry | undefined {
-    const dot = id.indexOf('.');
+    const resolved = aliases.tools.get(id) ?? id; // never aliases a tool of an installed plugin
+    const dot = resolved.indexOf('.');
     if (dot < 0) return undefined;
-    const pluginId = id.slice(0, dot);
-    const name = id.slice(dot + 1);
+    const pluginId = resolved.slice(0, dot);
+    const name = resolved.slice(dot + 1);
     const def = plugins.get(pluginId)?.tools[name];
-    return def ? { id, pluginId, name, def } : undefined;
+    return def ? { id: resolved, pluginId, name, def } : undefined;
   },
   tools(): ToolEntry[] {
     return this.list().flatMap((p) =>

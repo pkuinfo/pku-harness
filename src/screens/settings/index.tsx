@@ -10,21 +10,20 @@ import { modelInfo } from '@/core/agent/attachments/attachments';
 import { useAIConfig } from '@/core/agent/provider';
 import { useCampusAccount } from '@/core/campus/account';
 import { exportData, resetData } from '@/core/data';
-import type { IconName } from '@/components/icon';
-import { usePlugins } from '@/core/runtime/hooks';
-import { pluginSettings } from '@/core/runtime/plugin-settings';
-import { registry } from '@/core/runtime/registry';
-import { settingsRowText } from '@/core/runtime/localize';
 import { haptics } from '@/utils/haptics';
-import { setLocalePreference, useLocale, useLocalePreference, useT, type LocalePreference } from '@/i18n';
+import { setLocalePreference, useLocalePreference, useT, type LocalePreference } from '@/i18n';
 import { setThemePreference, useTheme, useThemePreference, type ThemePreference } from '@/theme';
 
+import { PluginsEntry } from './plugins-entry';
 
-/** Settings tab: account, AI provider, plugins, preferences (docs/ARCHITECTURE.md §2). */
+
+/**
+ * Settings tab, kept minimal (docs/ARCHITECTURE.md §2): account, one entry into plugins (their
+ * own settings live on each plugin's page), reminders, appearance and language, data.
+ */
 export function Settings() {
   const c = useTheme();
   const t = useT();
-  const locale = useLocale();
   const pref = useThemePreference();
   const localePref = useLocalePreference();
   const themeOptions: { label: string; value: ThemePreference }[] = [
@@ -39,12 +38,6 @@ export function Settings() {
   ];
   const ai = useAIConfig();
   const campus = useCampusAccount();
-  const plugins = usePlugins();
-  const pluginCount = plugins.length;
-  // Settings rows contributed by enabled plugins (e.g. AI 记忆 from the memory plugin).
-  const contributed = plugins
-    .filter((p) => pluginSettings.get(p.id).enabled && !registry.unavailable(p.id))
-    .flatMap((p) => (p.contributes?.settings ?? []).map((row) => ({ plugin: p, row })));
   return (
     <Screen title={t('app.settings.title')} subtitle={t('app.settings.eyebrow')}>
       <FadeIn index={0}>
@@ -65,35 +58,15 @@ export function Settings() {
           <ListRow icon="trendUp" title={t('app.settings.usage')} subtitle={t('app.settings.usageSubtitle')} onPress={() => router.push('/usage')} />
         </ListGroup>
       </FadeIn>
-      {contributed.length ? (
-        <FadeIn index={1}>
-          <ListGroup title={t('app.settings.pluginSettings')}>
-            {contributed.map(({ plugin, row }) => {
-              const text = settingsRowText(plugin, row.screen, row, locale);
-              return (
-                <ListRow
-                  key={`${plugin.id}/${row.screen}`}
-                  icon={(row.icon as IconName | undefined) ?? (plugin.icon as IconName | undefined) ?? 'puzzle'}
-                  title={text.title}
-                  subtitle={text.subtitle}
-                  onPress={() =>
-                    router.push({
-                      pathname: plugin.contributes?.screens?.[row.screen]?.presentation === 'modal' ? '/m/[plugin]/[screen]' : '/p/[plugin]/[screen]',
-                      params: { plugin: plugin.id, screen: row.screen },
-                    })
-                  }
-                />
-              );
-            })}
-          </ListGroup>
-        </FadeIn>
-      ) : null}
       <FadeIn index={1}>
-        <ListGroup title={t('app.settings.pluginsGroup')} footer={t('app.settings.pluginsFooter')}>
-          <ListRow icon="puzzle" title={t('app.settings.plugins')} value={t('app.settings.pluginCount', { count: pluginCount })} onPress={() => router.push('/plugins')} />
-        </ListGroup>
+        <PluginsEntry />
       </FadeIn>
       <FadeIn index={2}>
+        <ListGroup title={t('app.settings.notifications')}>
+          <ListRow icon="bell" title={t('app.settings.reminders')} subtitle={t('app.settings.remindersSubtitle')} onPress={() => router.push('/notifications')} />
+        </ListGroup>
+      </FadeIn>
+      <FadeIn index={3}>
         <View className="gap-2">
           <Text variant="micro" tone="faint" className="px-4">
             {t('core.settings.appearance').toUpperCase()}
@@ -104,11 +77,6 @@ export function Settings() {
           </Text>
           <Segmented options={localeOptions} value={localePref} onChange={setLocalePreference} />
         </View>
-      </FadeIn>
-      <FadeIn index={3}>
-        <ListGroup title={t('app.settings.notifications')}>
-          <ListRow icon="bell" title={t('app.settings.reminders')} subtitle={t('app.settings.remindersSubtitle')} onPress={() => router.push('/notifications')} />
-        </ListGroup>
       </FadeIn>
       <FadeIn index={4}>
         <ListGroup title={t('app.settings.data')} footer={t('app.settings.dataFooter')}>

@@ -5,6 +5,7 @@ import { seedStarterWidgets } from '@/core/dashboard/starter';
 import { widgetStore } from '@/core/dashboard/store';
 import { initNotifications } from '@/core/notify';
 import { installApprovalHandler } from '@/core/runtime/approvals';
+import { migrateJob, migrateWidget } from '@/core/runtime/legacy';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import { remotePlugins } from '@/core/runtime/remote';
@@ -54,6 +55,24 @@ export async function completeOnboarding() {
 }
 let app: Promise<void> | null = null;
 
+/**
+ * Rewrite stored ids of replaced plugins (PluginDef.legacy, e.g. campus-card → wallet) in
+ * dashboard widgets and scheduled checks. Lookups resolve old ids anyway (registry aliases); this
+ * keeps cache keys and write invalidation on the new ids. Idempotent: rewritten rows no longer match.
+ */
+async function migrateLegacyIds() {
+  const aliases = registry.aliases();
+  if (!aliases.tools.size && !aliases.widgets.size) return;
+  for (const w of widgetStore.list()) {
+    const next = migrateWidget(w, aliases);
+    if (next) await widgetStore.put(next);
+  }
+  for (const j of jobStore.list()) {
+    const next = migrateJob(j, aliases);
+    if (next) await jobStore.put(next);
+  }
+}
+
 /** Runtime without UI: plugins, settings, AI config, jobs. Used by background tasks too. */
 export function bootCore(): Promise<void> {
   if (!core) {
@@ -62,6 +81,7 @@ export function bootCore(): Promise<void> {
       for (const p of builtinPlugins) registry.register(p);
       await remotePlugins.load().catch((e) => console.warn('remote plugins failed to load', e));
       await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load(), campusAccount.load()]);
+      await migrateLegacyIds().catch((e) => console.warn('legacy id migration failed', e));
     })();
   }
   return core;

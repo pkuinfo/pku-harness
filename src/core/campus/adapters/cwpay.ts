@@ -58,7 +58,6 @@ async function iaaaApp(): Promise<IaaaApp> {
 
 async function login() {
   const { username, password } = await credentials();
-  await resetSession('iaaa');
   await resetSession('cwpay');
   const app = await iaaaApp();
   const iaaaToken = await iaaaSignIn(app, username, password, serviceName('cwpay'));

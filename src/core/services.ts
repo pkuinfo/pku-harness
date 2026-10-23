@@ -1,3 +1,4 @@
+import { awaitSmsCode } from '@/core/campus/sms';
 import * as Crypto from 'expo-crypto';
 import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
@@ -83,6 +84,9 @@ const host: HostServices = {
     has: (id) => !!remotePlugins.get(id),
   },
   genui: { describeCatalog, checkSpec },
+  sms: {
+    awaitCode: () => awaitSmsCode(),
+  },
   notify: {
     readiness: deliveryReadiness,
     fix: async (kind) => {

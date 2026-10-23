@@ -107,8 +107,12 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T11.12 Agent-driven scheduled tasks: fresh read-only session per run on the shared prefix, NO_REPLY = silent, last-step answer + out-of-steps is a failure, usage purpose 'scheduler'; exact delivery on Android via alarm-clock wake-ups + shortService foreground service (2026-10-21)
 - [~] T11.14 iOS readiness (docs/IOS.md): launch-safe without campus-http, keychain after-first-unlock, 64-pending caps, Time Sensitive, ATS, SwiftUI date picker; Swift campus-http port pending
 
+- [x] T11.15 Plugins page: Settings keeps one Plugins card; /plugins is a searchable grid of plugin cards grouped by kind with live status; each plugin page holds its settings screens, permissions, widgets, tools and access (2026-10-23)
+- [x] T11.16 One-tap SMS code takeover: modules/sms-consent (Android SMS User Consent, no SMS permission), extractCode, campus verification prompt + Treehole SMS screen + services.sms.awaitCode; iOS via textContentType oneTimeCode (2026-10-23)
+
 ## M12 Plugin batch 2 (in progress, 2026-10-21)
 - [~] T12.1 Money & utilities: cwfw expansion (salaries/rewards, tuition, tax), dorm electricity / water / bath balances + cashier recharge
+- [x] T12.1a Plugin `wallet` (校园钱包): campus-card, netfee and utilities merged into one plugin with a hub screen (every balance as a card, pull to refresh, payment code + top-ups one tap away); SDK `PluginDef.legacy` keeps old plugin / tool / widget ids working (registry aliases, one-time settings carry-over, boot rewrite of stored widgets and checks), tested (2026-10-22). Finance stays separate.
 - [~] T12.2 Blackboard depth: assignment submission (host multipart + file picker), grades, due-date → to-dos, 智云课堂
 - [~] T12.3 Library: loans + renew, seat reservation, catalog search, hours
 - [~] T12.4 Campus life: notices (official sites / info-spider), shuttle timetables, canteens, portal apps

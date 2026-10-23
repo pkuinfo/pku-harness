@@ -86,9 +86,12 @@ function WidgetNotice({ icon, text }: { icon: string; text: string }) {
 }
 
 /** A plugin's native dashboard widget, with its store and tool access, isolated by an error boundary. */
-function PluginWidget({ source, size }: { source: { plugin: string; widget: string; config?: Record<string, unknown> }; size: WidgetSize }) {
+function PluginWidget({ source: stored, size }: { source: { plugin: string; widget: string; config?: Record<string, unknown> }; size: WidgetSize }) {
   const t = useT();
   const locale = useLocale();
+  // A widget of a replaced plugin (PluginDef.legacy) renders its successor's widget.
+  const moved = registry.aliases().widgets.get(`${stored.plugin}.${stored.widget}`);
+  const source = moved ? { ...stored, ...moved } : stored;
   const plugin = usePlugin(source.plugin);
   const settings = usePluginSettings(source.plugin);
   const store = useMemo(() => kv(`plugin:${source.plugin}`), [source.plugin]);

@@ -5,7 +5,7 @@ import { groupOf, groupPlugins, requirementBadges } from './plugin-groups';
 
 describe('plugin groups', () => {
   test('buckets by role, hiding providers and remote plugins', () => {
-    expect(groupOf({ id: 'campus-card', requires: ['campus-session', 'network'] })).toBe('campus');
+    expect(groupOf({ id: 'wallet', requires: ['campus-session', 'network'] })).toBe('campus');
     expect(groupOf({ id: 'finance', requires: ['campus-session', 'campus-network'] })).toBe('campus');
     expect(groupOf({ id: 'course-catalog', requires: ['network'] })).toBe('campus');
     expect(groupOf({ id: 'authenticator', requires: ['campus-session'] })).toBe('productivity');
@@ -18,11 +18,11 @@ describe('plugin groups', () => {
   test('keeps order and drops empty groups', () => {
     const groups = groupPlugins([
       { id: 'ui', core: true },
-      { id: 'netfee', requires: ['campus-session'] },
-      { id: 'campus-card', requires: ['campus-session'] },
+      { id: 'wallet', requires: ['campus-session'] },
+      { id: 'courses', requires: ['campus-session'] },
     ]);
     expect(groups.map((g) => g.id)).toEqual(['campus', 'system']);
-    expect(groups[0].plugins.map((p) => p.id)).toEqual(['netfee', 'campus-card']);
+    expect(groups[0].plugins.map((p) => p.id)).toEqual(['wallet', 'courses']);
   });
 
   test('badges only for requirements worth mentioning', () => {

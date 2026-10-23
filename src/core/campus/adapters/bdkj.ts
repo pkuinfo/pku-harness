@@ -47,7 +47,6 @@ let signingIn: Promise<void> | null = null;
 
 async function login() {
   const { username, password } = await credentials();
-  await resetSession('iaaa');
   const token = await iaaaSignIn(BDKJ_APP, username, password, serviceName('bdkj'));
   await resetSession(SESSION);
   // Same shape as IAAA's own redirect: /login/oauth?_rand=…&token=… → 302 → /home.

@@ -61,7 +61,6 @@ export { credentials } from './credentials';
  */
 export async function signIn(username: string, password: string) {
   const id = username.trim();
-  await resetSession('iaaa');
   const token = await iaaaSignIn(PORTAL_APP, id, password, serviceName('account'));
   await secrets.set('campus.username', id);
   await secrets.set('campus.password', password);
@@ -133,7 +132,6 @@ async function cardJwt(force = false): Promise<string> {
     }
   }
   const { username, password } = await credentials();
-  await resetSession('iaaa');
   return cardFromIaaaToken(await iaaaSignIn(PORTAL_APP, username, password, serviceName('card')));
 }
 
@@ -218,7 +216,6 @@ async function treeholeLogin(): Promise<TreeholeSession> {
   const saved = await secrets.get('campus.treehole');
   // The short device id is kept across logins (login.rs get_device_uuid: last 12 hex chars).
   const device = saved ? (JSON.parse(saved) as TreeholeSession).device : Crypto.randomUUID().replace(/-/g, '').slice(20);
-  await resetSession('iaaa');
   const token = await iaaaSignIn(treeholeApp(device), username, password, serviceName('treehole'));
   await resetSession('treehole');
   const cb = await campusFetch('treehole', {
@@ -306,7 +303,6 @@ async function bbFetch(req: RequestOptions): Promise<CampusResponse> {
 
 async function bbLogin() {
   const { username, password } = await credentials();
-  await resetSession('iaaa');
   const token = await iaaaSignIn(BB_APP, username, password, serviceName('course'));
   await resetSession('blackboard');
   const sso = await bbFetch({ url: `${BB_BASE}/webapps/bb-sso-BBLEARN/execute/authValidate/campusLogin?_rand=${Math.random()}&token=${encodeURIComponent(token)}` });

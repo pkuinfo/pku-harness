@@ -7,7 +7,7 @@ import { resolveDynamic, type TurnInfo } from '@/core/runtime/types';
 
 import { byStability } from './context/assembly';
 
-/** Model-facing tool names can't contain dots: `campus-card.getBalance` → `campus-card__getBalance`. */
+/** Model-facing tool names can't contain dots: `wallet.cardBalance` → `wallet__cardBalance`. */
 export const toModelName = (id: string) => id.replace('.', '__');
 export const fromModelName = (name: string) => name.replace('__', '.');
 

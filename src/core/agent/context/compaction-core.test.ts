@@ -35,11 +35,11 @@ const user = (text: string): ModelMessage => ({ role: 'user', content: text });
 const assistant = (text: string): ModelMessage => ({ role: 'assistant', content: [{ type: 'text', text }] });
 const call = (id: string, text = ''): ModelMessage => ({
   role: 'assistant',
-  content: [...(text ? [{ type: 'text' as const, text }] : []), { type: 'tool-call', toolCallId: id, toolName: 'campus-card__getBalance', input: {} }],
+  content: [...(text ? [{ type: 'text' as const, text }] : []), { type: 'tool-call', toolCallId: id, toolName: 'wallet__cardBalance', input: {} }],
 });
 const result = (id: string, value: unknown = { balance: 42 }): ModelMessage => ({
   role: 'tool',
-  content: [{ type: 'tool-result', toolCallId: id, toolName: 'campus-card__getBalance', output: typeof value === 'string' ? { type: 'text', value } : { type: 'json', value: value as never } }],
+  content: [{ type: 'tool-result', toolCallId: id, toolName: 'wallet__cardBalance', output: typeof value === 'string' ? { type: 'text', value } : { type: 'json', value: value as never } }],
 });
 
 let ids = 0;

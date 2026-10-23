@@ -20,8 +20,8 @@ describe('session text', () => {
   const messages = [
     msg('user', [{ type: 'text', text: '余额多少' }]),
     msg('assistant', [
-      { type: 'tool', callId: '1', toolId: 'campus-card.getBalance', status: 'done' },
-      { type: 'tool', callId: '2', toolId: 'netfee.get', status: 'error' },
+      { type: 'tool', callId: '1', toolId: 'wallet.cardBalance', status: 'done' },
+      { type: 'tool', callId: '2', toolId: 'wallet.netfeeBalance', status: 'error' },
       { type: 'text', text: '还剩 32 元。' },
     ]),
     msg('event', [{ type: 'notice', tone: 'info', text: '已复制' }]),
@@ -32,8 +32,8 @@ describe('session text', () => {
     expect(lastReplyText([])).toBeNull();
   });
   test('markdown skips events, lists tools', () => {
-    const md = sessionMarkdown('校园卡', messages, (id) => (id === 'campus-card.getBalance' ? '查询校园卡余额' : id));
-    expect(md).toBe('# 校园卡\n\n## 我\n\n余额多少\n\n## 助手\n\n- 调用 查询校园卡余额\n- 调用 netfee.get（失败）\n\n还剩 32 元。\n');
+    const md = sessionMarkdown('校园卡', messages, (id) => (id === 'wallet.cardBalance' ? '查询校园卡余额' : id));
+    expect(md).toBe('# 校园卡\n\n## 我\n\n余额多少\n\n## 助手\n\n- 调用 查询校园卡余额\n- 调用 wallet.netfeeBalance（失败）\n\n还剩 32 元。\n');
     expect(md).not.toContain('已复制');
   });
 });

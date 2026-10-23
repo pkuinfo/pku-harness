@@ -6,7 +6,7 @@ import { pluginName, toolTitle } from '@/core/runtime/localize';
 import { registry } from '@/core/runtime/registry';
 import { getLocale, type Locale } from '@/i18n';
 
-/** `campus-card.getBalance` → "查询校园卡余额" / "Check card balance"; unknown ids as is. */
+/** `wallet.cardBalance` → "查询校园卡余额" / "Check card balance"; unknown ids as is. */
 export function toolLabel(toolId: string, locale: Locale = getLocale()): string {
   const entry = registry.tool(toolId);
   return entry ? toolTitle(registry.get(entry.pluginId), entry.name, entry.def.title, locale) : toolId;

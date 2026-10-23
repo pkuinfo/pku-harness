@@ -60,7 +60,6 @@ function resolveEntry(entry: string) {
 
 async function login() {
   const { username, password } = await credentials();
-  await resetSession('iaaa');
   const token = await iaaaSignIn(CWFW_APP, username, password, serviceName('cwfw'));
   await resetSession('cwfw');
 

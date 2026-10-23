@@ -138,7 +138,7 @@ export const catalog = defineCatalog(schema, {
     },
     callTool: {
       params: z.object({ tool: z.string(), input: z.record(z.string(), z.unknown()).nullable() }),
-      description: 'Run a plugin tool directly (tool id like "campus-card.getBalance").',
+      description: 'Run a plugin tool directly (tool id like "wallet.cardBalance").',
     },
   },
 });

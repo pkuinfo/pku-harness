@@ -44,7 +44,7 @@ Core runtime  src/core
               ├─ store/      SQLite (data) + SecureStore (secrets)
               └─ campus/     campus session manager (IAAA login, per-service sessions)
                     │
-Plugins       src/plugins/<id>   built-in: campus-card, netfee, timetable, courses, …
+Plugins       src/plugins/<id>   built-in: wallet, timetable, courses, …
                     │
 Native        modules/campus-http  Expo module: HTTP client with redirect control,
                                    per-session cookie jars, HTTP/1.1, extra trust anchors
@@ -92,19 +92,26 @@ A plugin is a TypeScript object:
 
 ```ts
 definePlugin({
-  id: 'campus-card',
-  name: '校园卡',
-  version: '0.1.0',
+  id: 'wallet',
+  name: '校园钱包',
+  version: '1.0.0',
   permissions: ['campus:portal2017', 'network:bdcard.pku.edu.cn'],
-  tools: { getBalance, listTransactions, getPaymentCode, … },  // typed with zod
-  dataSources: { balance: { tool: 'getBalance', ttl: '5m' } },   // for widgets & checks
+  tools: { cardBalance, cardTransactions, netfeeBalance, … },  // typed with zod
+  dataSources: { cardBalance: { tool: 'cardBalance', ttl: '5m' } }, // for widgets & checks
+  legacy: { pluginIds: ['campus-card'], tools: { 'campus-card.getBalance': 'cardBalance' } },
   widgets: { … },          // optional preset widget specs
   components: { … },       // optional extra generative-UI components
   setup(ctx) { … },        // optional: subscribe to events, register jobs
 })
 ```
 
-- **Tools** are the single API surface. Each has an id (`campus-card.getBalance`),
+- **Legacy ids.** A plugin that replaces others (wallet merged campus-card, netfee and
+  utilities) lists their ids in `legacy`. The registry resolves old plugin ids (settings,
+  `/p/<old>/…` screens, widgets) and old tool ids (`registry.tool('campus-card.getBalance')`
+  returns the `wallet.cardBalance` entry); boot rewrites stored widgets and scheduled checks
+  once (`src/core/runtime/legacy.ts`), and plugin settings carry over once (strictest mode
+  per effect).
+- **Tools** are the single API surface. Each has an id (`wallet.cardBalance`),
   description, zod input/output schema, an `effect` (`read` | `write` | `money` | `public`)
   and an `execute(input, ctx)` function.
 - **Built-in plugins** ship inside the app bundle. Store rules forbid downloading

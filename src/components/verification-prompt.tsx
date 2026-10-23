@@ -4,6 +4,7 @@ import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { awaitSmsCode, cancelSmsWait, smsAutofillAvailable } from '@/core/campus/sms';
 import { installVerificationPrompt, useVerificationRequest, verification, type VerificationRequest } from '@/core/campus/verify';
 import { useT } from '@/i18n';
 import { shadows, spacing, springs, useTheme } from '@/theme';
@@ -34,6 +35,24 @@ function Card({ req }: { req: VerificationRequest }) {
   const [sentTo, setSentTo] = useState(req.sentTo);
   const [wait, setWait] = useState(req.resend ? 60 : 0);
   const [error, setError] = useState<string | null>(null);
+  // SMS codes: Android asks the user to allow reading the one incoming message, then the code
+  // fills in and is submitted — the app takes over the code with that single tap.
+  const [autofilled, setAutofilled] = useState(false);
+  useEffect(() => {
+    if (req.mode !== 'sms' || !smsAutofillAvailable) return;
+    let live = true;
+    void awaitSmsCode().then((found) => {
+      if (!live || !found) return;
+      setCode(found);
+      setAutofilled(true);
+      haptics.success();
+      verification.answer(req.id, found);
+    });
+    return () => {
+      live = false;
+      cancelSmsWait();
+    };
+  }, [req.id, req.mode]);
   // Ride the keyboard so the code field stays visible.
   const keyboard = useReanimatedKeyboardAnimation();
   const lift = useAnimatedStyle(() => ({ transform: [{ translateY: Math.min(0, keyboard.height.get()) }] }));
@@ -82,6 +101,14 @@ function Card({ req }: { req: VerificationRequest }) {
           {req.mode === 'otp' ? t('chat.verification.otpHint') : sentTo ? t('chat.verification.sentTo', { to: sentTo }) : t('chat.verification.sentToPhone')}
         </Text>
         <Field value={code} onChangeText={setCode} keyboardType="number-pad" placeholder={t(req.mode === 'otp' ? 'chat.verification.otpPlaceholder' : 'chat.verification.codePlaceholder')} autoFocus textContentType="oneTimeCode" autoComplete="sms-otp" error={error ?? undefined} />
+        {req.mode === 'sms' && smsAutofillAvailable ? (
+          <View className="flex-row items-center gap-1.5">
+            <Icon name={autofilled ? 'check' : 'sparkles'} size={13} color={autofilled ? c.up : c.textMuted} />
+            <Text variant="caption" tone={autofilled ? 'up' : 'muted'} className="flex-1">
+              {autofilled ? t('chat.verification.autofilled') : t('chat.verification.autofillHint')}
+            </Text>
+          </View>
+        ) : null}
         {req.resend ? (
           <Button title={wait > 0 ? t('chat.verification.resendIn', { count: wait }) : t('chat.verification.resend')} size="sm" variant="ghost" disabled={wait > 0} onPress={() => void resend()} className="self-start" />
         ) : null}

@@ -2,6 +2,7 @@ import { useSyncExternalStore } from 'react';
 
 import { kv } from '@/core/store/kv';
 
+import { migrateLegacySettings } from './legacy';
 import { registry } from './registry';
 import type { ToolEffect } from './types';
 
@@ -24,14 +25,20 @@ let cache: Record<string, PluginSettings> = {};
 const listeners = new Set<() => void>();
 
 export const pluginSettings = {
+  /** Read stored settings; call after the built-in plugins are registered (legacy migration). */
   async load() {
-    cache = (await store.get<Record<string, PluginSettings>>('all')) ?? {};
+    const stored = (await store.get<Record<string, PluginSettings>>('all')) ?? {};
+    // Merged plugins (PluginDef.legacy): carry the old plugins' choices over once.
+    cache = migrateLegacySettings(stored, registry.aliases(), DEFAULT_SETTINGS);
     listeners.forEach((l) => l());
+    if (cache !== stored) await store.set('all', cache);
   },
   get(pluginId: string): PluginSettings {
-    return resolve(pluginId, cache[pluginId]);
+    const id = registry.canonicalId(pluginId);
+    return resolve(id, cache[id]);
   },
   async update(pluginId: string, patch: Partial<PluginSettings>) {
+    pluginId = registry.canonicalId(pluginId);
     const current = this.get(pluginId);
     cache = { ...cache, [pluginId]: { ...current, ...patch, modes: { ...current.modes, ...patch.modes } } };
     listeners.forEach((l) => l());
@@ -54,5 +61,6 @@ function resolve(pluginId: string, stored: PluginSettings | undefined): PluginSe
 
 export function usePluginSettings(pluginId: string): PluginSettings {
   const all = useSyncExternalStore(pluginSettings.subscribe, pluginSettings.snapshot);
-  return resolve(pluginId, all[pluginId]);
+  const id = registry.canonicalId(pluginId);
+  return resolve(id, all[id]);
 }

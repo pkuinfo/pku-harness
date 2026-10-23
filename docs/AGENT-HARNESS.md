@@ -110,7 +110,7 @@ sent as plain text. Commands are not added to the model history; local ones leav
 | `/plugins` | 插件 | Open Settings → 插件. |
 | `/help` | 帮助 | Notice listing commands. |
 
-Plugin examples: campus-card `/balance` (余额, prompt "校园卡还剩多少钱？"), timetable `/today`
+Plugin examples: wallet `/balance` (余额, prompt "校园卡还剩多少钱？"), timetable `/today`
 (今天 课表, prompt "今天有什么课？"), treehole `/treehole <关键词>` (树洞, prompt
 "在树洞搜索「{{input}}」并总结").
 

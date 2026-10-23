@@ -100,7 +100,7 @@ describe('live store', () => {
 
   test('invalidate marks matching entries stale and refetches active ones', async () => {
     const t = setup();
-    const other = { tool: 'netfee.status', ttlMinutes: 60 };
+    const other = { tool: 'wallet.netfeeBalance', ttlMinutes: 60 };
     await t.store.fetch({ ...q, ttlMinutes: 60 });
     await t.store.fetch(other);
     const release = t.store.activate([{ ...q, ttlMinutes: 60 }]);

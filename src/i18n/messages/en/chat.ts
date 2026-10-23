@@ -293,6 +293,8 @@ export const chat: Messages['chat'] = {
     resendIn: 'Resend in {count}s',
     resendIn_one: 'Resend in 1s',
     resend: 'Resend code',
+    autofillHint: 'When the SMS arrives, tap Allow and the code fills in by itself.',
+    autofilled: 'Code filled in from the SMS',
     verify: 'Verify',
   },
 };

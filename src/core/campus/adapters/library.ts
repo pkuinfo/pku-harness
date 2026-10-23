@@ -97,7 +97,6 @@ function deadLibSession(body: string) {
 
 async function libLogin(): Promise<string> {
   const { username, password } = await credentials();
-  await resetSession('iaaa');
   await resetSession(LIB);
   const entry = await campusFetch(LIB, { url: AUTHORIZE, followRedirects: false, headers: LIB_HEADERS });
   const app = iaaaAppFrom(entry.location, serviceName('library'));
@@ -235,7 +234,6 @@ async function fetchSpaceToken() {
 
 async function spaceLogin() {
   const { username, password } = await credentials();
-  await resetSession('iaaa');
   await resetSession(SPACE);
   spaceToken = null;
   const addr = await campusFetch(SPACE, {
