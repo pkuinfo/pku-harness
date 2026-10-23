@@ -22,9 +22,12 @@ const looksLikeDocument = (s: string) => /github\.com\/|raw\.githubusercontent\.
 /** What a plugin document can reach and do, shown before installing (docs/PLUGIN-LANGUAGE.md §9). */
 export function DocPermissions({ preview }: { preview: DocPreview }) {
   const t = useT();
-  const en = useLocale() === 'en' ? preview.doc.manifest.i18n?.en : undefined;
+  const useEn = useLocale() === 'en';
+  const en = useEn ? preview.doc.manifest.i18n?.en : undefined;
   const m = preview.doc.manifest;
   const toolTitle = (name: string, title: string) => en?.tools?.[name]?.title ?? title;
+  // A short line written for people; the tool's `description` is for the model and never shown.
+  const toolSummary = (name: string, summary?: string) => (useEn ? en?.tools?.[name]?.summary : summary);
   const tools = Object.entries(preview.doc.tools);
   const nothing = !m.campus?.length && !m.network?.length && !m.abilities?.length;
   return (
@@ -56,7 +59,7 @@ export function DocPermissions({ preview }: { preview: DocPreview }) {
           <ListRow
             key={name}
             title={toolTitle(name, tool.title)}
-            subtitle={tool.description}
+            subtitle={toolSummary(name, tool.summary)}
             titleLines={1}
             accessory={<Chip label={effectInfo(tool.effect, t).label} tone={effectInfo(tool.effect, t).tone} />}
           />
