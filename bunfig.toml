@@ -1,0 +1,4 @@
+# The plugins submodule holds a Bun server and a Preact web viewer with their own dependencies
+# (hono, preact), installed and tested in the plugins repo, not by the app's `bun install`.
+[test]
+pathIgnorePatterns = ["plugins/packages/cloud-server/**", "plugins/plugins/*/web/**"]
