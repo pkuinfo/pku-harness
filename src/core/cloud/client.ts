@@ -74,6 +74,10 @@ const WIRE_TO_SDK: Record<WireErrorCode, CloudErrorCode> = {
   pow_invalid: 'protocol',
   unsupported: 'not_configured',
   server: 'server',
+  // A functions call made without the document claim (client too old for server functions).
+  doc_required: 'protocol',
+  // A plugin's server function ran and failed; its message says why.
+  failed: 'server',
 };
 
 function statusCode(status: number): CloudErrorCode {
