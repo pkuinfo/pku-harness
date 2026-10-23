@@ -45,3 +45,5 @@ modules/*/android/build/
 modules/*/android/.gradle/
 modules/*/ios/build/
 /.ota/
+# Public OTA code-signing certificate (embedded in the app). Private keys never go in the repo.
+!certs/ota/certificate.pem
