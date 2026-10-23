@@ -14,6 +14,7 @@ import { formatClock } from '@/utils/date';
 import {
   getExactAlarmPermission,
   getNotificationPermission,
+  dismissPresented,
   listScheduledNotifications,
   notifyAt,
   requestExactAlarmPermission,
@@ -48,6 +49,22 @@ export function NotificationSettings() {
   const refresh = useCallback(() => {
     readStatus().then(setStatus).catch(() => {});
   }, []);
+  // While a test is on its way: a countdown, no second press (each press is one more
+  // notification), and the count re-read once it has fired so it doesn't look like they pile up.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (testAt == null) return;
+    const id = setInterval(() => {
+      const n = Date.now();
+      setNow(n);
+      if (n > testAt + 1500) {
+        setTestAt(null);
+        refresh();
+      }
+    }, 500);
+    return () => clearInterval(id);
+  }, [testAt, refresh]);
+  const pendingSeconds = testAt != null ? Math.max(0, Math.ceil((testAt - now) / 1000)) : null;
   useFocusEffect(refresh);
   useEffect(() => {
     // Exact-alarm and notification settings are changed in system screens; re-read on return.
@@ -66,9 +83,12 @@ export function NotificationSettings() {
       const p = await requestNotificationPermission();
       if (p !== 'granted') return refresh();
     }
+    // One test at a time, also in the shade: earlier test reminders are cleared first.
+    await dismissPresented('test').catch(() => {});
     const at = new Date(Date.now() + 10_000);
-    await notifyAt(at, { title: t('app.notifications.testTitle'), body: t('app.notifications.testBody', { time: formatClock(at, true) }), url: '/notifications' });
+    await notifyAt(at, { title: t('app.notifications.testTitle'), body: t('app.notifications.testBody', { time: formatClock(at, true) }), url: '/notifications', data: { kind: 'test' } });
     setTestAt(at.getTime());
+    setNow(Date.now());
     haptics.success();
     refresh();
   };
@@ -125,9 +145,14 @@ export function NotificationSettings() {
         </ListGroup>
       </FadeIn>
       <FadeIn index={2}>
-        <ListGroup title={t('app.notifications.status')} footer={testAt ? t('app.notifications.testFooter') : undefined}>
+        <ListGroup title={t('app.notifications.status')} footer={pendingSeconds != null ? t('app.notifications.testFooter') : undefined}>
           <ListRow icon="calendarClock" title={t('app.notifications.scheduled')} value={status ? t('app.notifications.scheduledCount', { count: status.scheduled }) : '—'} />
-          <ListRow icon="send2" title={t('app.notifications.test')} subtitle={t('app.notifications.testSubtitle')} onPress={test} />
+          <ListRow
+            icon="send2"
+            title={t('app.notifications.test')}
+            subtitle={pendingSeconds != null ? t('app.notifications.testPending', { n: pendingSeconds }) : t('app.notifications.testSubtitle')}
+            onPress={pendingSeconds != null ? undefined : test}
+          />
         </ListGroup>
       </FadeIn>
     </Screen>

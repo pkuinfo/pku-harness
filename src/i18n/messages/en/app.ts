@@ -189,6 +189,7 @@ export const app: Messages['app'] = {
     scheduledCount: '{count}',
     test: 'Send a test reminder',
     testSubtitle: 'Arrives in 10 seconds',
+    testPending: 'On its way… {n} s',
     testTitle: 'Test reminder',
     testBody: 'Scheduled for {time}',
     channels: {

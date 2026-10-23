@@ -156,6 +156,12 @@ export async function notifyAt(at: Date, c: NotifyContent, identifier?: string) 
   });
 }
 
+/** Dismiss shown notifications whose data has `kind` (e.g. earlier test reminders still in the shade). */
+export async function dismissPresented(kind: string) {
+  const shown = await Notifications.getPresentedNotificationsAsync();
+  await Promise.all(shown.filter((n) => n.request.content.data?.kind === kind).map((n) => Notifications.dismissNotificationAsync(n.request.identifier)));
+}
+
 export function cancelNotification(identifier: string) {
   return Notifications.cancelScheduledNotificationAsync(identifier);
 }

@@ -191,6 +191,7 @@ export const app = {
     scheduledCount: '{count} 条',
     test: '发送测试提醒',
     testSubtitle: '10 秒后送达',
+    testPending: '正在送达… {n} 秒',
     testTitle: '测试提醒',
     testBody: '计划于 {time} 送达',
     /** Android notification channels (system settings). */
