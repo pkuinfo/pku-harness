@@ -9,6 +9,8 @@ import { Text } from '@/components/text';
 import { modelInfo } from '@/core/agent/attachments/attachments';
 import { useAIConfig } from '@/core/agent/provider';
 import { useCampusAccount } from '@/core/campus/account';
+import { displayHost } from '@/core/cloud/config';
+import { useCloudProvider } from '@/core/cloud/provider';
 import { exportData, resetData } from '@/core/data';
 import { haptics } from '@/utils/haptics';
 import { setLocalePreference, useLocalePreference, useT, type LocalePreference } from '@/i18n';
@@ -38,6 +40,8 @@ export function Settings() {
   ];
   const ai = useAIConfig();
   const campus = useCampusAccount();
+  const cloud = useCloudProvider();
+  const cloudHost = displayHost(cloud.baseURL);
   return (
     <Screen title={t('app.settings.title')} subtitle={t('app.settings.eyebrow')}>
       <FadeIn index={0}>
@@ -54,6 +58,12 @@ export function Settings() {
             title={t('app.settings.ai')}
             subtitle={ai.hasKey ? `${ai.config.name} · ${modelInfo(ai.config.providerId, ai.config.model)?.name ?? ai.config.model}` : t('app.settings.aiNotConnected')}
             onPress={() => router.push('/ai-settings')}
+          />
+          <ListRow
+            icon="cloud"
+            title={t('app.settings.cloud')}
+            subtitle={cloud.config.mode === 'off' || !cloudHost ? t('app.settings.cloudOff') : t(cloud.config.mode === 'official' ? 'app.settings.cloudOfficial' : 'app.settings.cloudCustom', { host: cloudHost })}
+            onPress={() => router.push('/cloud-settings')}
           />
           <ListRow icon="trendUp" title={t('app.settings.usage')} subtitle={t('app.settings.usageSubtitle')} onPress={() => router.push('/usage')} />
         </ListGroup>

@@ -16,6 +16,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 
 import { ApprovalPrompt } from '@/components/approval-prompt';
+import { CloudConsentPrompt } from '@/components/cloud-consent-prompt';
 import { wakeAurora } from '@/components/aurora';
 import { VerificationPrompt } from '@/components/verification-prompt';
 import { boot } from '@/core/boot';
@@ -59,6 +60,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="welcome" options={{ animation: 'fade', gestureEnabled: false }} />
           <Stack.Screen name="ai-settings" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="cloud-settings" options={{ presentation: 'modal' }} />
           <Stack.Screen name="campus" options={{ presentation: 'modal' }} />
           <Stack.Screen name="m/[plugin]/[screen]" options={{ presentation: 'modal' }} />
           <Stack.Screen name="plugins/add" options={{ presentation: 'modal' }} />
@@ -99,6 +101,7 @@ export default function RootLayout() {
           <Stack.Screen name="usage" />
         </Stack>
         <ApprovalPrompt />
+        <CloudConsentPrompt />
         <VerificationPrompt />
       </ThemeProvider>
       </KeyboardProvider>
