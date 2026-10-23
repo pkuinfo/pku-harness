@@ -15,7 +15,7 @@ import { Text } from '@/components/text';
 import { usePlugins } from '@/core/runtime/hooks';
 import { pluginDescription, pluginName } from '@/core/runtime/localize';
 import { loadMarketplace, type MarketState, type RegistryEntry } from '@/core/runtime/marketplace';
-import { HOST_CAPABILITIES, registry } from '@/core/runtime/registry';
+import { hostHas, registry } from '@/core/runtime/registry';
 import type { Capability } from '@/core/runtime/types';
 import { useLocale, useT, type Locale } from '@/i18n';
 import { fonts, radius, typography, useTheme } from '@/theme';
@@ -35,7 +35,7 @@ function EntryCard({ entry, installed }: { entry: RegistryEntry; installed: bool
   const c = useTheme();
   const t = useT();
   const text = entryText(entry, useLocale());
-  const missing = entry.requires.filter((r) => !HOST_CAPABILITIES.has(r as Capability));
+  const missing = entry.requires.filter((r) => !hostHas(r as Capability));
   const action = () => {
     if (installed) {
       const id = entry.kind === 'builtin' ? entry.id : `mcp-${entry.id}`;

@@ -1,7 +1,10 @@
+import { Platform } from 'react-native';
+
 import CampusHttpModule from '../../../modules/campus-http';
 
 import { t, type MessageKey } from '@/i18n';
 
+import { hasDynamicCapability, subscribeCapabilities } from './capabilities';
 import { buildAliases, type LegacyAliases } from './legacy';
 import { modelText, providerText } from './localize';
 import type { Capability, CommandContribution, PluginDef, ProviderDef, ToolDef } from './types';
@@ -19,7 +22,14 @@ export const HOST_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
   // The authenticated campus session needs the native module (modules/campus-http): present on
   // Android builds; iOS gets it once the Swift port lands (docs/IOS.md).
   ...(CampusHttpModule != null ? (['campus-session'] as const) : []),
+  // A foreground service with an ongoing notification (react-native-notify-kit): Android only.
+  ...(Platform.OS === 'android' ? (['ongoing'] as const) : []),
 ]);
+
+/** Fixed device capabilities plus the runtime ones (`'cloud'` while a provider is configured). */
+export function hostHas(c: Capability): boolean {
+  return HOST_CAPABILITIES.has(c) || hasDynamicCapability(c);
+}
 
 const CAPABILITY_LABEL: Record<Capability, MessageKey> = {
   network: 'app.plugins.capability.network',
@@ -49,6 +59,9 @@ function emit() {
   listeners.forEach((l) => l());
 }
 
+// Availability depends on runtime capabilities: re-render plugin lists when they change.
+subscribeCapabilities(emit);
+
 export const registry = {
   register(plugin: PluginDef) {
     plugins.set(plugin.id, plugin);
@@ -73,7 +86,7 @@ export const registry = {
   },
   /** Why a plugin can't run on this device (in the app language), or null. */
   unavailable(id: string): string | null {
-    const missing = (this.get(id)?.requires ?? []).filter((c) => !HOST_CAPABILITIES.has(c));
+    const missing = (this.get(id)?.requires ?? []).filter((c) => !hostHas(c));
     return missing.length ? t('app.plugins.unsupported', { list: missing.map((c) => t(CAPABILITY_LABEL[c])).join(t('app.ui.listSep')) }) : null;
   },
   /**

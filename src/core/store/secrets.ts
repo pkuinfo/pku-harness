@@ -4,7 +4,7 @@ import * as SecureStore from 'expo-secure-store';
  * Secrets live only in the OS keystore (Android Keystore / iOS Keychain), never in SQLite,
  * logs, or network requests to servers we run. See AGENTS.md principle 6.
  */
-export type SecretKey = 'campus.username' | 'campus.password' | 'campus.otpSecret' | 'ai.apiKey' | `ai.${string}.apiKey` | `remote.${string}.token` | `campus.${string}`;
+export type SecretKey = 'campus.username' | 'campus.password' | 'campus.otpSecret' | 'ai.apiKey' | `ai.${string}.apiKey` | `remote.${string}.token` | `campus.${string}` | `cloud.${string}`;
 
 // iOS: readable after the first unlock since boot, still device-only (never in backups or on
 // another phone). Background checks usually run while the phone is locked; WHEN_UNLOCKED would
