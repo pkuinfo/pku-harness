@@ -47,7 +47,7 @@ export function response(status: number, body?: unknown, headers: Record<string,
 
 export function fakeProvider(opts: { routes?: Handler } = {}) {
   const devices = new Map<string, { signPub: string }>();
-  const tokens = new Map<string, { device: string; plugin: string; services: string[] }>();
+  const tokens = new Map<string, { device: string; plugin: string; services: string[]; doc?: { link: string; hash: string } }>();
   const log: { method: string; path: string; body: unknown; headers: Record<string, string> }[] = [];
   let tokenSeq = 0;
   let failNext: 'network' | number | null = null;
@@ -82,7 +82,7 @@ export function fakeProvider(opts: { routes?: Handler } = {}) {
       const v = verifyAuthChallenge(r.data, fromB64url(d.signPub), { aud: BASE });
       if (!v.ok) return response(401, { error: { code: 'unauthorized', message: v.reason } });
       const token = `tok-${++tokenSeq}-${'x'.repeat(16)}`;
-      tokens.set(token, { device: r.data.deviceId, plugin: r.data.plugin, services: r.data.services });
+      tokens.set(token, { device: r.data.deviceId, plugin: r.data.plugin, services: r.data.services, doc: r.data.doc });
       return response(200, { token, expiresAt: Date.now() + 600_000 });
     }
     const auth = init.headers.authorization?.replace(/^Bearer /, '');

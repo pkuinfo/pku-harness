@@ -39,6 +39,8 @@ export interface BindDeps {
   consent: { granted(pluginId: string): boolean; request(pluginId: string): Promise<boolean> };
   store(pluginId: string, manifest: CloudManifest): PluginCloud['store'];
   channels(): ChannelsBackend | undefined;
+  /** Run a server function of this plugin (docs/CLOUD-FUNCTIONS.md); absent until the runtime has a client. */
+  functions?(pluginId: string, name: string, input: unknown, signal?: AbortSignal): Promise<unknown>;
   /** Localised error text. */
   message(key: CloudMessage, vars: { plugin: string; service?: string }): string;
 }
@@ -137,11 +139,12 @@ export function createPluginCloud(pluginId: string, deps: BindDeps, opts: { inte
       },
     },
     functions: {
-      invoke: async () => {
+      invoke: async (name, input, o) => {
         const manifest = await guard('functions');
         // Server functions read their input in plaintext: an e2e plugin promised that never happens.
         if (manifest.e2e) return fail('plaintext', 'functions');
-        return fail('later', 'functions');
+        if (!deps.functions) return fail('notConfigured', 'functions');
+        return deps.functions(pluginId, name, input, o?.signal);
       },
     },
     requestConsent: async () => {

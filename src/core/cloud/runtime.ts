@@ -1,9 +1,10 @@
-import type { CloudServiceName } from '@pku-harness/cloud-protocol';
-import { isCloudError, type CloudManifest, type PluginCloud } from '@pku-harness/sdk';
+import { functionResponse, paths, type CloudServiceName } from '@pku-harness/cloud-protocol';
+import { CloudError, isCloudError, type CloudManifest, type PluginCloud } from '@pku-harness/sdk';
 import { requireOptionalNativeModule } from 'expo';
 import { useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 
+import { docPlugins } from '@/core/runtime/doc-plugins';
 import { pluginName } from '@/core/runtime/localize';
 import { registry } from '@/core/runtime/registry';
 import { kv } from '@/core/store/kv';
@@ -183,6 +184,17 @@ export function initCloud(): Promise<void> {
         return s;
       },
       channels: () => channels ?? undefined,
+      functions: async (pluginId, name, input, signal) => {
+        const plugin = registry.get(pluginId);
+        const label = plugin ? pluginName(plugin) : pluginId;
+        if (!client) throw new CloudError('not_configured', t('app.cloud.errors.notConfigured', { plugin: label, service: 'functions' }));
+        // The server runs exactly the document version the user consented to (CLOUD-FUNCTIONS §7).
+        const d = docPlugins.get(pluginId);
+        if (!d?.link) throw new CloudError('protocol', t('app.cloud.errors.noDocLink', { plugin: label }));
+        const doc = { link: d.link, hash: d.hash.toLowerCase() };
+        const res = await client.request({ method: 'POST', path: paths.fn(pluginId, name), body: { input: input ?? {} }, auth: { plugin: pluginId, services: ['functions'], doc }, schema: functionResponse, signal });
+        return res.result;
+      },
       message: (key, vars) => {
         const p = registry.get(vars.plugin);
         return t(`app.cloud.errors.${key}`, { plugin: p ? pluginName(p) : vars.plugin, service: vars.service ?? '' });

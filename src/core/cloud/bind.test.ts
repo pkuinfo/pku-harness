@@ -120,6 +120,16 @@ describe('createPluginCloud: enforcement', () => {
     expect((err as CloudError).message).toBe('plaintext:p1:functions');
   });
 
+  test('functions go to the runtime hook; without it the cloud reads as not configured', async () => {
+    const fn = deps({ manifest: manifest({ uses: ['functions'], e2e: false }), provider: { meta: { ...META, services: ['functions'] } } });
+    const calls: unknown[] = [];
+    fn.d.functions = async (pluginId, name, input) => (calls.push({ pluginId, name, input }), { ok: true });
+    expect(await createPluginCloud('p1', fn.d, { interactive: false }).functions.invoke('report', { level: 'high' })).toEqual({ ok: true });
+    expect(calls).toEqual([{ pluginId: 'p1', name: 'report', input: { level: 'high' } }]);
+    delete fn.d.functions;
+    expect(await code(createPluginCloud('p1', fn.d, { interactive: false }).functions.invoke('report', {}))).toBe('not_configured');
+  });
+
   test('external backends are refused in v1', async () => {
     const t = deps({ manifest: manifest({ backend: { kind: 'external', url: 'https://x.org' } }) });
     const cloud = createPluginCloud('p1', t.d, { interactive: false });

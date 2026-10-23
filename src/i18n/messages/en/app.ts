@@ -124,6 +124,7 @@ export const app: Messages['app'] = {
       plaintext: '“{plugin}” promises end-to-end encryption, so it can’t send plaintext to the server.',
       later: '{service} arrives in a later version.',
       external: 'External backends aren’t supported yet.',
+      noDocLink: '“{plugin}” runs server functions only when installed from a link (the server fetches that exact version).',
     },
     section: {
       title: 'Cloud',

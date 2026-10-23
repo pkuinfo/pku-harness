@@ -6,6 +6,7 @@ import {
   signAuthChallenge,
   solvePow,
   type CloudServiceName,
+  type DocClaim,
   type MetaResponse,
   type RandomBytes,
   type WireErrorCode,
@@ -48,7 +49,8 @@ export interface ClientDeps {
   powChunk?: number;
 }
 
-export type Auth = { plugin: string; services: CloudServiceName[] };
+/** `doc`: the consented plugin document version (server functions, docs/CLOUD-FUNCTIONS.md §7). */
+export type Auth = { plugin: string; services: CloudServiceName[]; doc?: DocClaim };
 
 export interface RequestOptions<T> {
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
@@ -180,7 +182,7 @@ export class CloudClient {
     let reminted = false;
     for (let attempt = 0; ; attempt++) {
       const headers = { ...opts.headers };
-      if (opts.auth) headers.authorization = `Bearer ${await this.token(opts.auth.plugin, opts.auth.services)}`;
+      if (opts.auth) headers.authorization = `Bearer ${await this.token(opts.auth.plugin, opts.auth.services, opts.auth.doc)}`;
       let res: FetchResponse & { bodyText: string };
       try {
         res = await this.send(opts.method, opts.path, opts.body, headers, opts.signal);
@@ -206,26 +208,26 @@ export class CloudClient {
   }
 
   /** A bearer token for (plugin, services): cached, deduplicated while minting. */
-  async token(plugin: string, services: CloudServiceName[]): Promise<string> {
-    const key = tokenKey({ plugin, services });
+  async token(plugin: string, services: CloudServiceName[], doc?: DocClaim): Promise<string> {
+    const key = tokenKey({ plugin, services, doc });
     const cached = this.tokens.get(key);
     if (cached && cached.expiresAt - TOKEN_MARGIN_MS > this.now()) return cached.token;
     let p = this.minting.get(key);
     if (!p) {
-      p = this.mint(plugin, services).finally(() => this.minting.delete(key));
+      p = this.mint(plugin, services, doc).finally(() => this.minting.delete(key));
       this.minting.set(key, p);
     }
     return p;
   }
 
-  private async mint(plugin: string, services: CloudServiceName[], retried = false): Promise<string> {
+  private async mint(plugin: string, services: CloudServiceName[], doc?: DocClaim, retried = false): Promise<string> {
     const deviceId = await this.ensureDevice();
     const id = await this.deps.identity();
-    const body = signAuthChallenge({ aud: this.deps.baseURL, deviceId, plugin, services, now: this.now(), rand: this.deps.rand }, id.signSecretKey);
+    const body = signAuthChallenge({ aud: this.deps.baseURL, deviceId, plugin, services, now: this.now(), rand: this.deps.rand, ...(doc ? { doc } : {}) }, id.signSecretKey);
     const res = await this.send('POST', paths.authToken(), body, {});
     if (res.status >= 200 && res.status < 300) {
       const t = this.parse(res, authTokenResponse);
-      this.tokens.set(tokenKey({ plugin, services }), t);
+      this.tokens.set(tokenKey({ plugin, services, doc }), t);
       return t.token;
     }
     const err = toCloudError(res.status, res.bodyText, res.headers);
@@ -233,7 +235,7 @@ export class CloudClient {
     const code = wireCode.get(err);
     if (!retried && (code === 'unauthorized' || code === 'not_found' || res.status === 404)) {
       await this.deps.deviceId.set(undefined);
-      return this.mint(plugin, services, true);
+      return this.mint(plugin, services, doc, true);
     }
     throw err;
   }
@@ -287,5 +289,5 @@ export class CloudClient {
 export const HOST_PLUGIN_ID = 'harness';
 
 function tokenKey(a: Auth) {
-  return `${a.plugin}|${[...new Set(a.services)].sort().join(',')}`;
+  return `${a.plugin}|${[...new Set(a.services)].sort().join(',')}${a.doc ? `|${a.doc.hash}` : ''}`;
 }

@@ -82,6 +82,21 @@ describe('CloudClient', () => {
     expect(seen[0]).not.toBe(seen[1]);
   });
 
+  test('server-function tokens carry the signed doc claim, one token per document version', async () => {
+    const seen: string[] = [];
+    const p = fakeProvider({ routes: routes(seen) });
+    const c = new CloudClient(p.deps);
+    const v1 = { link: 'https://github.com/o/r/tree/main/p', hash: 'a'.repeat(64) };
+    const v2 = { ...v1, hash: 'b'.repeat(64) };
+    await c.request({ method: 'GET', path: '/v1/store/a', auth: { plugin: 'doc-plugin', services: ['functions'], doc: v1 } });
+    await c.request({ method: 'GET', path: '/v1/store/a', auth: { plugin: 'doc-plugin', services: ['functions'], doc: v1 } });
+    await c.request({ method: 'GET', path: '/v1/store/a', auth: { plugin: 'doc-plugin', services: ['functions'], doc: v2 } });
+    expect(seen[0]).toBe(seen[1]);
+    expect(seen[2]).not.toBe(seen[0]);
+    expect(p.tokenInfo(seen[0]!)).toMatchObject({ doc: v1 });
+    expect(p.tokenInfo(seen[2]!)).toMatchObject({ doc: v2 });
+  });
+
   test('re-mints once on 401 and re-registers when the provider forgot the device', async () => {
     let calls = 0;
     const p = fakeProvider({

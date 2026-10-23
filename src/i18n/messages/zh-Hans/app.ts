@@ -124,6 +124,7 @@ export const app = {
       plaintext: '「{plugin}」声明了端到端加密，不能把明文发给服务器。',
       later: '{service} 会在后续版本中提供。',
       external: '暂不支持外部后端。',
+      noDocLink: '「{plugin}」需要通过链接安装才能使用服务器函数（服务器会按链接取同一版本）。',
     },
     section: {
       title: '云端',
