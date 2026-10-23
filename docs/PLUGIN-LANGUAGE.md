@@ -157,6 +157,7 @@ by the website's marketplace scanner.
 | `campus` | `CampusService[]` | no | Campus services the plugin may call with the user's session (`card`, `its`, `treehole`, `blackboard`, `elective`, `cwfw`, `cwpay`, `bdkj`, `library`, `library-space`, …). |
 | `network` | host[] | no | Public hosts it may call (exact host or `*.example.com`). HTTPS only. |
 | `abilities` | ability[] | no | Host abilities it uses (§7), e.g. `todos`, `timetable`, `browser`, `otp`, `sms`. |
+| `shared` | path | no | A YAML file `{ constants, functions }` every tool sees (a tool's own definitions win). Use it for data and helpers several tools need. |
 | `tools` | map name → path or inline tool | no | §5. Names `^[a-zA-Z][a-zA-Z0-9_]{0,39}$`. |
 | `dataSources` | map name → `{ tool, args?, ttl }` | no | Read tools widgets and scheduled checks may poll; `ttl` like `5m`, `1h`. |
 | `widgets` / `screens` | map name → path | no | §8. |
@@ -166,6 +167,7 @@ by the website's marketplace scanner.
 | `cloud` | CloudManifest | no | As in CLOUD.md §2.2. |
 | `i18n` | `{ en: {...} }` | no | Same overlay shape as `PluginTranslation`. |
 | `remote` | `{ mcp: URL, auth?: none|bearer }` | no | A remote MCP plugin described by a `PLUGIN.md` (no tools; the server's tools are used). Replaces `pku-harness.plugin.json`. |
+| `server` | object | no | Server functions, collections and schedules run by the cloud server ([CLOUD-FUNCTIONS.md](CLOUD-FUNCTIONS.md)). Implies `cloud.uses: [functions]`; `cloud.disclosure` (what leaves the device) is then required. |
 
 The Markdown body becomes the plugin's `instructions` (sent to the model in the plugin's prompt
 section). Keep it short: when to use which tool, what the numbers mean.
@@ -190,7 +192,7 @@ A tool file (or inline object):
 ### 5.1 Input fields
 
 `{ type: string|number|integer|boolean|array|object, enum?, default?, optional?, description?,
-min?, max?, pattern?, items? }`. Compiled to zod; invalid input is rejected before any step runs
+min?, max?, pattern?, trim?, items? }` (`trim`: strings are trimmed before validation). Compiled to zod; invalid input is rejected before any step runs
 (`invalid_input`, as today).
 
 ### 5.2 Results
@@ -284,8 +286,14 @@ Standard library (functions, and the same as methods where it reads better):
 | JSON | `json(text)`, `path(value, 'a.b[0].c')` |
 | Ranges | `compactRanges([1,2,5,6,7])` → `"1-2,5-7"` |
 
-Regexes are written as strings `'^(\\d+)~(\\d+)周'` and compiled once; patterns are length- and
-time-bounded.
+Regexes are written as strings and compiled once; patterns are length-bounded. Start a pattern
+with inline flags for case-insensitive and similar matching: `'(?i)^yanyuan'` (i, m, s, u). In
+expression strings an unknown escape keeps its backslash (`'\d+'` is the regex `\d+`), unlike JS,
+so patterns survive YAML; still prefer single-quoted YAML or `|` blocks for them. Expressions may
+contain `// …` and `/* … */` comments.
+
+`tableRows(node, { cells: true })` returns grid rows of `{ text, row, col, rowspan, colspan, id }`
+(`id` is shared by every slot one merged cell covers) when a parser must tell merged cells apart.
 
 ### 6.3 Extraction shorthand
 
@@ -353,7 +361,10 @@ the same interpreter with its own set (collections, push, channels; CLOUD-FUNCTI
 
 - **Widgets** are the dashboard's existing AI-built format: `{ title, sizes?, spec, bindings }`
   where `spec` is a generative-UI spec (`src/genui` catalog) and `bindings` map JSON pointers to
-  `{ tool, args?, path?, ttlMinutes? }` read tools of this plugin. The dashboard's widget gallery
+  `{ tool, args?, path?, ttlMinutes? }` read tools of this plugin, or `{ fn, … }` read server
+  functions of this plugin (shared data across users; the compiler backs each with a read tool
+  `fn_<name>`, and a missing cloud consent shows as an error, never a sheet). Lists use the
+  catalog's element-level `repeat: { statePath, key }` with `{ "$item": "field" }`. The dashboard's widget gallery
   lists them next to built-in widgets; `dashboard.addPluginWidget` places them.
 - **Screens** are full-page generative-UI specs with bindings, mounted at `/p/<id>/<screen>`
   (`presentation: modal` → `/m/…`). Actions: `callTool` (same permissions as the agent),
