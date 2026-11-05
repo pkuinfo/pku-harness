@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, ScrollView, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -10,6 +10,9 @@ import { spacing } from '@/theme';
 import { Aurora } from './aurora';
 import { Button, IconButton } from './button';
 import { Text } from './text';
+
+/** How long a freshly opened sheet ignores touches on its content (the opening animation). */
+const ARM_MS = 300;
 
 /** Close a sheet; when opened from a deep link there is nothing to go back to, so replace. */
 export function dismiss(fallback: '/schedule' | '/' | '/settings' = '/schedule') {
@@ -43,6 +46,13 @@ export function SheetScreen({
 }) {
   const t = useT();
   const insets = useSafeAreaInsets();
+  // The sheet slides in under the finger that opened it (often a long-press): ignore touches on
+  // its controls for a moment so that finger can't land on a stepper or switch by accident.
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    const id = setTimeout(() => setArmed(true), ARM_MS);
+    return () => clearTimeout(id);
+  }, []);
   return (
     <KeyboardAvoidingView className="flex-1 bg-bg" behavior="padding">
       <Aurora />
@@ -52,7 +62,7 @@ export function SheetScreen({
         </Text>
         <IconButton icon="close" label={t('core.common.close')} variant="ghost" onPress={() => dismiss()} />
       </View>
-      <ScrollView contentContainerClassName="w-full self-center gap-4 p-4 pb-8" contentContainerStyle={{ maxWidth: MAX_CONTENT_WIDTH }} keyboardShouldPersistTaps="handled">
+      <ScrollView pointerEvents={armed ? 'auto' : 'none'} contentContainerClassName="w-full self-center gap-4 p-4 pb-8" contentContainerStyle={{ maxWidth: MAX_CONTENT_WIDTH }} keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
       <View className="flex-row gap-2 border-t-[0.5px] border-edge px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
