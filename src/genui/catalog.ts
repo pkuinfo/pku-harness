@@ -105,6 +105,20 @@ export const catalog = defineCatalog(schema, {
       slots: [],
       description: 'Small trend line for a series of numbers (e.g. daily spending). Bind values with { "$state": "/series" }.',
     },
+    Chart: {
+      props: z.object({
+        kind: z.enum(['donut', 'column', 'line']),
+        data: z.array(z.object({ label: z.string(), value: z.number() })).max(60),
+        valuePrefix: z.string().nullable().describe('e.g. "¥"'),
+        decimals: z.number().nullable(),
+        tone: z.enum(['accent', 'up', 'down', 'info', 'warn']).nullable().describe('column / line colour'),
+        centerLabel: z.string().nullable().describe('donut centre, e.g. "¥1,234"'),
+        centerCaption: z.string().nullable(),
+      }),
+      slots: [],
+      description:
+        'A chart the user can tap to read values. donut = share of a whole (spending by category, ≤ 8 slices, with a legend), column = amounts per day or month, line = a trend. data: [{ label, value }] in display order.',
+    },
     Ring: {
       props: z.object({
         value: z.number().describe('0 to 1'),

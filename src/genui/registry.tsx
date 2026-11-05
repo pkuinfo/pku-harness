@@ -12,6 +12,8 @@ import { Sparkline } from '@/components/sparkline';
 import { Stat } from '@/components/stat';
 import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
+import { HostColumnChart, HostDonutChart, HostLegend, HostLineChart } from '@/core/host-charts';
+import { formatChartValue } from '@/core/host-charts-format';
 import { radius, spacing, useTheme } from '@/theme';
 
 import { catalog } from './catalog';
@@ -278,6 +280,7 @@ const components: Components<typeof catalog> = {
   Toggle: ({ props, bindings }) => <ToggleRow label={props.label} value={props.value} binding={bindings?.value} />,
   Choice: ({ props, bindings }) => <ChoiceBound {...props} binding={bindings?.value} />,
   Sparkline: ({ props }) => <Sparkline values={Array.isArray(props.values) ? props.values : []} tone={props.tone ?? 'accent'} />,
+  Chart: ({ props }) => <GenChart {...props} />,
   Ring: ({ props }) => (
     <ProgressRing
       value={typeof props.value === 'number' ? props.value : 0}
@@ -292,6 +295,35 @@ const components: Components<typeof catalog> = {
     <Button title={props.label} variant={props.variant ?? 'primary'} loading={loading} onPress={() => emit('press')} />
   ),
 };
+
+type ChartSpec = {
+  kind: 'donut' | 'column' | 'line';
+  data: { label: string; value: number }[];
+  valuePrefix: string | null;
+  decimals: number | null;
+  tone: 'accent' | 'up' | 'down' | 'info' | 'warn' | null;
+  centerLabel: string | null;
+  centerCaption: string | null;
+};
+
+/** The catalog's Chart: the plugin chart components, with a legend under a donut. */
+function GenChart({ kind, data: raw, valuePrefix, decimals, tone, centerLabel, centerCaption }: ChartSpec) {
+  const data = (Array.isArray(raw) ? raw : []).filter((d) => d && typeof d.value === 'number');
+  const format = { valuePrefix: valuePrefix ?? undefined, decimals: decimals ?? undefined };
+  if (kind === 'donut') {
+    const total = data.reduce((sum, d) => sum + Math.max(0, d.value), 0);
+    return (
+      <View style={{ alignItems: 'center', gap: spacing.md }}>
+        <HostDonutChart data={data} centerLabel={centerLabel ?? formatChartValue(total, format)} centerCaption={centerCaption ?? undefined} {...format} />
+        <View style={{ alignSelf: 'stretch' }}>
+          <HostLegend columns items={data.map((d) => ({ label: d.label, value: total > 0 ? `${formatChartValue(d.value, format)} · ${Math.round((Math.max(0, d.value) / total) * 100)}%` : formatChartValue(d.value, format) }))} />
+        </View>
+      </View>
+    );
+  }
+  const Chart = kind === 'line' ? HostLineChart : HostColumnChart;
+  return <Chart data={data} tone={tone ?? 'accent'} {...format} />;
+}
 
 function DividerLine() {
   const c = useTheme();
