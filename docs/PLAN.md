@@ -61,6 +61,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 ## M7 Schedule tab
 - [x] T7.1 Timetable: courses (weekday, time, place, weeks incl. 单/双周), day list with live status/countdown, week grid with now line, semester form, class reminders (N min before; odd/even weeks → 2-week interval) — model unit-tested (2026-10-18)
 - [x] T7.2 To-dos (quick add, native checkbox, due chips, reminders via scheduler, done pauses reminder) and reminders list/editor (once/repeat, day/week/hour/minute, times, weekdays, count/until, live preview); `todo.*` / `timetable.*` tools (2026-10-18)
+- [x] T7.2b To-dos v2: priority (important flag) and repeating to-dos (an `every` series; completing creates the next instance, undo removes it), `todo.list` views today/upcoming/all, dashboard widget `todo/today` (sm/md, tick off in place), Schedule list grouped overdue/today/later/no date/done; SQLite migration 4 (2026-11-05). Needs a device check
 
 ## M8 Settings & plugins
 - [x] T8.1 Plugins screen: list, enable/disable, per-effect modes (auto/ask/off), scopes, tool list (2026-10-18)

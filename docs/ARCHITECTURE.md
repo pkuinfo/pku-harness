@@ -267,6 +267,12 @@ One engine serves dashboard alerts, schedule reminders and to-dos.
   - The agent and forms use a friendlier input (`schedule-input.ts`): local
     `"YYYY-MM-DD HH:mm"` strings, converted to triggers and summarized back as human text
     plus the next occurrences, so the model can confirm times to the user.
+- **To-dos** (`src/core/todo`, the `todo` plugin's tools and widget, the schedule plugin's UI):
+  a reminder is a job with `meta.todoId`. A to-do may have `priority: 'high'` and a `repeat`
+  series (a day/week `every` trigger whose occurrences are its due times); completing it creates
+  the next instance after the current due time, never in the past, with the same title, notes,
+  priority and a one-shot reminder's lead time (`nextTodoInstance`, SDK, pure). Undoing removes
+  that instance while it is still open.
 - **Timetable**: synced from the campus timetable plugin into SQLite; class reminders are
   ordinary `notify` jobs.
 
