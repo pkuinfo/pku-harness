@@ -38,6 +38,7 @@ import { revealLink } from '@/core/cloud/secret-link';
 import { formatAgo, refreshAll, useBindings, useToolData, useWidgetData } from '@/core/dashboard/live-hooks';
 import { widgetStore } from '@/core/dashboard/store';
 import { usePlugin } from '@/core/runtime/hooks';
+import { HostColumnChart, HostDonutChart, HostLegend, HostLineChart } from '@/core/host-charts';
 import { invokeTool, services } from '@/core/runtime/invoke';
 import { pluginName } from '@/core/runtime/localize';
 import { usePluginSettings } from '@/core/runtime/plugin-settings';
@@ -152,6 +153,10 @@ const components = {
   QRCode,
   Glass,
   GlassEdges,
+  ColumnChart: HostColumnChart,
+  DonutChart: HostDonutChart,
+  LineChart: HostLineChart,
+  Legend: HostLegend,
 } as unknown as HostComponents;
 
 function useHostTheme(): HostTheme {

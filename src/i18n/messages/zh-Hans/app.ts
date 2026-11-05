@@ -29,6 +29,8 @@ export const app = {
     qrCode: '二维码',
     countdown: '倒计时沙漏',
     tapBars: '点按柱子查看数值',
+    tapSegments: '点按扇区查看占比',
+    tapPoints: '点按曲线查看数值',
     image: '[图片]',
     imageAlt: '[图片：{alt}]',
     listSep: '、',

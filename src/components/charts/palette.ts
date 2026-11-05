@@ -1,4 +1,4 @@
-import { courseColors, palette, useTheme } from '@/theme';
+import { courseColors, palette, useTheme, useThemeName } from '@/theme';
 
 /**
  * Chart colours, composed from theme tokens (no new hex). The categorical sets were checked with
@@ -30,4 +30,20 @@ export function withAlpha(color: string, alpha: number): string {
 export function useHeatRamp(): readonly string[] {
   const c = useTheme();
   return [c.surface2, withAlpha(c.accent, 0.28), withAlpha(c.accent, 0.5), withAlpha(c.accent, 0.74), c.accent];
+}
+
+/**
+ * Categorical colours for plugin charts (donut segments, legends): the timetable inks of the
+ * current theme, in order. Index i here equals `HostTheme.courseColor(i).ink`, so a plugin can
+ * colour its own rows to match a chart without knowing any hex.
+ */
+export function useCategorical(): readonly string[] {
+  const name = useThemeName();
+  return courseColors[name].map((c) => c.ink);
+}
+
+/** Series colour for a semantic chart tone. */
+export function useToneColor(tone: 'accent' | 'up' | 'down' | 'info' | 'warn' = 'accent'): string {
+  const c = useTheme();
+  return tone === 'up' ? c.up : tone === 'down' ? c.down : tone === 'info' ? c.info : tone === 'warn' ? c.warn : c.accent;
 }

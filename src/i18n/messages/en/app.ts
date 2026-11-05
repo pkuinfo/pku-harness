@@ -28,6 +28,8 @@ export const app: Messages['app'] = {
     qrCode: 'QR code',
     countdown: 'Countdown',
     tapBars: 'Tap a bar to see its value',
+    tapSegments: 'Tap a segment to see its share',
+    tapPoints: 'Tap the line to see a value',
     image: '[Image]',
     imageAlt: '[Image: {alt}]',
     listSep: ', ',
