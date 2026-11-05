@@ -290,7 +290,7 @@ Standard library (functions, and the same as methods where it reads better):
 | Dates | `now` (ms), `date(text, format?)` (understands `YYYY-MM-DD[ HH:mm]`, `MM月DD日`, `上午/下午`), `formatDate(ms, pattern)`, `addDays`, `daysBetween`, `minutesOf('HH:mm')`, `weekday(ms)`, `startOfDay` — all in Beijing time (UTC+8) |
 | URLs and encoding | `url(base, path)`, `query(url, name)`, `encode(s)`, `decode(s)`, `base64(s)` and `unbase64(s)` (UTF-8 text) |
 | HTML | `html(text)` → document; `select(doc, css)` → nodes; `first(doc, css)`; node `.text`, `.attr(name)`, `.html`, `.data(name)`; `tableRows(node, { header: true, spans: true })` → row objects keyed by header label (rowspan/colspan expanded); `options(select)`; `htmlText(s)` (strip tags, decode entities); `largestText(doc)` |
-| JSON | `json(text)`, `path(value, 'a.b[0].c')` |
+| JSON | `json(text)`, `json(text, fallback)` (the fallback instead of an error when the text isn't JSON), `path(value, 'a.b[0].c')` |
 | Ranges | `compactRanges([1,2,5,6,7])` → `"1-2,5-7"` |
 
 Regexes are written as strings and compiled once; patterns are length-bounded. Start a pattern
