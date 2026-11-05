@@ -269,6 +269,13 @@ read:
 - Arrow functions `(a, b) => expr` (single expression), only as arguments or in `functions`.
 - Method calls on a fixed allowlist (below). No `new`, no assignment, no globals, no
   `constructor` / `__proto__` / `prototype`. Evaluation is bounded (100 000 operations per run).
+- In scope: `input`, `constants`, `functions`, `now` (ms), bound `let`s, `item`/`index` inside
+  `each`, and for plugins that declare `campus:` a read-only `account` = `{ signedIn, username }`
+  (the student ID some campus pages need; never the password or the holder's name).
+- `==` / `!=` are strict, except that `null` and `undefined` are equal (`x == null` tests for "no
+  value"). Strings understand `\n \t \r \' \" \\` and `\uXXXX`.
+- A request field whose template evaluates to `null` is left out, so one step can switch between
+  GET and POST or send a body only sometimes.
 - A name that was never bound is an error (catches typos). Bind optional values first, e.g.
   `- let: failure` / `value: "null"` before a `try` that may set it.
 
@@ -278,7 +285,7 @@ Standard library (functions, and the same as methods where it reads better):
 |---|---|
 | Lists | `map filter find some every flatMap flat slice concat includes indexOf join reverse length`, `sortBy(list, f, desc?)`, `groupBy(list, f)`, `unique(list, f?)`, `sum(list, f?)`, `count(list, f?)`, `min max`, `range(a, b)`, `chunk(list, n)`, `zip` |
 | Objects | `keys values entries fromEntries pick omit merge` |
-| Strings | `trim lower upper split replace(s, regex, with) startsWith endsWith padStart`, `match(s, regex)` → groups or null, `matchAll(s, regex)`, `test(s, regex)`, `squash(s)` (collapse whitespace), `clip(s, n)`, `fmt(template, values)` |
+| Strings | `trim lower upper split replace(s, regex, with) startsWith endsWith padStart`, `match(s, regex)` → groups or null, `matchAll(s, regex)`, `matchAt(s, regex)` → `[{ text, index, groups }]`, `test(s, regex)`, `squash(s)` (collapse whitespace), `clip(s, n)`, `fmt(template, values)` |
 | Numbers | `num(x, fallback?)`, `int(x)`, `round(x, digits?)`, `fixed(x, n)`, `abs floor ceil`, `yuan(fen)` |
 | Dates | `now` (ms), `date(text, format?)` (understands `YYYY-MM-DD[ HH:mm]`, `MM月DD日`, `上午/下午`), `formatDate(ms, pattern)`, `addDays`, `daysBetween`, `minutesOf('HH:mm')`, `weekday(ms)`, `startOfDay` — all in Beijing time (UTC+8) |
 | URLs | `url(base, path)`, `query(url, name)`, `encode(s)` |
