@@ -137,8 +137,17 @@ export const catalog = defineCatalog(schema, {
       description: 'Send the current form state (everything under /form) back to you as the user\'s answer.',
     },
     callTool: {
-      params: z.object({ tool: z.string(), input: z.record(z.string(), z.unknown()).nullable() }),
-      description: 'Run a plugin tool directly (tool id like "wallet.cardBalance").',
+      params: z.object({
+        tool: z.string(),
+        input: z.record(z.string(), z.unknown()).nullable(),
+        resultPath: z.string().nullable().optional(),
+        errorPath: z.string().nullable().optional(),
+      }),
+      description: 'Run a plugin tool directly (tool id like "wallet.cardBalance"). Optional resultPath / errorPath (e.g. "/result") store the outcome in state; bound data refreshes afterwards.',
+    },
+    smsCode: {
+      params: z.object({ statePath: z.string() }),
+      description: 'Fill a field with the code from the next SMS (the user allows it), e.g. { "statePath": "/form/code" }.',
     },
     ask: {
       params: z.object({ text: z.string() }),

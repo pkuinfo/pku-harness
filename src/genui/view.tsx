@@ -7,9 +7,10 @@ import {
   VisibilityProvider,
 } from '@json-render/react-native';
 import { router } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 
 import { sendMessage } from '@/core/agent/run';
+import { refreshAll } from '@/core/dashboard/live-hooks';
 import { invokeTool, services } from '@/core/runtime/invoke';
 
 import { registry } from './registry';
@@ -19,17 +20,49 @@ export type GenUIHandlers = {
   onSubmit?: (form: Record<string, unknown>, label?: string) => void;
 };
 
-/** Renders an agent-produced spec with our catalog, state and action handlers. */
+/** State the user owns: kept when the spec's data refreshes (a half-typed form, results of actions). */
+const USER_STATE = new Set(['form', 'result', 'error']);
+
+/**
+ * Renders a spec with our catalog, state and action handlers. The state store lives as long as the
+ * view: when the spec's state changes (a widget or plugin screen whose bindings refreshed), only
+ * the data keys are updated, so what the user typed survives a refresh.
+ */
 export function GenUIView({ spec, onSubmit }: { spec: Spec } & GenUIHandlers) {
-  const store = useMemo(() => createStateStore((spec as { state?: Record<string, unknown> }).state ?? {}), [spec]);
+  const initial = (spec as { state?: Record<string, unknown> }).state ?? {};
+  const storeRef = useRef<ReturnType<typeof createStateStore> | null>(null);
+  storeRef.current ??= createStateStore(initial);
+  const store = storeRef.current;
+  useEffect(() => {
+    const updates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries((spec as { state?: Record<string, unknown> }).state ?? {})) if (!USER_STATE.has(key)) updates[`/${key}`] = value;
+    store.update(updates);
+  }, [spec, store]);
   const handlers = useMemo(
     () => ({
       submit: async (params: Record<string, unknown>) => {
         const form = (store.get('/form') as Record<string, unknown> | undefined) ?? {};
         onSubmit?.(form, typeof params?.label === 'string' ? params.label : undefined);
       },
+      // Run a tool as the user. `resultPath` / `errorPath` put the outcome into state (e.g. to show
+      // "code sent"); bound data on screen refreshes afterwards, so a toggle shows its new state.
       callTool: async (params: Record<string, unknown>) => {
-        await invokeTool(String(params.tool), params.input ?? {}, { actor: 'user' });
+        const at = (key: string) => (typeof params[key] === 'string' && String(params[key]).startsWith('/') ? String(params[key]) : null);
+        try {
+          const result = await invokeTool(String(params.tool), params.input ?? {}, { actor: 'user' });
+          if (at('resultPath')) store.set(at('resultPath')!, result);
+          if (at('errorPath')) store.set(at('errorPath')!, null);
+        } catch (e) {
+          if (!at('errorPath')) throw e;
+          store.set(at('errorPath')!, e instanceof Error ? e.message : String(e));
+        }
+        await refreshAll();
+      },
+      // One-tap SMS code: the user allows reading the next SMS; its code goes to `statePath`.
+      smsCode: async (params: Record<string, unknown>) => {
+        const path = String(params.statePath ?? '/form/code');
+        const code = await services.sms.awaitCode();
+        if (code && path.startsWith('/')) store.set(path, code);
       },
       ask: async (params: Record<string, unknown>) => {
         const text = String(params.text ?? '').trim();
