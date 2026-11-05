@@ -81,7 +81,8 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
   - [x] T10.6c First ports (TS removed, parity-tested, recorded tests in CI): classrooms, campus-events, grades, canteen, shuttle, notices (2026-10-23)
   - [x] T10.6f course-catalog, elective as documents (parity-tested, TS removed) (2026-11-05)
   - [x] T10.6g library, treehole as documents (parity-tested, TS removed); document screens get route params, translated strings, one-tap SMS fill, tool results and refresh after actions (2026-11-05)
-  - [ ] T10.6h The "needs new abilities" group (§13): room-booking, finance, courses, wallet, calendar, course-sync
+  - [x] T10.6h room-booking, course-sync as documents (parity-tested, TS removed) (2026-11-05)
+  - [ ] T10.6i Still TypeScript: finance (cwfw obfuscation), courses (multipart upload), wallet (signing, secure payment-code screen), calendar (bundle scraping): need new abilities first (§13)
   - [x] T10.6d Agent authoring tools `plugins.reference / validate / tryTool / source / install` (install opens the review sheet) (2026-10-23)
   - [ ] T10.6e `{ fn }` bindings for cloud server functions once `functions.invoke` is live (CLOUD-FUNCTIONS.md)
 - [ ] T10.7 Self-hosted, code-signed OTA updates (ARCHITECTURE §14; owned by the website/deploy session)
