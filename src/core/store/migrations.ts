@@ -98,4 +98,14 @@ export const migrations: { version: number; sql: string }[] = [
       CREATE INDEX usage_session ON usage(session_id, purpose, at);
     `,
   },
+  {
+    // To-dos gain a priority, a repeat series (JSON trigger) and a link to the instance created
+    // when a repeating one was completed. Old rows read as priority 'none', not repeating.
+    version: 4,
+    sql: `
+      ALTER TABLE todos ADD COLUMN priority TEXT NOT NULL DEFAULT 'none';
+      ALTER TABLE todos ADD COLUMN repeat TEXT;
+      ALTER TABLE todos ADD COLUMN next_id TEXT;
+    `,
+  },
 ];

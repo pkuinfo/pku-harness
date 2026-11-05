@@ -3,18 +3,32 @@ import { useSyncExternalStore } from 'react';
 
 import { getDb } from '@/core/store/db';
 
-export type Todo = {
+import type { Todo, TodoPriority, TodoRepeat } from '@pku-harness/sdk';
+
+export type { Todo };
+
+type Row = {
   id: string;
   title: string;
   notes: string | null;
-  dueAt: number | null;
-  doneAt: number | null;
-  /** Reminder job in the scheduler, if any. */
-  jobId: string | null;
-  createdAt: number;
+  due_at: number | null;
+  done_at: number | null;
+  job_id: string | null;
+  created_at: number;
+  priority: string | null;
+  repeat: string | null;
+  next_id: string | null;
 };
 
-type Row = { id: string; title: string; notes: string | null; due_at: number | null; done_at: number | null; job_id: string | null; created_at: number };
+function parseRepeat(json: string | null): TodoRepeat | null {
+  if (!json) return null;
+  try {
+    const r = JSON.parse(json) as TodoRepeat;
+    return r?.type === 'every' ? r : null;
+  } catch {
+    return null;
+  }
+}
 
 const fromRow = (r: Row): Todo => ({
   id: r.id,
@@ -24,6 +38,9 @@ const fromRow = (r: Row): Todo => ({
   doneAt: r.done_at,
   jobId: r.job_id,
   createdAt: r.created_at,
+  priority: (r.priority === 'high' ? 'high' : 'none') as TodoPriority,
+  repeat: parseRepeat(r.repeat),
+  nextId: r.next_id,
 });
 
 let todos: Todo[] = [];
@@ -56,9 +73,10 @@ export const todoStore = {
     emit();
     const db = await getDb();
     await db.runAsync(
-      `INSERT INTO todos (id, title, notes, due_at, done_at, job_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO todos (id, title, notes, due_at, done_at, job_id, created_at, priority, repeat, next_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET title = excluded.title, notes = excluded.notes, due_at = excluded.due_at,
-         done_at = excluded.done_at, job_id = excluded.job_id`,
+         done_at = excluded.done_at, job_id = excluded.job_id, priority = excluded.priority, repeat = excluded.repeat,
+         next_id = excluded.next_id`,
       t.id,
       t.title,
       t.notes,
@@ -66,6 +84,9 @@ export const todoStore = {
       t.doneAt,
       t.jobId,
       t.createdAt,
+      t.priority ?? 'none',
+      t.repeat ? JSON.stringify(t.repeat) : null,
+      t.nextId ?? null,
     );
   },
   async remove(id: string) {

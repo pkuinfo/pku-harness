@@ -79,6 +79,8 @@ export const icons = {
   undo: { ios: 'arrow.uturn.backward', android: 'undo' },
   pin: { ios: 'pin', android: 'push_pin' },
   drop: { ios: 'drop', android: 'water_drop' },
+  flag: { ios: 'flag.fill', android: 'flag' },
+  leaf: { ios: 'leaf', android: 'eco' },
   // Plugin tiles: one distinct, meaningful icon per plugin (the grid never repeats one).
   wallet: { ios: 'wallet.bifold', android: 'account_balance_wallet' },
   brain: { ios: 'brain', android: 'psychology' },
@@ -96,6 +98,17 @@ export const icons = {
   ticket: { ios: 'ticket', android: 'local_activity' },
   room: { ios: 'door.left.hand.open', android: 'meeting_room' },
   calendarRange: { ios: 'calendar.circle', android: 'date_range' },
+  ledger: { ios: 'list.bullet.rectangle.portrait', android: 'receipt_long' },
+  // Ledger categories.
+  basket: { ios: 'basket', android: 'shopping_basket' },
+  house: { ios: 'house', android: 'home' },
+  medical: { ios: 'cross.case', android: 'medical_services' },
+  phone: { ios: 'iphone', android: 'smartphone' },
+  gift: { ios: 'gift', android: 'redeem' },
+  briefcase: { ios: 'briefcase', android: 'work' },
+  more: { ios: 'ellipsis.circle', android: 'more_horiz' },
+  chevronLeft: { ios: 'chevron.left', android: 'chevron_left' },
+  backspace: { ios: 'delete.left', android: 'backspace' },
 } as const;
 
 export type IconName = keyof typeof icons;
