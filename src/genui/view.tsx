@@ -7,7 +7,7 @@ import {
   VisibilityProvider,
 } from '@json-render/react-native';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { sendMessage } from '@/core/agent/run';
 import { refreshAll } from '@/core/dashboard/live-hooks';
@@ -29,10 +29,8 @@ const USER_STATE = new Set(['form', 'result', 'error']);
  * the data keys are updated, so what the user typed survives a refresh.
  */
 export function GenUIView({ spec, onSubmit }: { spec: Spec } & GenUIHandlers) {
-  const initial = (spec as { state?: Record<string, unknown> }).state ?? {};
-  const storeRef = useRef<ReturnType<typeof createStateStore> | null>(null);
-  storeRef.current ??= createStateStore(initial);
-  const store = storeRef.current;
+  // One store for the life of the view (created from the first spec's state).
+  const [store] = useState(() => createStateStore((spec as { state?: Record<string, unknown> }).state ?? {}));
   useEffect(() => {
     const updates: Record<string, unknown> = {};
     for (const [key, value] of Object.entries((spec as { state?: Record<string, unknown> }).state ?? {})) if (!USER_STATE.has(key)) updates[`/${key}`] = value;
