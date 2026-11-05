@@ -129,3 +129,4 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [~] T12.2 Blackboard depth: assignment submission (host multipart + file picker), grades, due-date → to-dos, 智云课堂
 - [~] T12.3 Library: loans + renew, seat reservation, catalog search, hours
 - [~] T12.4 Campus life: notices (official sites / info-spider), shuttle timetables, canteens, portal apps
+- [x] T12.5 Plugin `ledger` (记账): on-device bookkeeping by keypad sheet or chat (add / addMany with import dedupe / list / summary / update / delete / budgets / categories), month home with donut + daily columns, year report, budget editor, category manager, `month` + `trend` widgets; host chart components for plugins (`ColumnChart`, `LineChart`, `DonutChart`, `Legend`) and a `Chart` genUI element (2026-11-05)

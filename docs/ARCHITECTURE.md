@@ -183,7 +183,8 @@ widgets) applies unchanged. TypeScript stays for the harness's own features and 
 - Library: `@json-render/core` + `@json-render/react-native`. The agent emits a JSON spec;
   the app renders only components from a **catalog** we define (zod-typed props).
 - The catalog = json-render standard components restyled with our design system, plus
-  pku-harness components: `StatCard`, `Sparkline`, `ProgressRing`, `TimetableDay`,
+  pku-harness components: `StatCard`, `Sparkline`, `ProgressRing`, `Chart` (donut / column /
+  line), `TimetableDay`,
   `PaymentQR`, `ChoiceList`, `DateTimeField`, `ConfirmBar`, …
 - The same catalog powers dashboard widgets, so the agent learns one UI language.
 - Actions inside a spec (`submit`, `callTool`, `openRoute`, `setState`) are handled by the
