@@ -39,16 +39,24 @@ const resolveUrl = (location: string, base: string) => {
   return location.startsWith('/') ? origin + location : base.replace(/[^/]*([?#].*)?$/, '') + location;
 };
 
+/**
+ * elective registers an http :80 redirect with IAAA (see APP), so the SSO 3xx chain can hand back a
+ * cleartext `Location`. Release builds ship no cleartext permission (config-plugins/with-debug-user-ca),
+ * which blocks the follow and breaks sign-in on device. elective.pku.edu.cn serves the same paths over
+ * https (pkucli uses https throughout), so follow on https instead — no plaintext campus traffic.
+ */
+const httpsUpgrade = (url: string) => url.replace(/^http:\/\/elective\.pku\.edu\.cn(?::80)?/i, 'https://elective.pku.edu.cn');
+
 /** api.rs follow_and_read: a redirect towards iaaa / a login page means the session is gone. */
 const toLogin = (location: string) => location.includes('iaaa') || location.includes('login');
 
 /** Follow up to 5 redirects (login.rs follow_redirects / api.rs follow_and_read), stopping at a login hop. */
 async function electiveFetch(req: RequestOptions): Promise<CampusResponse & { lost?: boolean }> {
-  let url = req.url;
-  let res = await campusFetch('elective', { ...req, followRedirects: false, headers: { ...HEADERS, ...req.headers } });
+  let url = httpsUpgrade(req.url);
+  let res = await campusFetch('elective', { ...req, url, followRedirects: false, headers: { ...HEADERS, ...req.headers } });
   for (let hop = 0; hop < 5 && res.status >= 300 && res.status < 400 && res.location; hop++) {
     if (toLogin(res.location)) return { ...res, lost: true };
-    url = resolveUrl(res.location, url);
+    url = httpsUpgrade(resolveUrl(res.location, url));
     if (__DEV__) console.log('[elective] →', res.status, url.split('?')[0]);
     res = await campusFetch('elective', { url, followRedirects: false, headers: HEADERS });
   }
