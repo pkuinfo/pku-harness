@@ -247,10 +247,12 @@ as: json                    # json | text | html | response
   plugin never sees cookies or tokens.
 - `multipart: { fields, files }` uploads files to a campus service (POST, instead of `json`,
   `form` or `body`). `fields` is `{ k: v }` or a list of `[name, value]` pairs (keeps order and
-  repeated names); `files` is a list of `{ field, uri, name? }`. Every `uri` must be one the user
-  picked with `ability: files.pick` in the same run, so a plugin can't upload any other local
-  file. Without `timeout`, an upload may use the whole run (60 s). Recorded tests give the
-  picker's answer as `picked: [...]`.
+  repeated names); `files` is a list of `{ field, uri, name? }`. Every `uri` must be a file the
+  user picked with `ability: files.pick` in this plugin during this app session, so a plugin
+  can't upload any other local file. Picking and uploading both need `userOnly: true` on the tool:
+  files leave the phone only after a tap on the plugin's screen, never from the agent. A screen
+  can pick in one tap (show the files) and submit in the next. Without `timeout`, an upload may
+  use the whole run (60 s). Recorded tests give the picker's answer as `picked: [...]`.
 - Per run: ≤ 60 requests, ≤ 4 in flight, ≤ 60 s total.
 
 ### 6.2 Expressions and templates
@@ -361,7 +363,7 @@ fixed effect; the tool calling it must declare at least that effect.
 | `browser` | `open(url)` | read | HTTPS only; opens outside the app |
 | `campusPage` | `open(service)` | read | Opens a campus site already signed in |
 | `sms` | `awaitCode()` | read | One-tap SMS code (user-mediated) |
-| `files` | `pick({types})` | read | User picks a file; returns a handle for `request.multipart` |
+| `files` | `pick({types})` | read | User picks a file; returns a handle for `request.multipart`. `userOnly` tools only |
 | `crypto` | `sha256(text)` | read | For request signing |
 
 New abilities are added to the harness (TypeScript, `@pku-harness/sdk` `lang/abilities.ts`),
