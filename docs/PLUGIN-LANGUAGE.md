@@ -162,7 +162,7 @@ by the website's marketplace scanner.
 | `dataSources` | map name → `{ tool, args?, ttl }` | no | Read tools widgets and scheduled checks may poll; `ttl` like `5m`, `1h`. |
 | `widgets` / `screens` | map name → path | no | §8. |
 | `settings` | list `{ screen, title, subtitle?, icon? }` | no | Rows on the plugin's page in Settings. |
-| `commands` | map name → `{ description, prompt, aliases?, argHint? }` | no | Slash commands; `prompt` with `{{input}}`. |
+| `commands` | map name → `{ description, prompt \| screen, aliases?, argHint? }` | no | Slash commands: `prompt` (with `{{input}}`) goes to the agent; `screen` opens one of the plugin's screens. |
 | `defaultModes` | `{ read?, write?, money?, public? }` → `auto`/`ask`/`off` | no | Suggested permission modes; the app applies the stricter of this and its own defaults for unverified plugins. |
 | `cloud` | CloudManifest | no | As in CLOUD.md §2.2. |
 | `i18n` | `{ en: {...} }` | no | Same overlay shape as `PluginTranslation`. |
@@ -188,6 +188,7 @@ A tool file (or inline object):
 | `functions` | map name → lambda | Pure helpers, `(a, b) => expr`. |
 | `steps` | Step[] | §6, run in order. |
 | `return` | expression | The tool's result (JSON). |
+| `limits` | `{ requests?, seconds? }` | More than the default budget, up to 200 requests and 120 s (§6.5). |
 
 ### 5.1 Input fields
 
@@ -214,7 +215,7 @@ bound names, `input`, `constants`, `functions`, and `now`.
 | value | `{ let, value: expr }` | Bind an expression. |
 | request | `{ let, request: Request, as?: json\|text\|html\|response }` | One HTTP request (§6.1). |
 | each | `{ let, each: expr, concurrency?: 1–4, request \| steps \| value }` | Map over a list (≤ 50 items); `item`, `index` in scope; results in order. |
-| paginate | `{ let, paginate: { request, next: expr, items: expr, max: 1–30 } }` | Repeat a request while `next` (evaluated on each page) is non-null; collect `items`. |
+| paginate | `{ let, paginate: { request, next: expr, items: expr, max: 1–30 or expr } }` | Repeat a request while `next` (evaluated on each page) is non-null; collect `items`. |
 | extract | `{ let, extract: { from, each, fields }, limit? }` | Items from HTML / JSON (§6.3). |
 | if | `{ if: expr, then: Step[], else?: Step[] }` | Branch. |
 | check | `{ check: expr, error: template, code? }` | Fail the tool with a message unless `expr` is truthy. |
@@ -337,9 +338,11 @@ shows "刷新失败".
 
 ### 6.5 Limits (enforced by the interpreter)
 
-≤ 200 steps executed per run (loops count), ≤ 60 requests, ≤ 60 s wall time, ≤ 2 MB per response,
-≤ 1 MB result, ≤ 100 000 expression operations, KV ≤ 256 KB per plugin. Exceeding a limit fails
-the run with a clear message.
+≤ 400 steps executed per run (loops count), ≤ 60 requests (≤ 4 in flight), ≤ 60 s wall time,
+≤ 2 MB per response, ≤ 1 MB result, ≤ 300 000 expression operations, KV ≤ 256 KB per plugin.
+Tools reached with `call` share the caller's counters. A tool that crawls more (every course of
+the semester) declares `limits: { requests: ≤ 200, seconds: ≤ 120 }`, shown before install; the
+tool the run starts with sets the budget. Exceeding a limit fails the run with a clear message.
 
 ### 6.6 Second factors
 
