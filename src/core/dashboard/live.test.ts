@@ -3,7 +3,9 @@ import { describe, expect, test } from 'bun:test';
 
 import { createLiveStore, queryKey } from './live';
 
-function setup(persisted: Record<string, { value: unknown; fetchedAt: number; stale?: boolean }> = {}) {
+const DAY = 86_400_000;
+
+function setup(persisted: Record<string, { value: unknown; fetchedAt: number; stale?: boolean }> = {}, dayScopedTools: string[] = []) {
   let now = 1_000_000;
   let calls = 0;
   let fail = false;
@@ -22,6 +24,8 @@ function setup(persisted: Record<string, { value: unknown; fetchedAt: number; st
       for (const k of Object.keys(persisted)) if (k.startsWith(prefix)) persisted[k] = { ...persisted[k], stale: true };
     },
     now: () => now,
+    dayScoped: (tool) => dayScopedTools.includes(tool),
+    dayKey: (ms) => String(Math.floor(ms / DAY)),
   });
   return {
     store,
@@ -109,5 +113,51 @@ describe('live store', () => {
     expect(t.store.get(queryKey(q))?.stale).toBe(false);
     expect(t.store.get(queryKey(other))?.stale).not.toBe(true);
     release();
+  });
+
+  describe('day-scoped tools', () => {
+    const today = { tool: 'calendar.today', ttlMinutes: 5 };
+    const key = queryKey(today);
+    // setup() starts at 1_000_000 ms (day 0); "yesterday" is a day earlier.
+    const yesterday = 1_000_000 - DAY;
+
+    test("a value cached on an earlier day isn't painted; the fresh one replaces it", async () => {
+      const t = setup({ [key]: { value: 'Nov 5', fetchedAt: yesterday } }, ['calendar.today']);
+      await t.store.hydrate(key, 'calendar.today');
+      expect(t.store.get(key)?.value).toBeUndefined();
+      expect(t.store.get(key)?.fallback?.value).toBe('Nov 5');
+      const v = await t.store.fetch(today);
+      expect(v).toEqual({ tool: 'calendar.today', n: 1 });
+      expect(t.store.get(key)?.fallback).toBeUndefined();
+    });
+
+    test('same-day cache paints as usual, and other tools keep yesterday\'s value', async () => {
+      const t = setup({ [key]: { value: 'Nov 7', fetchedAt: 1_000_000 - 60_000 }, [queryKey(q)]: { value: 42, fetchedAt: yesterday } }, ['calendar.today']);
+      await t.store.hydrate(key, 'calendar.today');
+      await t.store.hydrate(queryKey(q), q.tool);
+      expect(t.store.get(key)?.value).toBe('Nov 7');
+      expect(t.store.get(queryKey(q))?.value).toBe(42);
+    });
+
+    test('offline: the held-back value comes back with its real time', async () => {
+      const t = setup({ [key]: { value: 'Nov 5', fetchedAt: yesterday } }, ['calendar.today']);
+      t.setFail(true);
+      await expect(t.store.fetch(today)).rejects.toThrow('offline');
+      expect(t.store.get(key)?.value).toBe('Nov 5');
+      expect(t.store.get(key)?.fetchedAt).toBe(yesterday);
+      expect(t.store.get(key)?.error).toBe('offline');
+    });
+
+    test('open across midnight: yesterday\'s value steps aside before the refetch', async () => {
+      const t = setup({}, ['calendar.today']);
+      await t.store.fetch(today);
+      t.advance(DAY);
+      const seen: unknown[] = [];
+      const off = t.store.subscribe(() => seen.push(t.store.get(key)?.value));
+      await t.store.fetch(today);
+      off();
+      expect(seen[0]).toBeUndefined(); // never repainted with the old day's value
+      expect(t.store.get(key)?.value).toEqual({ tool: 'calendar.today', n: 2 });
+    });
   });
 });

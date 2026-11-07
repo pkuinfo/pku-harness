@@ -10,6 +10,9 @@ import type { Binding } from '@pku-harness/sdk';
  * - Concurrent requests for the same key share one promise; an error keeps the last value.
  * - `invalidate` marks matching entries stale (a write changed their source) and refetches the
  *   active ones right away.
+ * - Tools whose result is about the current day (`ToolDef.dayScoped`, e.g. calendar.today) never
+ *   paint a value fetched on an earlier day: it is held back as `fallback` and shown only if the
+ *   fresh fetch fails (offline), so the 今天 card can't open on yesterday's date.
  */
 
 export const DEFAULT_TTL_MIN = 5;
@@ -23,6 +26,8 @@ export type Entry = {
   hydrated: boolean;
   /** Invalidated by a write: refetch regardless of TTL. */
   stale?: boolean;
+  /** A day-scoped value from an earlier day, held back; shown only if the fresh fetch fails. */
+  fallback?: { value: unknown; fetchedAt: number };
 };
 
 export type LiveDeps = {
@@ -32,6 +37,10 @@ export type LiveDeps = {
   /** Make persisted entries under a key prefix stale. */
   markStale(prefix: string): Promise<void>;
   now(): number;
+  /** Whether a tool's result describes the current day (`ToolDef.dayScoped`). */
+  dayScoped?(tool: string): boolean;
+  /** Wall-clock day of an instant in the app clock zone ('YYYY-MM-DD'). */
+  dayKey?(ms: number): string;
 };
 
 type Query = Pick<Binding, 'tool' | 'args' | 'ttlMinutes'>;
@@ -61,7 +70,11 @@ export function createLiveStore(deps: LiveDeps) {
     emit();
   };
 
-  function hydrate(key: string): Promise<void> {
+  /** A day-scoped tool's value fetched before today (app clock zone). */
+  const fromEarlierDay = (tool: string, fetchedAt: number) =>
+    !!deps.dayScoped?.(tool) && !!deps.dayKey && deps.dayKey(fetchedAt) !== deps.dayKey(deps.now());
+
+  function hydrate(key: string, tool?: string): Promise<void> {
     if (entries.get(key)?.hydrated) return Promise.resolve();
     let h = hydrating.get(key);
     if (!h) {
@@ -71,8 +84,10 @@ export function createLiveStore(deps: LiveDeps) {
         .then((row) => {
           const cur = entries.get(key);
           // A fetch may have landed first; never overwrite a newer value.
-          if (row && (cur?.fetchedAt == null || cur.fetchedAt < row.fetchedAt)) patch(key, { value: row.value, fetchedAt: row.fetchedAt, hydrated: true, stale: row.stale });
-          else patch(key, { hydrated: true });
+          if (row && (cur?.fetchedAt == null || cur.fetchedAt < row.fetchedAt)) {
+            if (tool && fromEarlierDay(tool, row.fetchedAt)) patch(key, { hydrated: true, fallback: { value: row.value, fetchedAt: row.fetchedAt } });
+            else patch(key, { value: row.value, fetchedAt: row.fetchedAt, hydrated: true, stale: row.stale });
+          } else patch(key, { hydrated: true });
         })
         .finally(() => hydrating.delete(key));
       hydrating.set(key, h);
@@ -83,9 +98,14 @@ export function createLiveStore(deps: LiveDeps) {
   /** The tool's result, from memory if fresh; otherwise fetched (deduped) and persisted. */
   async function fetch(q: Query, force = false): Promise<unknown> {
     const key = queryKey(q);
-    await hydrate(key);
+    await hydrate(key, q.tool);
     const ttl = ttlMs(q);
-    const e = entries.get(key);
+    let e = entries.get(key);
+    // Open across midnight: yesterday's "today" goes back to the fallback instead of staying up.
+    if (e?.value !== undefined && e.fetchedAt != null && fromEarlierDay(q.tool, e.fetchedAt)) {
+      patch(key, { value: undefined, fetchedAt: undefined, fallback: { value: e.value, fetchedAt: e.fetchedAt } });
+      e = entries.get(key);
+    }
     if (!force && !isStale(e, ttl, deps.now())) return e?.value;
     const pending = inflight.get(key);
     if (pending) return pending;
@@ -94,12 +114,15 @@ export function createLiveStore(deps: LiveDeps) {
       .load(q.tool, q.args ?? {})
       .then(async (value) => {
         const at = deps.now();
-        patch(key, { value, fetchedAt: at, error: undefined, fetching: false, stale: false });
+        patch(key, { value, fetchedAt: at, error: undefined, fetching: false, stale: false, fallback: undefined });
         await deps.write(key, value, at, ttl).catch(() => {});
         return value;
       })
       .catch((err: unknown) => {
-        patch(key, { error: err instanceof Error ? err.message : String(err), fetching: false });
+        // Offline with nothing fresher: show the held-back value, with its real (old) time.
+        const held = entries.get(key)?.fallback;
+        const restore = held && entries.get(key)?.value === undefined ? { value: held.value, fetchedAt: held.fetchedAt } : {};
+        patch(key, { ...restore, error: err instanceof Error ? err.message : String(err), fetching: false });
         throw err;
       })
       .finally(() => inflight.delete(key));
