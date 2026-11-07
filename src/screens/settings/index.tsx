@@ -13,6 +13,7 @@ import { displayHost } from '@/core/cloud/config';
 import { useCloudProvider } from '@/core/cloud/provider';
 import { exportData, resetData } from '@/core/data';
 import { haptics } from '@/utils/haptics';
+import { setTimezonePreference, useTimezonePreference, type TimezonePreference } from '@/core/clock/preference';
 import { setLocalePreference, useLocalePreference, useT, type LocalePreference } from '@/i18n';
 import { setThemePreference, useTheme, useThemePreference, type ThemePreference } from '@/theme';
 
@@ -28,6 +29,7 @@ export function Settings() {
   const t = useT();
   const pref = useThemePreference();
   const localePref = useLocalePreference();
+  const timezonePref = useTimezonePreference();
   const themeOptions: { label: string; value: ThemePreference }[] = [
     { label: t('core.settings.themeSystem'), value: 'system' },
     { label: t('core.settings.themeDark'), value: 'dark' },
@@ -37,6 +39,10 @@ export function Settings() {
     { label: t('core.settings.languageSystem'), value: 'system' },
     { label: t('core.settings.languageZh'), value: 'zh-Hans' },
     { label: t('core.settings.languageEn'), value: 'en' },
+  ];
+  const timezoneOptions: { label: string; value: TimezonePreference }[] = [
+    { label: t('core.settings.timezoneAuto'), value: 'auto' },
+    { label: t('core.settings.timezoneBeijing'), value: 'beijing' },
   ];
   const ai = useAIConfig();
   const campus = useCampusAccount();
@@ -86,6 +92,10 @@ export function Settings() {
             {t('core.settings.language').toUpperCase()}
           </Text>
           <Segmented options={localeOptions} value={localePref} onChange={setLocalePreference} />
+          <Text variant="micro" tone="faint" className="mt-3 px-4">
+            {t('core.settings.timezone').toUpperCase()}
+          </Text>
+          <Segmented options={timezoneOptions} value={timezonePref} onChange={setTimezonePreference} />
         </View>
       </FadeIn>
       <FadeIn index={4}>

@@ -25,6 +25,9 @@ export const core: Messages['core'] = {
     languageSystem: 'System',
     languageZh: '简体中文',
     languageEn: 'English',
+    timezone: 'Time zone',
+    timezoneAuto: 'Device',
+    timezoneBeijing: 'Beijing',
   },
   date: {
     weekdays: 'Sun,Mon,Tue,Wed,Thu,Fri,Sat',

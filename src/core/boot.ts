@@ -18,6 +18,7 @@ import { jobStore } from '@/core/scheduler/store';
 import { timetable } from '@/core/timetable/store';
 import { todoStore } from '@/core/todo/store';
 import { kv } from '@/core/store/kv';
+import { loadTimezonePreference, persistTimezonePreference } from '@/core/clock/preference';
 import { builtinPlugins } from '@pku-harness/plugins';
 import { getLocalePreference, setLocalePreference, subscribeLocale, type LocalePreference } from '@/i18n';
 import { getThemePreference, setThemePreference, subscribeThemePreference, type ThemePreference } from '@/theme';
@@ -84,6 +85,9 @@ export function bootCore(): Promise<void> {
     core = (async () => {
       installLogScrubber();
       installServices();
+      // Set the clock zone before anything loads time-bucketed data (jobs, timetable, ledger),
+      // so every layer — including background tasks that only call bootCore — agrees from the start.
+      await loadTimezonePreference().catch((e) => console.warn('timezone preference failed to load', e));
       for (const p of builtinPlugins) registry.register(p);
       await remotePlugins.load().catch((e) => console.warn('remote plugins failed to load', e));
       // Plugin documents (PLUGIN.md): bundled ones, then installed ones; they replace same-id TS plugins.
@@ -112,6 +116,7 @@ export function boot(): Promise<void> {
       const locale = await prefs.get<LocalePreference>('locale');
       if (locale) setLocalePreference(locale);
       subscribeLocale(() => prefs.set('locale', getLocalePreference()));
+      persistTimezonePreference();
       await Promise.all([chatStore.load(), seedStarterWidgets()]);
       // Linked plugin documents update as data (at most daily; wider access waits for the user).
       docPlugins.checkUpdates().catch((e) => console.warn('plugin document update check failed', e));

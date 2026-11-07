@@ -1,6 +1,7 @@
 import { DatePickerDialog, TimePickerDialog } from '@expo/ui/jetpack-compose';
 import { DatePicker } from '@expo/ui/swift-ui';
 import { labelsHidden, tint } from '@expo/ui/swift-ui/modifiers';
+import { at as clockAt, parts as clockParts } from '@pku-harness/sdk';
 import { useState } from 'react';
 import { Platform, View } from 'react-native';
 
@@ -45,7 +46,24 @@ export function pickerColors(c: ThemeColors) {
 
 const CURVE = { borderCurve: 'continuous' } as const;
 const pad = (n: number) => String(n).padStart(2, '0');
-export const formatClock = (d: Date) => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+export const formatClock = (d: Date) => {
+  const p = clockParts(d.getTime());
+  return `${pad(p.hour)}:${pad(p.minute)}`;
+};
+
+/**
+ * The native pickers work in the device's own zone, but we want the user to pick in the app's
+ * clock zone (Settings). These two bridge the gap: `toDisplay` makes a device-local `Date` that
+ * *reads* as the instant's app-zone wall-clock (so a picker seeded with it shows the right
+ * numbers), and `fromDisplay` reinterprets the device-local wall-clock the picker hands back as
+ * app-zone wall-clock and returns the real instant. When the app zone is the device zone (the
+ * default) the delta is zero and both are identities.
+ */
+const toDisplay = (d: Date) => {
+  const p = clockParts(d.getTime());
+  return new Date(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+};
+const fromDisplay = (d: Date) => new Date(clockAt(d.getFullYear(), d.getMonth() + 1, d.getDate(), d.getHours(), d.getMinutes()));
 
 /**
  * Date and/or time input. Android: the native Material 3 dialogs (the date dialog reports UTC
@@ -72,9 +90,14 @@ export function DateTimeField({
   const locale = useLocale();
   const [step, setStep] = useState<'none' | 'date' | 'time'>('none');
   const base = value ?? defaultValue();
+  // A device-local Date that reads as base's app-zone wall-clock, to seed the native pickers.
+  const disp = toDisplay(base);
 
   const pickedDate = (utcMidnight: Date) => {
-    const next = new Date(utcMidnight.getUTCFullYear(), utcMidnight.getUTCMonth(), utcMidnight.getUTCDate(), base.getHours(), base.getMinutes());
+    // The date dialog reports UTC midnight of the chosen day; those UTC fields are the app-zone
+    // day. Keep base's app-zone time of day.
+    const bp = clockParts(base.getTime());
+    const next = new Date(clockAt(utcMidnight.getUTCFullYear(), utcMidnight.getUTCMonth() + 1, utcMidnight.getUTCDate(), bp.hour, bp.minute));
     if (mode === 'datetime') {
       onChange(next);
       setStep('time');
@@ -84,8 +107,10 @@ export function DateTimeField({
     }
   };
   const pickedTime = (local: Date) => {
-    const cur = value ?? base;
-    onChange(new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(), local.getHours(), local.getMinutes()));
+    // The time dialog reports the picked H:M as device-local fields; they are the app-zone H:M
+    // the user saw. Keep the current app-zone day.
+    const vp = clockParts((value ?? base).getTime());
+    onChange(new Date(clockAt(vp.year, vp.month, vp.day, local.getHours(), local.getMinutes())));
     setStep('none');
   };
 
@@ -111,9 +136,9 @@ export function DateTimeField({
           <View className="flex-1 items-start">
             <NativeHost>
               <DatePicker
-                selection={base}
+                selection={disp}
                 displayedComponents={mode === 'date' ? ['date'] : mode === 'time' ? ['hourAndMinute'] : ['date', 'hourAndMinute']}
-                onDateChange={onChange}
+                onDateChange={(d) => onChange(fromDisplay(d))}
                 modifiers={[labelsHidden(), tint(c.accent)]}
               />
             </NativeHost>
@@ -147,7 +172,7 @@ export function DateTimeField({
       {Platform.OS === 'android' && step === 'date' ? (
         <NativeHost>
           <DatePickerDialog
-            initialDate={new Date(Date.UTC(base.getFullYear(), base.getMonth(), base.getDate())).toISOString()}
+            initialDate={new Date(Date.UTC(disp.getFullYear(), disp.getMonth(), disp.getDate())).toISOString()}
             confirmButtonLabel={t('app.ui.ok')}
             dismissButtonLabel={t('core.common.cancel')}
             color={c.accent}
@@ -160,7 +185,7 @@ export function DateTimeField({
       {Platform.OS === 'android' && step === 'time' ? (
         <NativeHost>
           <TimePickerDialog
-            initialDate={base.toISOString()}
+            initialDate={disp.toISOString()}
             is24Hour
             confirmButtonLabel={t('app.ui.ok')}
             dismissButtonLabel={t('core.common.cancel')}
@@ -175,9 +200,9 @@ export function DateTimeField({
   );
 }
 
-/** Next whole hour. */
+/** Next whole hour, in the app clock zone. */
 function defaultValue() {
-  const d = new Date();
-  d.setHours(d.getHours() + 1, 0, 0, 0);
-  return d;
+  const p = clockParts(Date.now());
+  // clockAt rolls hour 24 over to next midnight, so `hour + 1` is safe at 23:xx.
+  return new Date(clockAt(p.year, p.month, p.day, p.hour + 1, 0, 0));
 }

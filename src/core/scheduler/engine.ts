@@ -8,7 +8,7 @@ import { invokeTool } from '@/core/runtime/invoke';
 import { t } from '@/i18n';
 import { registry } from '@/core/runtime/registry';
 
-import { evaluate, fillTemplate, getPath, lastOccurrence, MAX_ACTIVE_JOBS, MAX_AGENT_JOBS, MAX_LATE_MS, MIN_AGENT_GAP_MS, MIN_CHECK_GAP_MS, minGap, nextOccurrence, recordRun, runsBy, runsInJs } from '@pku-harness/sdk';
+import { evaluate, fillTemplate, getPath, lastOccurrence, MAX_ACTIVE_JOBS, MAX_AGENT_JOBS, MAX_LATE_MS, MIN_AGENT_GAP_MS, MIN_CHECK_GAP_MS, minGap, nextOccurrence, recordRun, runsBy, runsInJs, subscribeClockZone } from '@pku-harness/sdk';
 import { runAgentJob } from './agent-run';
 import { dismissWake, EventType, isWakeEvent, notifee, syncWakeups } from './exact-wake';
 import { ANDROID_LIMITS, diffArmed, IOS_LIMITS, planNotifications } from './plan';
@@ -313,6 +313,9 @@ export async function startScheduler() {
   if (!jobStore.isLoaded()) await jobStore.load();
   await runDueChecks();
   changed();
+  // A time-zone change (Settings) moves every "9:00" / "daily" occurrence, so re-derive and
+  // re-arm the exact notifications that were planned under the old zone.
+  subscribeClockZone(() => changed());
   // A wake trigger firing while the app is open: the foreground timer usually got there first,
   // so just make sure checks ran and remove the placeholder.
   notifee.onForegroundEvent(async (e) => {

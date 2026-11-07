@@ -1,4 +1,5 @@
 import { defineRegistry, useBoundProp, type Components } from '@json-render/react-native';
+import { at as clockAt, parts as clockParts } from '@pku-harness/sdk';
 import { Switch, View } from 'react-native';
 
 import { Button } from '@/components/button';
@@ -188,10 +189,14 @@ function ProgressBar({ label, value, tone }: { label: string | null; value: numb
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
-const toLocal = (d: Date) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+// The agent reads/writes these strings as app-zone wall-clock, so convert through the clock.
+const toLocal = (d: Date) => {
+  const p = clockParts(d.getTime());
+  return `${p.year}-${pad2(p.month)}-${pad2(p.day)} ${pad2(p.hour)}:${pad2(p.minute)}`;
+};
 const fromLocal = (s: string | null | undefined) => {
   const m = s ? /^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2}):(\d{2})/.exec(s) : null;
-  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]) : null;
+  return m ? new Date(clockAt(+m[1], +m[2], +m[3], +m[4], +m[5])) : null;
 };
 
 function DateTimeBound({ label, value, mode, binding }: { label: string; value: string | null; mode: 'date' | 'time' | 'datetime' | null; binding?: string }) {

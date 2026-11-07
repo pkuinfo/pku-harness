@@ -24,6 +24,9 @@ export const core = {
     languageSystem: '跟随系统',
     languageZh: '简体中文',
     languageEn: 'English',
+    timezone: '时区',
+    timezoneAuto: '跟随设备',
+    timezoneBeijing: '北京时间',
   },
   date: {
     weekdays: '日一二三四五六',

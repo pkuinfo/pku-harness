@@ -4,6 +4,8 @@
  */
 import type { ModelMessage } from 'ai';
 
+import { parts as clockParts, startOfDay as clockStartOfDay } from '@pku-harness/sdk';
+
 import type { MessageKey, Params } from '@/i18n';
 
 import type { AttachmentPart, ChatMessage, ChatPart } from './chat-store';
@@ -138,11 +140,7 @@ export function userText(text: string, attachments: AttachmentPart[] = []): stri
 export type Section = 'pinned' | 'today' | 'yesterday' | 'week' | 'earlier';
 export const SECTIONS: Section[] = ['pinned', 'today', 'yesterday', 'week', 'earlier'];
 
-const startOfDay = (t: number) => {
-  const d = new Date(t);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-};
+const startOfDay = (t: number) => clockStartOfDay(t);
 const DAY = 86_400_000;
 
 export function sectionOf(ts: number, now = Date.now()): Exclude<Section, 'pinned'> {
@@ -162,15 +160,16 @@ const pad = (n: number) => String(n).padStart(2, '0');
 export function relativeTime(ts: number, tr: Tr, now = Date.now()): string {
   const diff = now - ts;
   if (diff < 60_000) return tr('chat.time.justNow');
-  const d = new Date(ts);
+  const p = clockParts(ts);
   if (ts >= startOfDay(now)) {
     if (diff < 3_600_000) return tr('chat.time.minutesAgo', { count: Math.floor(diff / 60_000) });
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return `${pad(p.hour)}:${pad(p.minute)}`;
   }
   if (ts >= startOfDay(now) - DAY) return tr('chat.time.yesterday');
-  if (ts >= startOfDay(now) - 6 * DAY) return tr('chat.time.weekdays').split(',')[d.getDay()];
-  const date = { month: tr('chat.time.months').split(',')[d.getMonth()], monthNum: d.getMonth() + 1, day: d.getDate(), year: d.getFullYear() };
-  if (d.getFullYear() === new Date(now).getFullYear()) return tr('chat.time.monthDay', date);
+  // parts.weekday is ISO (1=Mon…7=Sun); `% 7` maps it to the 0=Sun…6=Sat table.
+  if (ts >= startOfDay(now) - 6 * DAY) return tr('chat.time.weekdays').split(',')[p.weekday % 7];
+  const date = { month: tr('chat.time.months').split(',')[p.month - 1], monthNum: p.month, day: p.day, year: p.year };
+  if (p.year === clockParts(now).year) return tr('chat.time.monthDay', date);
   return tr('chat.time.fullDate', date);
 }
 

@@ -1,33 +1,28 @@
 /**
- * Pure aggregation over usage rows for the usage screen (docs/AGENT-HARNESS.md §6.4). Local time
- * (the device's zone); weeks start on Monday. No React Native imports: unit-tested with bun.
+ * Pure aggregation over usage rows for the usage screen (docs/AGENT-HARNESS.md §6.4). Wall-clock
+ * buckets use the app's clock zone (SDK `clock.ts`), like every other layer; weeks start on
+ * Monday. No React Native imports: unit-tested with bun.
  */
+import { addDays as clockAddDays, at as clockAt, parts as clockParts, startOfDay as clockStartOfDay } from '@pku-harness/sdk';
+
 import { costOf, savedByCache, type Currency, type PriceLookup } from './cost';
 import type { UsagePurpose, UsageStep } from './types';
 
 const DAY = 86_400_000;
 
-export const startOfDay = (ms: number) => {
-  const d = new Date(ms);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-};
+export const startOfDay = (ms: number) => clockStartOfDay(ms);
 /** Calendar-safe day arithmetic (survives DST shifts where they exist). */
-export const addDays = (ms: number, n: number) => {
-  const d = new Date(ms);
-  d.setDate(d.getDate() + n);
-  return d.getTime();
-};
+export const addDays = (ms: number, n: number) => clockAddDays(ms, n);
 const startOfMonth = (ms: number) => {
-  const d = new Date(ms);
-  return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  const p = clockParts(ms);
+  return clockAt(p.year, p.month, 1);
 };
 export const dayKey = (ms: number) => {
-  const d = new Date(ms);
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  const p = clockParts(ms);
+  return `${p.year}-${p.month}-${p.day}`;
 };
 /** 0 = Monday … 6 = Sunday. */
-const weekday = (ms: number) => (new Date(ms).getDay() + 6) % 7;
+const weekday = (ms: number) => clockParts(ms).weekday - 1;
 
 export const tokensOf = (r: UsageStep) => r.inputTokens + r.outputTokens;
 
@@ -119,7 +114,7 @@ export function heatmap(rows: readonly UsageStep[], now: number, weeks = 20): He
       col.push({ date, turns: e?.turns ?? 0, tokens: e?.tokens ?? 0, level: level(e?.turns ?? 0) });
     }
     cols.push(col);
-    const m = new Date(monday).getMonth();
+    const m = clockParts(monday).month - 1;
     if (m !== prevMonth) months.push({ col: w, label: `${m + 1}月` });
     prevMonth = m;
   }
@@ -132,7 +127,7 @@ export function heatmap(rows: readonly UsageStep[], now: number, weeks = 20): He
 export function hourly(rows: readonly UsageStep[], now: number, days = 30): number[] {
   const since = addDays(startOfDay(now), -(days - 1));
   const out = Array.from({ length: 24 }, () => 0);
-  for (const r of turnRows(rows)) if (r.at >= since && r.at <= now) out[new Date(r.at).getHours()]++;
+  for (const r of turnRows(rows)) if (r.at >= since && r.at <= now) out[clockParts(r.at).hour]++;
   return out;
 }
 
