@@ -68,6 +68,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T8.2 Remote plugins: dependency-free MCP Streamable-HTTP client (tested against the official SDK server), manifest cached on device, tools mapped via `z.fromJSONSchema`, effects from MCP annotations, untrusted defaults (write/money/public ask), add/refresh/remove UI, `plugins.*` tools (2026-10-18)
 - [x] T8.4 "Ask first" approvals: agent calls whose effect is set to ask raise a native prompt (allow / deny / always allow) over any screen (2026-10-18)
 - [x] T8.3 Notifications (permission, exact alarms, background status, test), appearance (system/dark/light, persisted), data export (JSON, no secrets) and full reset (2026-10-18)
+- [x] T8.5 Time zone: Settings › 时区 follows the system by default or any zone from a searchable city list (zh/en, offset in force now); one choice drives the SDK clock for agent, scheduler (alarms re-armed on change), to-dos, timetable, ledger, Schedule and pickers; named zones get exact DST through Intl (2026-11-07)
 
 ## M10 Plugin ecosystem
 - [x] T10.1 `pkuinfo/pku-harness-plugins`: SDK (contract + pure helpers + tests), all bundled plugins ported, registry + schema + validator, remote template, demo-canteen example, CI, CONTRIBUTING; app consumes it as submodule `./plugins` and implements `HostServices` (2026-10-18)

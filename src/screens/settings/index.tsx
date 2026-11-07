@@ -13,8 +13,9 @@ import { displayHost } from '@/core/cloud/config';
 import { useCloudProvider } from '@/core/cloud/provider';
 import { exportData, resetData } from '@/core/data';
 import { haptics } from '@/utils/haptics';
-import { setTimezonePreference, useTimezonePreference, type TimezonePreference } from '@/core/clock/preference';
-import { setLocalePreference, useLocalePreference, useT, type LocalePreference } from '@/i18n';
+import { systemZoneId, useTimezonePreference } from '@/core/clock/preference';
+import { formatUtcOffset, offsetNow, zoneName } from '@/core/clock/zones';
+import { setLocalePreference, useLocale, useLocalePreference, useT, type LocalePreference } from '@/i18n';
 import { setThemePreference, useTheme, useThemePreference, type ThemePreference } from '@/theme';
 
 import { PluginsEntry } from './plugins-entry';
@@ -40,10 +41,11 @@ export function Settings() {
     { label: t('core.settings.languageZh'), value: 'zh-Hans' },
     { label: t('core.settings.languageEn'), value: 'en' },
   ];
-  const timezoneOptions: { label: string; value: TimezonePreference }[] = [
-    { label: t('core.settings.timezoneAuto'), value: 'auto' },
-    { label: t('core.settings.timezoneBeijing'), value: 'beijing' },
-  ];
+  const locale = useLocale();
+  // 跟随系统 · 洛杉矶 UTC−8, or the chosen zone with the offset in force now.
+  const zoneId = timezonePref === 'auto' ? systemZoneId() : timezonePref;
+  const zoneText = zoneId ? `${zoneName(zoneId, locale)} · ${formatUtcOffset(offsetNow(zoneId))}` : '';
+  const timezoneSubtitle = timezonePref === 'auto' ? [t('core.settings.timezoneAuto'), zoneText].filter(Boolean).join(' · ') : zoneText;
   const ai = useAIConfig();
   const campus = useCampusAccount();
   const cloud = useCloudProvider();
@@ -92,13 +94,14 @@ export function Settings() {
             {t('core.settings.language').toUpperCase()}
           </Text>
           <Segmented options={localeOptions} value={localePref} onChange={setLocalePreference} />
-          <Text variant="micro" tone="faint" className="mt-3 px-4">
-            {t('core.settings.timezone').toUpperCase()}
-          </Text>
-          <Segmented options={timezoneOptions} value={timezonePref} onChange={setTimezonePreference} />
         </View>
       </FadeIn>
       <FadeIn index={4}>
+        <ListGroup>
+          <ListRow icon="globe" title={t('app.settings.timezone')} subtitle={timezoneSubtitle} onPress={() => router.push('/timezone')} />
+        </ListGroup>
+      </FadeIn>
+      <FadeIn index={5}>
         <ListGroup title={t('app.settings.data')} footer={t('app.settings.dataFooter')}>
           <ListRow
             icon="send2"
