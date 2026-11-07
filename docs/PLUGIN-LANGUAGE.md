@@ -184,6 +184,7 @@ A tool file (or inline object):
 | `effect` | `read` \| `write` \| `money` \| `public` | Declared honestly; `read` tools must not change state. |
 | `untrusted` | bool | The result carries third-party text (posts, notices). Taints the turn (AGENT-HARNESS §5.7). Default `false` for verified plugins, `true` otherwise. |
 | `userOnly` | bool | Only a human tap may run it (e.g. payment flows). |
+| `dayScoped` | bool | The result is about the current day (today, this teaching week): widgets never paint a cached value fetched on an earlier day. |
 | `input` | map name → field | Input fields (§5.1). |
 | `constants` | map | Static data (tables, aliases). |
 | `functions` | map name → lambda | Pure helpers, `(a, b) => expr`. |
