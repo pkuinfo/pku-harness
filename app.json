@@ -104,7 +104,15 @@
         }
       ],
       "./config-plugins/with-debug-user-ca",
-      "./config-plugins/with-release-signing"
+      "./config-plugins/with-release-signing",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "extraProguardRules": "# Expo builds module views by reflection with (Context, AppContext). expo-modules-core keeps that\n# constructor only for ExpoView subclasses; expo-gl's GLView extends TextureView, so R8 stripped it\n# and every fresh install crashed on the welcome screen. Keep the constructor wherever it exists.\n-keepclassmembers class * {\n  public <init>(android.content.Context, expo.modules.kotlin.AppContext);\n}\n"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
