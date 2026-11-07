@@ -166,6 +166,7 @@ by the website's marketplace scanner.
 | `defaultModes` | `{ read?, write?, money?, public? }` → `auto`/`ask`/`off` | no | Suggested permission modes; the app applies the stricter of this and its own defaults for unverified plugins. |
 | `cloud` | CloudManifest | no | As in CLOUD.md §2.2. |
 | `i18n` | `{ en: {...} }` | no | Same overlay shape as `PluginTranslation`. |
+| `legacy` | `{ pluginIds?, tools?, widgets? }` | no | Old ids this plugin now serves (`'old.tool': tool`, `'old.widget': widget`), so saved checks, widgets and settings carry over. Verified plugins only. |
 | `remote` | `{ mcp: URL, auth?: none|bearer }` | no | A remote MCP plugin described by a `PLUGIN.md` (no tools; the server's tools are used). Replaces `pku-harness.plugin.json`. |
 | `server` | object | no | Server functions, collections and schedules run by the cloud server ([CLOUD-FUNCTIONS.md](CLOUD-FUNCTIONS.md)). Implies `cloud.uses: [functions]`; `cloud.disclosure` (what leaves the device) is then required. **Off on the official server for now** (CLOUD-FUNCTIONS.md is on hold): keep plugins phone-side, or use your own backend (CLOUD-FUNCTIONS §9). |
 
@@ -249,6 +250,11 @@ as: json                    # json | text | html | response
 - Public requests send the harness user agent, are HTTPS-only, ≤ 2 MB, and only to `network`
   hosts. Campus requests go through `services.campus.request` with the user's session; the
   plugin never sees cookies or tokens.
+- `authIn: form` (campus) asks the host to put the service's session token into `form`, for APIs
+  that read and sign it from the body. `sign: { field, suffix?, case?: upper | lower, exclude? }`
+  then sets `field` to the SHA-256 of every other non-empty field, sorted by name, as `k=v&`
+  pairs, followed by `suffix`. The SDK computes it inside the request, so the plugin never sees
+  the token, not even in an error.
 - `multipart: { fields, files }` uploads files to a campus service (POST, instead of `json`,
   `form` or `body`). `fields` is `{ k: v }` or a list of `[name, value]` pairs (keeps order and
   repeated names); `files` is a list of `{ field, uri, name? }`. Every `uri` must be a file the
@@ -301,6 +307,7 @@ Standard library (functions, and the same as methods where it reads better):
 | Numbers | `num(x, fallback?)`, `int(x)`, `round(x, digits?)`, `fixed(x, n)`, `abs floor ceil`, `yuan(fen)` |
 | Dates | `now` (ms), `date(text, format?)` (understands `YYYY-MM-DD[ HH:mm]`, `MM月DD日`, `上午/下午`), `formatDate(ms, pattern)`, `addDays`, `daysBetween`, `minutesOf('HH:mm')`, `weekday(ms)`, `startOfDay` — all in Beijing time (UTC+8) |
 | URLs and encoding | `url(base, path)`, `query(url, name)`, `encode(s)`, `decode(s)`, `base64(s)` and `unbase64(s)` (UTF-8 text) |
+| Hashing and ids | `sha256(s)` (lowercase hex of the UTF-8 text), `randomId(n = 16)` (`0-9a-z`, for nonces) |
 | HTML | `html(text)` → document; `select(doc, css)` → nodes; `first(doc, css)`; node `.text`, `.attr(name)`, `.html`, `.data(name)`; `tableRows(node, { header: true, spans: true })` → row objects keyed by header label (rowspan/colspan expanded); `options(select)`; `htmlText(s)` (strip tags, decode entities); `largestText(doc)` |
 | JSON | `json(text)`, `json(text, fallback)` (the fallback instead of an error when the text isn't JSON), `path(value, 'a.b[0].c')` |
 | Ranges | `compactRanges([1,2,5,6,7])` → `"1-2,5-7"` |
@@ -392,7 +399,12 @@ the same interpreter with its own set (collections, push, channels; CLOUD-FUNCTI
   as the agent, plus the plugin's `userOnly` tools), `submit`, `ask` (send a prompt to the agent),
   `navigate`, `open` (URL, HTTPS). `secure: { brightness? }` on a screen keeps it out of
   screenshots and the app switcher while open, and optionally raises brightness (payment codes).
-- **Commands** are prompt templates (`{{input}}`).
+  A screen binding with `refreshSeconds: 5–300` instead of `ttlMinutes` is live: its tool runs as
+  the user when the screen opens and every N seconds while it stays open, the value is kept in
+  memory only (never cached), a failed refresh clears it, and `/refreshIn` holds the seconds to the
+  next refresh. View state also has `/params`, `/size`, `/t` and, for plugins with campus
+  services, `/account: { signedIn }`.
+- **Commands** are prompt templates (`{{input}}`) or open a screen (`screen: <name>`).
 - Host components that need native code (payment QR, OTP digits, hourglass, file picker) are
   catalog components the harness provides; plugins reference them by name. A `QRCode`'s `value`
   must be bound (`{ "$state": "/…" }`, filled by a `userOnly` tool), never text in the file, so
