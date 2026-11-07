@@ -85,7 +85,8 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
   - [x] T10.6h room-booking, course-sync as documents (parity-tested, TS removed) (2026-11-05)
   - [x] T10.6i finance as a document (cwfw request encoding in shared.yaml via `base64`; `json(text, fallback)`)
   - [x] T10.6j courses as a document: per-tool request budget for the semester crawl, multipart submission from the 交作业 screen (files.pick and submit are `userOnly`; draft revision check), 课程回放 through a `userOnly` play tool (signed URL only to the browser), screen commands (2026-11-07)
-  - [ ] T10.6k Still TypeScript: wallet (secure payment-code screen: `secure` views and the `QRCode` element are in; signing uses `crypto.sha256`). calendar, authenticator and card-share stay TypeScript (core / host features)
+  - [x] T10.6k wallet as a document (1.1.0): `cardRecharge` signs its form declaratively (`authIn: form` + `sign`; the card token never reaches the plugin) and opens the cashier only in the browser; the 付款码 screen is `secure` with a 30 s memory-only `refreshSeconds` binding to a `userOnly` payCode tool; `legacy` ids from campus-card / netfee / utilities carry over (verified plugins only); parity-tested, TS removed (2026-11-07)
+  - Stay TypeScript (core / host features): calendar, authenticator, card-share
   - [x] T10.6d Agent authoring tools `plugins.reference / validate / tryTool / source / install` (install opens the review sheet) (2026-10-23)
   - [ ] T10.6e `{ fn }` bindings for cloud server functions once `functions.invoke` is live (CLOUD-FUNCTIONS.md)
 - [ ] T10.7 Self-hosted, code-signed OTA updates (ARCHITECTURE §14; owned by the website/deploy session)
