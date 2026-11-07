@@ -225,6 +225,9 @@ bound names, `input`, `constants`, `functions`, and `now`.
 | call | `{ let?, call: <tool>, input: expr }` | Call another tool of the same plugin. |
 | ability | `{ let?, ability: <name>.<op>, args: expr }` | Call a host ability (§7). |
 
+The value of inner `steps:` (in `each`, `try` and `cache`) is the last bound `let` (or a `return`).
+A step without `let` contributes nothing, so bind the value you want to keep.
+
 ### 6.1 Request
 
 ```yaml
