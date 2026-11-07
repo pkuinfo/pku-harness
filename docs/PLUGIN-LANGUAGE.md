@@ -233,7 +233,7 @@ request:
   method: GET               # GET | POST
   query: { page: '${input.page}' }
   headers: { referer: https://example.pku.edu.cn/ }
-  json: { ... }             # OR form: { k: v | [v1, v2] } OR body: "raw" + contentType
+  json: { ... }             # OR form: { k: v | [v1, v2] } OR body: "raw" + contentType OR multipart (below)
   followRedirects: true
   timeout: 15s
 as: json                    # json | text | html | response
@@ -245,6 +245,12 @@ as: json                    # json | text | html | response
 - Public requests send the harness user agent, are HTTPS-only, ≤ 2 MB, and only to `network`
   hosts. Campus requests go through `services.campus.request` with the user's session; the
   plugin never sees cookies or tokens.
+- `multipart: { fields, files }` uploads files to a campus service (POST, instead of `json`,
+  `form` or `body`). `fields` is `{ k: v }` or a list of `[name, value]` pairs (keeps order and
+  repeated names); `files` is a list of `{ field, uri, name? }`. Every `uri` must be one the user
+  picked with `ability: files.pick` in the same run, so a plugin can't upload any other local
+  file. Without `timeout`, an upload may use the whole run (60 s). Recorded tests give the
+  picker's answer as `picked: [...]`.
 - Per run: ≤ 60 requests, ≤ 4 in flight, ≤ 60 s total.
 
 ### 6.2 Expressions and templates
