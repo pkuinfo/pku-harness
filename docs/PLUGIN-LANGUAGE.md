@@ -382,11 +382,15 @@ the same interpreter with its own set (collections, push, channels; CLOUD-FUNCTI
   catalog's element-level `repeat: { statePath, key }` with `{ "$item": "field" }`. The dashboard's widget gallery
   lists them next to built-in widgets; `dashboard.addPluginWidget` places them.
 - **Screens** are full-page generative-UI specs with bindings, mounted at `/p/<id>/<screen>`
-  (`presentation: modal` → `/m/…`). Actions: `callTool` (same permissions as the agent),
-  `submit`, `ask` (send a prompt to the agent), `navigate`, `open` (URL, HTTPS).
+  (`presentation: modal` → `/m/…`). Actions: `callTool` (runs as the user: the same permissions
+  as the agent, plus the plugin's `userOnly` tools), `submit`, `ask` (send a prompt to the agent),
+  `navigate`, `open` (URL, HTTPS). `secure: { brightness? }` on a screen keeps it out of
+  screenshots and the app switcher while open, and optionally raises brightness (payment codes).
 - **Commands** are prompt templates (`{{input}}`).
 - Host components that need native code (payment QR, OTP digits, hourglass, file picker) are
-  catalog components the harness provides; plugins reference them by name.
+  catalog components the harness provides; plugins reference them by name. A `QRCode`'s `value`
+  must be bound (`{ "$state": "/…" }`, filled by a `userOnly` tool), never text in the file, so
+  a payment code never reaches the model or the plugin's source.
 
 ## 9. Permissions and safety
 
