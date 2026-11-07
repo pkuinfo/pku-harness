@@ -79,8 +79,12 @@ export function Screen({
   const compactTitle = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(y.get(), [COLLAPSE * 0.6, COLLAPSE], [6, 0], Extrapolation.CLAMP) }] }));
 
   const backButton = back ? <IconButton icon="back" label={t('app.ui.back')} variant="ghost" onPress={() => router.back()} className="-ml-2 mb-0.5" /> : null;
+  // Only one header is ever announced: an invisible (opacity 0) view is still read by TalkBack /
+  // VoiceOver, so the large header hides from them once collapsed and the compact bar until then.
+  const a11yHidden = (hidden: boolean) =>
+    ({ accessibilityElementsHidden: hidden, importantForAccessibility: hidden ? 'no-hide-descendants' : 'auto' }) as const;
   const header = (
-    <Animated.View className="w-full flex-row items-end gap-3 self-center px-4 pb-3 pt-4" style={[HEADER, largeStyle]}>
+    <Animated.View className="w-full flex-row items-end gap-3 self-center px-4 pb-3 pt-4" style={[HEADER, largeStyle]} {...a11yHidden(collapsed)}>
       {backButton}
       <View className="flex-1 gap-0.5">
         {subtitle ? (
@@ -88,7 +92,9 @@ export function Screen({
             {subtitle.toUpperCase()}
           </Text>
         ) : null}
-        <Text variant="title">{title}</Text>
+        <Text variant="title" accessibilityRole="header">
+          {title}
+        </Text>
       </View>
       {trailing}
     </Animated.View>
@@ -125,13 +131,17 @@ export function Screen({
       </Animated.ScrollView>
       <Animated.View pointerEvents="none" className="absolute left-0 right-0 top-0" style={[{ height: insets.top, backgroundColor: c.bg }, scrimStyle]} />
       {/* Compact bar: appears once the large title has scrolled away. */}
-      <Animated.View pointerEvents={collapsed ? 'box-none' : 'none'} className="absolute left-0 right-0 top-0" style={[{ paddingTop: insets.top }, compactStyle]}>
+      <Animated.View
+        pointerEvents={collapsed ? 'box-none' : 'none'}
+        className="absolute left-0 right-0 top-0"
+        style={[{ paddingTop: insets.top }, compactStyle]}
+        {...a11yHidden(!collapsed)}>
         <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.bg, opacity: 0.95 }]} />
         <View pointerEvents="none" className="absolute bottom-0 left-0 right-0 h-[0.5px]" style={{ backgroundColor: m.edge }} />
         <View className="h-13 flex-row items-center px-2">
           <View className="w-24 flex-row items-center">{backButton}</View>
           <Animated.View className="flex-1 items-center" style={compactTitle}>
-            <Text variant="bodyStrong" numberOfLines={1}>
+            <Text variant="bodyStrong" numberOfLines={1} accessibilityRole="header">
               {title}
             </Text>
           </Animated.View>
