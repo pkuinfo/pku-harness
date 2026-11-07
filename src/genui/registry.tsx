@@ -9,6 +9,7 @@ import { Field } from '@/components/field';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { ProgressRing } from '@/components/progress-ring';
+import { QRCode } from '@/components/qr-code';
 import { Sparkline } from '@/components/sparkline';
 import { Stat } from '@/components/stat';
 import { Surface } from '@/components/surface';
@@ -294,6 +295,10 @@ const components: Components<typeof catalog> = {
       tone={props.tone ?? 'accent'}
       size={props.size === 'sm' ? 64 : props.size === 'lg' ? 120 : 88}
     />
+  ),
+  // No `sm`: below ~220 px scanners struggle at arm's length.
+  QRCode: ({ props }) => (
+    <QRCode value={typeof props.value === 'string' ? props.value : undefined} size={props.size === 'lg' ? 280 : 220} ecl={props.ecl ?? undefined} />
   ),
   DateTime: ({ props, bindings }) => <DateTimeBound label={props.label} value={props.value} mode={props.mode} binding={bindings?.value} />,
   Button: ({ props, emit, loading }) => (

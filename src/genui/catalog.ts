@@ -130,6 +130,16 @@ export const catalog = defineCatalog(schema, {
       slots: [],
       description: 'Circular progress, e.g. data quota used or semester progress.',
     },
+    QRCode: {
+      props: z.object({
+        value: z.string().nullable().describe('text to encode'),
+        size: z.enum(['md', 'lg']).nullable(),
+        ecl: z.enum(['L', 'M', 'Q', 'H']).nullable().describe('error correction, default L'),
+      }),
+      slots: [],
+      description:
+        'Scannable QR code (dark on white in both themes). In plugin screens value must come from state ({ "$state": "/…" }), never literal text, so codes like payment codes never reach the model.',
+    },
     DateTime: {
       props: z.object({ label: z.string(), value: z.string().nullable(), mode: z.enum(['date', 'time', 'datetime']).nullable() }),
       slots: [],
