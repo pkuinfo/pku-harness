@@ -369,11 +369,14 @@ export const app = {
       off: '已关闭',
       signIn: '需登录',
       campusNetwork: '仅限校园网',
-      unavailable: '此设备不可用',
+      unavailable: '暂不可用',
     },
     builtin: '内置',
     enable: '启用 {name}',
     unsupported: '需要{list}，这台设备暂不支持',
+    setup: {
+      cloud: '需要云服务：可在「设置 → 云服务」中开启',
+    },
     capability: {
       network: '网络',
       campusNetwork: '校园网',

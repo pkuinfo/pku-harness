@@ -365,11 +365,14 @@ export const app: Messages['app'] = {
       off: 'Off',
       signIn: 'Needs sign-in',
       campusNetwork: 'Campus network only',
-      unavailable: 'Unavailable on this device',
+      unavailable: 'Not available',
     },
     builtin: 'Built-in',
     enable: 'Turn on {name}',
     unsupported: 'Needs {list}, which this device doesn’t support yet',
+    setup: {
+      cloud: 'Needs a cloud service: turn one on in Settings → Cloud',
+    },
     capability: {
       network: 'internet access',
       campusNetwork: 'the campus network',
