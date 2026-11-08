@@ -1,6 +1,6 @@
 {
   "name": "pku-harness",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "index.ts",
   "dependencies": {
     "@ai-sdk/openai-compatible": "^3.0.71",
