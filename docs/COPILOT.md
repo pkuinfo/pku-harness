@@ -152,6 +152,13 @@ restored Copilot's bound service. Legacy screenshots use device ID `emulator-555
 screenshots over hierarchy dumps during active sessions so automation does not suppress the
 service under test.
 
-Visual inspection found app-selection checkboxes without visible names: the host checkbox's
-`label` is an accessibility label only. Copilot now renders the app name and package beside each
-checkbox. This correction still needs an updated device build and visual recheck.
+The latest-main release (1.0.3, versionCode 4) was built and installed without clearing data.
+The app-selection UI now uses native switches in labeled grouped rows, with selected count
+and Start above the list. Light/dark emulator screenshots and selecting Chrome, Clock, and
+Settings verified the controls; native tests (15), plugin verification (1,233 tests), and app
+verification (1,630 passed, 3 skipped) passed. The system theme was restored after inspection.
+
+The live model opened Chrome on a separate display, read its accessibility tree, tapped the
+address field, entered a query, and displayed the local preview. Search completion is not yet
+verified: the first run exposed a missing editor-submit action. Brightness remains untested.
+These partial observations do not mark the full device checklist complete.
