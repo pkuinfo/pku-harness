@@ -93,6 +93,9 @@ into Harness. Mika adaptations retain the module's existing source attribution a
 
 The integration merges current app `master` (including the thinking display and release 1.0.3
 configuration) and current plugin `main`. It does not tag or publish a new APK release.
+Post-merge verification: app typecheck/lint and 1,630 tests passed (3 skipped); plugin
+typecheck, registry/document validation, and 1,233 tests passed. Earlier native build evidence
+below predates this merge; the updated UI and full action loop still need device verification.
 
 Selected Android mechanisms were adapted from Mika revision `9fbbc89e`, under Apache-2.0.
 The module's `LICENSE` and `NOTICE` retain attribution; the root README thanks Mika and its
