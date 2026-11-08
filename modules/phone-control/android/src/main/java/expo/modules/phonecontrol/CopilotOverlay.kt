@@ -255,12 +255,16 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
             if (approval != null) row(
                 button(R.string.copilot_deny) { PhoneOverlayBridge.answer(approval, false); rendered = "" },
                 button(R.string.copilot_allow, filled = true) { PhoneOverlayBridge.answer(approval, true); rendered = "" })
-            row(button(if (paused) R.string.copilot_resume else R.string.copilot_pause,
-                icon = if (paused) R.drawable.copilot_play else R.drawable.copilot_pause) {
-                action { PhoneRuntime.pause(sessionId, !paused) }
-            }, button(R.string.copilot_stop, icon = R.drawable.copilot_stop, danger = true) {
-                PhoneRuntime.requestStop(sessionId)
-                service.startService(Intent(service, CopilotService::class.java).setAction("copilot.stop").putExtra("sessionId", sessionId))
+            root.addView(LinearLayout(ui).apply {
+                gravity = Gravity.END
+                addView(iconButton(if (paused) R.string.copilot_resume else R.string.copilot_pause,
+                    if (paused) R.drawable.copilot_play else R.drawable.copilot_pause, enabled = !busy) {
+                    action { PhoneRuntime.pause(sessionId, !paused) }
+                })
+                addView(iconButton(R.string.copilot_stop, R.drawable.copilot_stop, danger = true) {
+                    PhoneRuntime.requestStop(sessionId)
+                    service.startService(Intent(service, CopilotService::class.java).setAction("copilot.stop").putExtra("sessionId", sessionId))
+                })
             })
         }
         root.post { if (attached && !closed) { clamp(); runCatching { manager.updateViewLayout(root, params) } } }
@@ -287,8 +291,11 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         setTextSize(TypedValue.COMPLEX_UNIT_PX, service.resources.getDimension(R.dimen.copilot_overlay_text))
         setPadding(0, size(R.dimen.copilot_overlay_small_gap), 0, size(R.dimen.copilot_overlay_small_gap))
     }
-    private fun iconButton(title: Int, icon: Int, click: (View) -> Unit) = ImageButton(ui).apply {
-        setImageResource(icon); imageTintList = ColorStateList.valueOf(service.getColor(R.color.copilot_overlay_text_muted))
+    private fun iconButton(title: Int, icon: Int, danger: Boolean = false, enabled: Boolean = true, click: (View) -> Unit) = ImageButton(ui).apply {
+        setImageResource(icon)
+        val color = service.getColor(if (danger) R.color.copilot_overlay_error else R.color.copilot_overlay_text_muted)
+        imageTintList = ColorStateList(arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()), intArrayOf(service.getColor(R.color.copilot_overlay_text_muted), color))
+        isEnabled = enabled; alpha = if (enabled) 1f else 0.38f
         contentDescription = service.getString(title); tooltipText = contentDescription
         background = ripple(null)
         val padding = size(R.dimen.copilot_overlay_gap)
@@ -296,22 +303,15 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         layoutParams = LinearLayout.LayoutParams(size(R.dimen.copilot_overlay_touch), size(R.dimen.copilot_overlay_touch))
         setOnClickListener { click(it) }
     }
-    private fun button(title: Int, filled: Boolean = false, icon: Int? = null, danger: Boolean = false, click: () -> Unit) = Button(ui, null, android.R.attr.borderlessButtonStyle).apply {
+    private fun button(title: Int, filled: Boolean = false, click: () -> Unit) = Button(ui, null, android.R.attr.borderlessButtonStyle).apply {
         text = service.getString(title); contentDescription = text; isAllCaps = false
         setTextSize(TypedValue.COMPLEX_UNIT_PX, service.resources.getDimension(R.dimen.copilot_overlay_text))
-        val color = service.getColor(when { filled -> R.color.copilot_overlay_on_brand; danger -> R.color.copilot_overlay_error; else -> R.color.copilot_overlay_accent })
+        val color = service.getColor(when { filled -> R.color.copilot_overlay_on_brand; else -> R.color.copilot_overlay_accent })
         setTextColor(ColorStateList(arrayOf(intArrayOf(-android.R.attr.state_enabled), intArrayOf()), intArrayOf(service.getColor(R.color.copilot_overlay_text_muted), color)))
         background = if (filled) InsetDrawable(ripple(surface(R.color.copilot_overlay_brand, R.dimen.copilot_overlay_inner_corner)), 0, size(R.dimen.copilot_overlay_small_gap) / 2, 0, size(R.dimen.copilot_overlay_small_gap) / 2) else ripple(null)
         minHeight = size(R.dimen.copilot_overlay_touch); minimumHeight = minHeight
         minWidth = 0; minimumWidth = 0
         setPadding(size(R.dimen.copilot_overlay_small_gap), 0, size(R.dimen.copilot_overlay_small_gap), 0)
-        if (icon != null) {
-            val drawable = service.getDrawable(icon)?.mutate()
-            drawable?.setTint(color)
-            drawable?.setBounds(0, 0, size(R.dimen.copilot_overlay_action_icon), size(R.dimen.copilot_overlay_action_icon))
-            setCompoundDrawablesRelative(drawable, null, null, null)
-            compoundDrawablePadding = size(R.dimen.copilot_overlay_small_gap)
-        }
         isEnabled = !busy || title == R.string.copilot_stop
         setOnClickListener { click() }
     }

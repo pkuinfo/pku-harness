@@ -82,8 +82,8 @@ allows touches outside it to reach the underlying app. The foreground-app guard 
 move an app the user is currently using; concurrent work targets other selected apps.
 
 The native panel uses Android Material-themed Views: a draggable title, collapse icon, and
-native overflow menu for takeover/return and opening Harness. Pause and Stop remain directly
-visible as text/icon actions. Only Allow once uses a filled accent button. The panel is 264dp
+native overflow menu for takeover/return and opening Harness. Pause/Resume and Stop remain directly
+visible as icon-only actions with accessibility labels and native long-press tooltips. Only Allow once uses a filled accent button. The panel is 264dp
 wide with a 192dp preview; its compact status control is 48dp tall. Controls retain at least
 48dp touch targets, with ripples, accessibility labels, scalable text, and light/dark resource
 colors. Content scrolls on short screens so the action row stays reachable. Native overlay
@@ -381,3 +381,14 @@ Evidence: `/tmp/copilot-e2e-evidence/material-compact-light.png`,
 `material-approval-light.png`, `material-approval-dark.png`, `material-menu-light.png`,
 `material-paused-dark.png`, `material-search-agent-result.png`, and `material-preview-1.png`
 in that same evidence directory. Large-font and physical-device layout coverage remains untested.
+
+
+The icon-only follow-up release keeps the 48dp Pause/Resume and Stop targets in a small,
+end-aligned toolbar. Approval choices retain text. On-device checks verified light/dark
+appearance, pause → resume during pending approval, the native Stop tooltip on long press,
+and Stop removing the session/overlay without submitting the query. Clock remained foreground.
+Evidence in `/tmp/copilot-e2e-evidence/`: `icons-approval-light.png`, `icons-paused-dark.png`,
+`icons-resumed-dark.png`, `icons-stop-tooltip.png`, `icons-stop-cleared.png`.
+Checks: main 1,658 pass/3 skip, native 34 pass; release build succeeded in 1m 53s and installed.
+Logs: `/tmp/copilot-icons-verify.log`, `/tmp/copilot-icons-release.log`. APK SHA-256:
+`2a3571eec2b8e1c0c6fd2004b3a994732fbbcdc212753b1dc524ec4d755b00f9`.
