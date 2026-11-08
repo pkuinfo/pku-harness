@@ -11,10 +11,11 @@ export type ProviderConfig = { mode: ProviderMode; customURL?: string };
 export const DEFAULT_PROVIDER_CONFIG: ProviderConfig = { mode: 'off' };
 
 /**
- * Our hosted instance. TODO(cloud stage 5): replace with the real domain once it is bought and
- * tested inside WeChat (docs/CLOUD.md §5 decisions 1–2); until then 官方 cannot connect.
+ * Our hosted instance: the cloud server on rainyun behind Caddy, under the website's domain at
+ * /cloud (deployed 2026-11-08). TODO(cloud stage 5): move to a dedicated domain once one is
+ * bought and tested inside WeChat (docs/CLOUD.md §5 decisions 1–2).
  */
-export const OFFICIAL_URL = 'https://cloud.pkuinfo.org';
+export const OFFICIAL_URL = 'https://harness.novadiffusion.com/cloud';
 
 export type URLCheck = { ok: true; url: string } | { ok: false; reason: 'empty' | 'invalid' | 'insecure' | 'credentials' | 'query' };
 

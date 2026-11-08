@@ -380,6 +380,11 @@ Record the results in `docs/CLOUD.md`. This decides whether batch mode and one-s
 19. Only if S0 allows: `feat(card-share): batch mode via mailbox`, then the one-shot share.
 
 **Stage 5. Deploy.** Dockerfile, Caddy and Litestream; our instance; onboarding offers 云服务 as an optional step.
+- Our instance (2026-11-08): `https://harness.novadiffusion.com/cloud` = 官方 (`OFFICIAL_URL`). On
+  rainyun as `/opt/pkuharness-cloud/compose.yml` (image built from the plugins repo, bound to
+  127.0.0.1:8787, `mem_limit: 256m`); Caddy strips `/cloud` via `/etc/caddy/pkuharness-cloud.caddy`,
+  imported in the website's site block. No Litestream replica yet. Open: a dedicated domain
+  (§5 decisions 1–2).
 
 **Stage 6. push and functions.**
 - push uses UnifiedPush (ntfy) on Android, APNs on iOS and optional FCM. Payloads are E2E envelopes.
