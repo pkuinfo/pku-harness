@@ -217,7 +217,6 @@ export function CloudSettings() {
   const provider = useCloudProvider();
   const [mode, setMode] = useState<ProviderMode>(provider.config.mode);
   const [url, setURL] = useState(provider.config.customURL ?? '');
-  const [urlError, setURLError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ meta: MetaResponse; host: string } | { error: string } | null>(null);
 
@@ -225,6 +224,9 @@ export function CloudSettings() {
     const r = checkBaseURL(input, { dev: __DEV__ });
     return r.ok ? undefined : t(`app.cloud.urlErrors.${r.reason}`);
   };
+  // A saved URL this build refuses (e.g. a dev http:// address in a release build) leaves the
+  // cloud off: say why up front instead of showing the provider as in use.
+  const [urlError, setURLError] = useState<string | undefined>(() => (provider.config.mode === 'custom' && !provider.baseURL ? urlMessage(provider.config.customURL ?? '') : undefined));
 
   // The saved provider's cached meta shows until a new test replaces it.
   const savedMeta = mode === provider.config.mode && provider.baseURL && provider.meta ? { meta: provider.meta, host: displayHost(provider.baseURL) } : null;
@@ -273,7 +275,7 @@ export function CloudSettings() {
             title={t(m.title)}
             hint={m.mode === 'official' ? `${t(m.hint)} · ${displayHost(OFFICIAL_URL)}` : t(m.hint)}
             selected={mode === m.mode}
-            active={provider.config.mode === m.mode}
+            active={provider.config.mode === m.mode && (m.mode === 'off' || !!provider.baseURL)}
             onPress={() => {
               haptics.select();
               setMode(m.mode);
