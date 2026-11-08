@@ -143,3 +143,5 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] Copilot Pause/Resume and Stop are icon-only, with native long-press tooltips and accessible labels. Verified both themes, pause/resume state changes, Stop tooltip and session cleanup on the installed release; main 1,658 pass/3 skip and native 34 pass (2026-11-08).
 
 - [x] Copilot settings refinement: enable-first layout, collapsible readiness, separate reconnect/pair modes, saved-app filter, compact icons, clearable search, and header refresh. Installed release checked in light/dark and at 130% text size; enable and search/filter interactions passed. Main 1,658 pass/3 skip; plugins 1,245 pass (2026-11-08).
+
+- [x] Copilot modern visual pass: neutral canvas, compact toolbar, flat app rows and underlined tabs through opt-in SDK/host styles. Installed release checked in both themes and at 130% text size; tab interactions passed. Main 1,658 pass/3 skip; plugins 1,245 pass (2026-11-08).

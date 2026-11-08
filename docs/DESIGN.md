@@ -152,3 +152,14 @@ chooses raw colours or sizes. Catalog props expose semantic options only (`tone:
 4. Four data states present (loading, empty, error, content).
 5. Every tappable thing has pressed feedback and an accessibility label.
 6. Check against "native slop" tells (`expo-design-system/references/native-slop.md`).
+
+
+## Copilot utility-screen direction (2026-11-08)
+
+Copilot settings use a restrained, desktop-tool-inspired surface: an opaque neutral canvas,
+compact fixed toolbar, flat rows with hairline separators, small app icons, and underlined
+filter tabs. Avoid large promotional headings, tinted background light, and card framing
+for these settings. Native switches retain their touch targets and text still scales.
+`Screen.appearance="plain"`, `ListGroup.variant="plain"`, `ListRow.compact`, and
+`Segmented.variant="tabs"` are opt-in host components exposed through the SDK; other screens
+retain their standard appearance. Connection details remain progressive disclosure.

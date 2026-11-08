@@ -416,3 +416,20 @@ APK SHA-256: `286757bae1d7eb9107835a1531ae77b1b4861c3f9c8ac19077793fab23b86282`.
 Evidence in `/tmp/copilot-e2e-evidence/`: `settings-ready-light.png`, `settings-all-dark.png`,
 `settings-ready-large-dark.png`, `settings-setup-large-dark.png`, `settings-pair.png`,
 and `settings-empty-search.png`.
+
+
+### Flat settings design (2026-11-08)
+
+A further visual pass replaces the large heading, tinted background, grouped cards, and
+segmented pills with a compact fixed toolbar, neutral canvas, flat compact app rows, and
+underlined filter tabs. Native switches and all phone-control behavior are retained.
+Optional shared host styles are documented in DESIGN.md; other screens keep their defaults.
+
+Release installed and inspected in light/dark and at 130% text size. All/Allowed tab switching
+passed, and the saved four-app scope remained intact. Normal font scale and light mode restored.
+Main verification: 1,658 pass/3 skip; plugins: 1,245 pass. Build: successful in 1m 47s.
+Logs: `/tmp/copilot-modern-main-verify.log`, `/tmp/copilot-modern-plugin-verify.log`,
+`/tmp/copilot-modern-release.log`. APK SHA-256:
+`b0372f0316005f8667771ec5601f100c11fee2663302ea5db43f51809e8e319b`.
+Screenshots in `/tmp/copilot-e2e-evidence/`: `modern-settings-light.png`,
+`modern-settings-dark.png`, `modern-settings-large-dark.png`.

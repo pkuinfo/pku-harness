@@ -33,6 +33,7 @@ export function Screen({
   trailing,
   children,
   scroll = true,
+  appearance = 'standard',
   back,
   contentContainerStyle,
   ...scrollProps
@@ -42,6 +43,8 @@ export function Screen({
   trailing?: ReactNode;
   children: ReactNode;
   scroll?: boolean;
+  /** Flat canvas and compact toolbar for utility screens. */
+  appearance?: 'standard' | 'plain';
   /** Pushed screens: show a back button that pops the stack. */
   back?: boolean;
 }) {
@@ -101,6 +104,24 @@ export function Screen({
   );
 
   const backdrop = provided ? null : <Aurora />;
+
+  if (appearance === 'plain') {
+    return (
+      <View className="flex-1 bg-bg" style={{ paddingTop: insets.top, paddingBottom: bar }}>
+        <View className="w-full flex-row items-center gap-2 self-center border-b border-edge px-4 py-2" style={CONTENT}>
+          {backButton}
+          <View className="flex-1"><Text variant="bodyStrong" accessibilityRole="header">{title}</Text></View>
+          {trailing}
+        </View>
+        {scroll ? <Animated.ScrollView
+          style={enter}
+          contentContainerStyle={[{ paddingBottom: spacing.xxxl }, contentContainerStyle]}
+          {...scrollProps}>
+          <View className="w-full gap-6 self-center px-4 pt-4" style={CONTENT}>{children}</View>
+        </Animated.ScrollView> : children}
+      </View>
+    );
+  }
 
   if (!scroll) {
     return (

@@ -1,6 +1,8 @@
 import { Children, Fragment, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { cx } from '@/utils/cx';
+
 import { radius, useTheme } from '@/theme';
 
 import { GlassEdges } from './glass';
@@ -14,7 +16,9 @@ export function ListGroup({
   footer,
   children,
   style,
+  variant = 'grouped',
 }: {
+  variant?: 'grouped' | 'plain';
   title?: string;
   footer?: string;
   children: ReactNode;
@@ -28,12 +32,12 @@ export function ListGroup({
           {title.toUpperCase()}
         </Text>
       ) : null}
-      <View className="overflow-hidden rounded-lg bg-surface" style={{ borderCurve: 'continuous' }}>
-        <GlassEdges radius={radius.lg} />
+      <View className={cx("overflow-hidden", variant === 'grouped' && "rounded-lg bg-surface")} style={{ borderCurve: 'continuous' }}>
+        {variant === 'grouped' ? <GlassEdges radius={radius.lg} /> : null}
         {items.map((child, i) => (
           <Fragment key={i}>
             {/* Inset under the text, past the 32 px icon well. */}
-            {i > 0 ? <View className="ml-[60px] bg-edge" style={{ height: StyleSheet.hairlineWidth }} /> : null}
+            {i > 0 ? <View className={cx('bg-edge', variant === 'grouped' && 'ml-[60px]')} style={{ height: StyleSheet.hairlineWidth }} /> : null}
             {child}
           </Fragment>
         ))}
@@ -58,7 +62,9 @@ export function ListRow({
   onPress,
   chevron,
   titleLines = 1,
+  compact = false,
 }: {
+  compact?: boolean;
   leading?: ReactNode;
   icon?: IconName;
   iconTint?: string;
@@ -73,14 +79,14 @@ export function ListRow({
 }) {
   const c = useTheme();
   const content = (
-    <View className="min-h-14 flex-row items-center gap-3 px-4 py-3">
+    <View className={cx('min-h-14 flex-row items-center gap-3', compact ? 'py-1' : 'px-4 py-3')}>
       {leading ?? (icon ? (
         <View className="h-8 w-8 items-center justify-center rounded-md bg-surface-3" style={{ borderCurve: 'continuous' }}>
           <Icon name={icon} size={18} color={iconTint ?? c.text} />
         </View>
       ) : null)}
       <View className="flex-1 gap-0.5">
-        <Text variant="body" numberOfLines={titleLines}>
+        <Text variant={compact ? "callout" : "body"} numberOfLines={titleLines}>
           {title}
         </Text>
         {subtitle ? (
