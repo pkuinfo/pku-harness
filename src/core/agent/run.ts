@@ -33,12 +33,16 @@ function appendPart(sid: string, messageId: string, part: ChatPart) {
 }
 
 function appendText(sid: string, messageId: string, kind: 'text' | 'reasoning', delta: string) {
+  const now = Date.now();
   sessionStore.updateMessage(sid, messageId, (m) => {
     const last = m.parts[m.parts.length - 1];
     if (last && last.type === kind) {
-      return { ...m, parts: [...m.parts.slice(0, -1), { ...last, text: last.text + delta }] };
+      // Thinking is timed from its first delta to its latest one (the UI's "思考了 Ns").
+      const next = last.type === 'reasoning' ? { ...last, text: last.text + delta, ms: now - (last.startedAt ?? now) } : { ...last, text: last.text + delta };
+      return { ...m, parts: [...m.parts.slice(0, -1), next] };
     }
-    return { ...m, parts: [...m.parts, { type: kind, text: delta }] };
+    const part: ChatPart = kind === 'reasoning' ? { type: 'reasoning', text: delta, startedAt: now, ms: 0 } : { type: 'text', text: delta };
+    return { ...m, parts: [...m.parts, part] };
   });
 }
 

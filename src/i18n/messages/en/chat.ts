@@ -70,6 +70,13 @@ export const chat: Messages['chat'] = {
     toLatest: 'Jump to latest',
     toLatestWith: 'Jump to latest: {label}',
   },
+  thinking: {
+    live: 'Thinking',
+    done: 'Thought for {s}s',
+    untimed: 'Thinking',
+    show: 'Show the thinking',
+    hide: 'Hide the thinking',
+  },
   tools: {
     step: '{title}… · step {n}',
     used: 'Used {count} tools · {names}',

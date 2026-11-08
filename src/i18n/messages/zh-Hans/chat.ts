@@ -72,6 +72,13 @@ export const chat = {
     toLatest: '回到最新',
     toLatestWith: '回到最新：{label}',
   },
+  thinking: {
+    live: '思考中',
+    done: '思考了 {s} 秒',
+    untimed: '思考过程',
+    show: '展开思考过程',
+    hide: '收起思考过程',
+  },
   tools: {
     step: '{title}… · 第 {n} 步',
     used: '用了 {count} 个工具 · {names}',

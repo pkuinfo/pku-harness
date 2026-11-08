@@ -24,7 +24,8 @@ export type ToolStatus = 'running' | 'done' | 'error';
 
 export type ChatPart =
   | { type: 'text'; text: string }
-  | { type: 'reasoning'; text: string }
+  /** Model thinking. `startedAt`/`ms` time the block (absent on chats saved before they existed). */
+  | { type: 'reasoning'; text: string; startedAt?: number; ms?: number }
   | {
       type: 'tool';
       callId: string;

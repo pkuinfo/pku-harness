@@ -26,6 +26,7 @@ import { formatCount } from './composer/logic';
 
 import { ReplyActions } from './reply-actions';
 import { ToolGroup } from './tool-chip';
+import { ThinkingPill } from './thinking-pill';
 
 /** A sent message grows out of the composer: from its bottom-right corner, with a spring. */
 function bubbleIn(_values: EntryAnimationsValues) {
@@ -76,8 +77,9 @@ export const MessageView = memo(function MessageView({
   const groups = new Map<number, ToolPart[]>();
   let start = -1;
   message.parts.forEach((p, i) => {
-    // Blank text and hidden reasoning between steps don't break a group.
-    if (p.type === 'reasoning' || (p.type === 'text' && !p.text.trim())) return;
+    // Blank text and empty thinking between steps don't break a group; real thinking does, so
+    // think → tool → think reads in order.
+    if ((p.type === 'reasoning' || p.type === 'text') && !p.text.trim()) return;
     if (p.type !== 'tool') return void (start = -1);
     if (start < 0) start = i;
     groups.set(start, [...(groups.get(start) ?? []), p]);
@@ -93,7 +95,7 @@ export const MessageView = memo(function MessageView({
               </FadeIn>
             ) : null;
           case 'reasoning':
-            return null;
+            return <ThinkingPill key={i} part={part} live={streaming && i === message.parts.length - 1} replyStreaming={streaming} />;
           case 'tool': {
             const group = groups.get(i);
             return group ? <ToolGroup key={i} parts={group} /> : null;
