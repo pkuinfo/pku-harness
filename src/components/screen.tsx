@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useState, useRef, useImperativeHandle, type ReactNode, type Ref, type ComponentRef } from 'react';
 import { StyleSheet, View, type ScrollViewProps } from 'react-native';
 import Animated, { Extrapolation, interpolate, useAnimatedReaction, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -34,6 +34,8 @@ export function Screen({
   children,
   scroll = true,
   appearance = 'standard',
+  scrollRef,
+  overlay,
   back,
   contentContainerStyle,
   ...scrollProps
@@ -43,11 +45,15 @@ export function Screen({
   trailing?: ReactNode;
   children: ReactNode;
   scroll?: boolean;
+  scrollRef?: Ref<{ scrollTo: (options: { y?: number; animated?: boolean }) => void }>;
+  overlay?: ReactNode;
   /** Flat canvas and compact toolbar for utility screens. */
   appearance?: 'standard' | 'plain';
   /** Pushed screens: show a back button that pops the stack. */
   back?: boolean;
 }) {
+  const nativeScroll = useRef<ComponentRef<typeof Animated.ScrollView>>(null);
+  useImperativeHandle(scrollRef, () => ({ scrollTo: (options) => nativeScroll.current?.scrollTo(options) }), []);
   const t = useT();
   const m = glassMaterial[useThemeName()];
   const c = useTheme();
@@ -114,11 +120,13 @@ export function Screen({
           {trailing}
         </View>
         {scroll ? <Animated.ScrollView
+          ref={nativeScroll}
           style={enter}
           contentContainerStyle={[{ paddingBottom: spacing.xxxl }, contentContainerStyle]}
           {...scrollProps}>
           <View className="w-full gap-6 self-center px-4 pt-4" style={CONTENT}>{children}</View>
         </Animated.ScrollView> : children}
+        {overlay ? <View pointerEvents="box-none" className="absolute inset-0" style={{ top: insets.top + spacing.xxxl }}>{overlay}</View> : null}
       </View>
     );
   }
@@ -138,6 +146,7 @@ export function Screen({
     <View className={cx('flex-1', provided ? 'bg-transparent' : 'bg-bg')}>
       {backdrop}
       <Animated.ScrollView
+        ref={nativeScroll}
         className="flex-1"
         style={enter}
         contentContainerStyle={[{ paddingTop: insets.top, paddingBottom: spacing.xxxl + bar }, contentContainerStyle]}

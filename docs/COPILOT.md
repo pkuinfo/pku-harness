@@ -433,3 +433,23 @@ Logs: `/tmp/copilot-modern-main-verify.log`, `/tmp/copilot-modern-plugin-verify.
 `b0372f0316005f8667771ec5601f100c11fee2663302ea5db43f51809e8e319b`.
 Screenshots in `/tmp/copilot-e2e-evidence/`: `modern-settings-light.png`,
 `modern-settings-dark.png`, `modern-settings-large-dark.png`.
+
+
+### Alphabet quick access (2026-11-08)
+
+All apps now has alphabetic sections and a fixed right-edge letter index. Only initials with
+installed apps appear. Tapping scrolls to the section; near the end, scrolling clamps to the
+list boundary so the chosen section is visible. The index hides during search and in Allowed
+apps. Its own rail scrolls if necessary, and a reserved strip prevents overlapping controls.
+Latin accents normalize to base letters; other scripts/symbols group under # and remain
+searchable. No transliteration or drag-to-scrub behavior is claimed.
+
+Verified C → S → C navigation, light/dark rendering, and retained four-app scope on the
+emulator. Main verification: 1,660 pass/3 skip; plugins: 1,247 pass, including grouping,
+accent, duplicate-name and non-Latin tests. Logs: `/tmp/copilot-index-main-verify.log`,
+`/tmp/copilot-index-plugin-verify.log`, `/tmp/copilot-index-release.log`. Evidence:
+`/tmp/copilot-e2e-evidence/index-jump-s-light.png`, `index-jump-c-dark.png`.
+
+Final spacing correction built in 1m 12s and installed; verified reserved index space in
+`/tmp/copilot-e2e-evidence/index-final-light.png`. APK SHA-256:
+`92b69a65b431f622a5c84f80d5b7d0828ec47e2d5f2bfd2ffe02bdc432369a6d`.
