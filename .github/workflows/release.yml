@@ -114,9 +114,18 @@ jobs:
           echo "PKU_HARNESS_KEYSTORE=$KS" >> "$GITHUB_ENV"
 
       # Real phones are arm64; a universal APK (with emulator ABIs) is ~3x larger.
+      # Dependency downloads fail at times too (Maven Central redirects some Kotlin jars to GitHub
+      # releases, which 504s): more retries per request, and the build retried with what it fetched.
       - name: Build
         working-directory: android
-        run: ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --max-workers=2 --no-daemon
+        run: |
+          for i in 1 2 3 4; do
+            ./gradlew assembleRelease -PreactNativeArchitectures=arm64-v8a --max-workers=2 --no-daemon \
+              -Dorg.gradle.internal.repository.max.retries=8 -Dorg.gradle.internal.repository.initial.backoff=2000 && exit 0
+            echo "::warning::Build failed (attempt $i), retrying in $((i * 60))s"
+            sleep $((i * 60))
+          done
+          exit 1
 
       - name: Inspect
         id: apk
