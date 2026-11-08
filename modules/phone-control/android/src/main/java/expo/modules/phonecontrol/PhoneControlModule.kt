@@ -1,5 +1,10 @@
 package expo.modules.phonecontrol
 
+import org.pkuinfo.harness.phone.core.PhoneException
+import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.util.Base64
+import java.io.ByteArrayOutputStream
 import android.content.Intent
 import android.provider.Settings
 import org.pkuinfo.harness.phone.platform.PhonePlatform
@@ -12,11 +17,33 @@ import kotlinx.coroutines.withContext
 class PhoneControlModule : Module() {
     private val context get() = requireNotNull(appContext.reactContext).applicationContext
 
+    private suspend fun result(block: suspend () -> Map<String, Any?>): Map<String, Any?> = try { block() }
+        catch (error: PhoneException) { mapOf("nativeError" to mapOf("code" to error.code.name, "message" to error.message)) }
+
     override fun definition() = ModuleDefinition {
         Name("PhoneControl")
+        Events("onOverlayAnswer", "onControlStopped")
         OnCreate {
+            PhoneOverlayBridge.onControlStopped = { sessionId ->
+                sendEvent("onControlStopped", mapOf("sessionId" to sessionId))
+            }
+            PhoneOverlayBridge.onAnswer = { request, allowed ->
+                sendEvent("onOverlayAnswer", mapOf("id" to request.id, "sessionId" to request.sessionId, "allowed" to allowed))
+            }
             PhoneRuntime.initialize(context)
             PhonePlatform.of(context).shellManager.start()
+        }
+        OnDestroy { PhoneOverlayBridge.onControlStopped = null; PhoneOverlayBridge.status = null; PhoneOverlayBridge.onAnswer = null; PhoneOverlayBridge.update(null) }
+        AsyncFunction("overlayStatus") { value: Map<String, Any?>? ->
+            val id = value?.get("sessionId") as? String
+            val phase = value?.get("phase") as? String
+            PhoneOverlayBridge.status = if (id != null && id == PhoneRuntime.activeId() && phase in setOf("waiting", "thinking", "working", "attention"))
+                PhoneOverlayBridge.Status(id, phase!!, (value?.get("title") as? String).orEmpty().take(160)) else null
+        }
+        AsyncFunction("overlayApproval") { value: Map<String, Any?>? ->
+            val id = value?.get("sessionId") as? String
+            PhoneOverlayBridge.update(if (value != null && id != null && id == PhoneRuntime.activeId())
+                PhoneOverlayBridge.Approval(id, (value["id"] as Number).toInt(), (value["title"] as String).take(240), (value["detail"] as String).take(1200)) else null)
         }
         AsyncFunction("readiness") { PhoneRuntime.readiness(context) }
         AsyncFunction("setup") { kind: String ->
@@ -49,21 +76,48 @@ class PhoneControlModule : Module() {
         }
         AsyncFunction("apps") {
             val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
-            context.packageManager.queryIntentActivities(intent, 0)
-                .filter { it.activityInfo.packageName != context.packageName }
-                .distinctBy { it.activityInfo.packageName }
-                .map { mapOf("packageName" to it.activityInfo.packageName, "label" to it.loadLabel(context.packageManager).toString()) }
-                .sortedBy { it["label"] }
+            val manager = context.packageManager
+            val launchers = manager.queryIntentActivities(intent, 0).map { it.activityInfo.applicationInfo }
+            // Android-owned companion windows are separately selectable; selecting Settings
+            // never silently grants access to System UI or its search provider.
+            val companions = listOf("com.android.systemui", "com.google.android.settings.intelligence")
+                .mapNotNull { name -> runCatching { manager.getApplicationInfo(name, 0) }.getOrNull() }
+            (launchers + companions)
+                .filter { it.packageName != context.packageName }
+                .distinctBy { it.packageName }
+                .map { mapOf("packageName" to it.packageName, "label" to it.loadLabel(manager).toString(),
+                    "launchable" to (manager.getLaunchIntentForPackage(it.packageName) != null),
+                    "iconUri" to runCatching {
+                        val icon = it.loadIcon(manager)
+                        val bitmap = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
+                        try {
+                            icon.setBounds(0, 0, bitmap.width, bitmap.height)
+                            icon.draw(Canvas(bitmap))
+                            val bytes = ByteArrayOutputStream().also { stream -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, stream) }.toByteArray()
+                            "data:image/png;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
+                        } finally { bitmap.recycle() }
+                    }.getOrNull()) }
+                .sortedBy { it["label"] as String }
+
         }
         AsyncFunction("begin") Coroutine { packages: List<String> -> PhoneRuntime.begin(context, packages) }
         AsyncFunction("preview") Coroutine { sessionId: String ->
             withContext(Dispatchers.Default) { PhoneRuntime.preview(context, sessionId) }
         }
+        AsyncFunction("assessSubmit") Coroutine { sessionId: String, snapshotId: String, ref: String ->
+            result { PhoneRuntime.assessTap(sessionId, snapshotId, ref, submit = true) }
+        }
         AsyncFunction("assessTap") Coroutine { sessionId: String, snapshotId: String, ref: String ->
-            PhoneRuntime.assessTap(sessionId, snapshotId, ref)
+            result { PhoneRuntime.assessTap(sessionId, snapshotId, ref) }
         }
         AsyncFunction("execute") Coroutine { sessionId: String, operation: String, args: Map<String, Any?> ->
-            withContext(Dispatchers.Default) { PhoneRuntime.execute(context, sessionId, operation, args) }
+            result { withContext(Dispatchers.Default) { PhoneRuntime.execute(context, sessionId, operation, args) } }
+        }
+        AsyncFunction("readBrightness") Coroutine { sessionId: String ->
+            result { withContext(Dispatchers.Default) { PhoneRuntime.readBrightness(context, sessionId) } }
+        }
+        AsyncFunction("setBrightness") Coroutine { sessionId: String, percent: Float, adaptive: Boolean? ->
+            result { withContext(Dispatchers.Default) { PhoneRuntime.setBrightness(context, sessionId, percent, adaptive) } }
         }
         AsyncFunction("end") Coroutine { sessionId: String -> PhoneRuntime.end(context, sessionId) }
         AsyncFunction("takeover") Coroutine { sessionId: String -> PhoneRuntime.takeover(context, sessionId) }

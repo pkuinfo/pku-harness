@@ -1,3 +1,5 @@
+import { useOverlayActivity } from '@/core/phone/use-overlay-activity';
+import { useOverlayApprovals } from '@/core/phone/use-overlay-approvals';
 import { View } from 'react-native';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -38,6 +40,8 @@ function preview(input: unknown): [string, string][] {
  * effect the user set to 每次询问. Mounted once in the root layout.
  */
 export function ApprovalPrompt() {
+  useOverlayApprovals();
+  useOverlayActivity();
   const c = useTheme();
   const t = useT();
   const insets = useSafeAreaInsets();

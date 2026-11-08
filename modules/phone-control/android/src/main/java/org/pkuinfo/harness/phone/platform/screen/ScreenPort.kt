@@ -52,9 +52,12 @@ data class UiElement(
     val placeholder: String? = null,
     val searchField: Boolean = false,
     val states: Set<String> = emptySet(),
+    val rangeMin: Float? = null,
+    val rangeMax: Float? = null,
+    val rangeCurrent: Float? = null,
 ) {
     /** 无名字且不可交互的节点对模型没有信息量。 */
-    val meaningful: Boolean get() = name.isNotBlank() || clickable || editable || scrollable
+    val meaningful: Boolean get() = name.isNotBlank() || clickable || editable || scrollable || rangeMin != null
 }
 
 /** 控件状态的名字,手机与网页共用。 */

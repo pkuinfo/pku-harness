@@ -22,12 +22,13 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         val stopped = AtomicBoolean(false)
         val stop = CompletableDeferred<Unit>()
         @Volatile var handedOver = false
+        @Volatile var pauseGate: CompletableDeferred<Unit>? = null
         var observed: Pair<DeviceFrame, PhoneObservation>? = null
         var sequence = 0L
     }
 
     fun state(): PhoneSessionState? = current?.takeUnless { it.stopped.get() }?.let {
-        PhoneSessionState(it.id, it.packages.toSet(), it.handedOver)
+        PhoneSessionState(it.id, it.packages.toSet(), it.handedOver, it.pauseGate != null)
     }
 
     suspend fun begin(packages: Set<String>): PhoneSessionState = mutex.withLock {
@@ -49,14 +50,35 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         }
     }
 
-    suspend fun observe(id: String): PhoneObservation = mutex.withLock { publish(active(id)) }
+    fun pause(id: String, paused: Boolean) {
+        val session = active(id)
+        synchronized(session) {
+            if (paused && session.pauseGate == null) session.pauseGate = CompletableDeferred()
+            if (!paused) { session.pauseGate?.complete(Unit); session.pauseGate = null }
+        }
+    }
 
-    suspend fun assess(id: String, snapshotId: String, ref: String): PhoneAssessment = mutex.withLock {
+    private suspend fun awaitRunning(id: String) {
+        val session = active(id)
+        while (true) {
+            val gate = session.pauseGate ?: return
+            select<Unit> { gate.onAwait { }; session.stop.onAwait { } }
+            live(session)
+        }
+    }
+
+    suspend fun observe(id: String): PhoneObservation {
+        awaitRunning(id)
+        return mutex.withLock { publish(active(id)) }
+    }
+
+    suspend fun assess(id: String, snapshotId: String, ref: String, submit: Boolean = false): PhoneAssessment = mutex.withLock {
         val session = active(id)
         val (frame, observation) = fresh(session, snapshotId)
         val target = target(observation, ref)
         validateTarget(target)
-        PhoneAssessment(policy.assess(frame, target), label(target), frame.packageName, snapshotId, ref)
+        if (submit && !target.editable) fail(PhoneFailure.INVALID, "Choose an editable field")
+        PhoneAssessment(if (submit) policy.submit(frame, target) else policy.assess(frame, target), label(target), frame.packageName, snapshotId, ref, submit)
     }
 
     suspend fun execute(
@@ -65,35 +87,88 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         snapshotId: String? = null,
         ref: String? = null,
         approved: PhoneAssessment? = null,
-    ): PhoneExecution = mutex.withLock {
-        val session = active(id)
-        var element: DeviceElement? = null
-        if (action is PhoneAction.Launch) {
-            if (action.packageName !in session.packages) fail(PhoneFailure.APP_SCOPE, "This app was not selected")
-            checkedFrame(session)
-        } else {
-            val (frame, observation) = fresh(session, snapshotId)
-            if (ref != null) element = target(observation, ref).also(::validateTarget)
-            when (action) {
-                PhoneAction.Tap -> {
-                    val hit = element ?: fail(PhoneFailure.INVALID, "A target is required")
-                    val assessment = PhoneAssessment(policy.assess(frame, hit), label(hit), frame.packageName, observation.snapshotId, ref!!)
-                    if (assessment.effect == PhoneEffect.MONEY) fail(PhoneFailure.HANDOFF, "Hand payment or purchase confirmation to the user")
-                    if (approved != assessment) fail(PhoneFailure.STALE, "The approved action no longer matches the observed target")
+    ): PhoneExecution {
+        while (true) {
+            awaitRunning(id)
+            val result = mutex.withLock {
+                val session = active(id)
+                if (session.pauseGate != null) return@withLock null
+                var element: DeviceElement? = null
+                if (action is PhoneAction.Launch) {
+                    if (action.packageName !in session.packages) fail(PhoneFailure.APP_SCOPE, "This app was not selected")
+                    if (session.handedOver) fail(PhoneFailure.HANDOFF, "The user has control")
+                    if (session.device.isLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to continue")
+                } else {
+                    val (frame, observation) = fresh(session, snapshotId)
+                    if (ref != null) element = target(observation, ref).also(::validateTarget)
+                    when (action) {
+                        PhoneAction.Tap, PhoneAction.Submit -> {
+                            val hit = element ?: fail(PhoneFailure.INVALID, "A target is required")
+                            val submit = action == PhoneAction.Submit
+                            if (submit && !hit.editable) fail(PhoneFailure.INVALID, "Choose an editable field")
+                            val assessment = PhoneAssessment(if (submit) policy.submit(frame, hit) else policy.assess(frame, hit), label(hit), frame.packageName, observation.snapshotId, ref!!, submit)
+                            if (assessment.effect == PhoneEffect.MONEY) fail(PhoneFailure.HANDOFF, "Hand payment or purchase confirmation to the user")
+                            if (approved != assessment) fail(PhoneFailure.STALE, "The approved action no longer matches the observed target")
+                        }
+                        is PhoneAction.SetProgress -> {
+                            val hit = element ?: fail(PhoneFailure.INVALID, "A slider is required")
+                            val minimum = hit.rangeMin ?: fail(PhoneFailure.INVALID, "This target is not a slider")
+                            val maximum = hit.rangeMax ?: fail(PhoneFailure.INVALID, "This target is not a slider")
+                            if (!action.value.isFinite() || action.value < minimum || action.value > maximum)
+                                fail(PhoneFailure.INVALID, "Choose a value within the observed slider range")
+                            if (policy.assess(frame, hit) != PhoneEffect.WRITE) fail(PhoneFailure.HANDOFF, "This slider needs user control")
+                        }
+                        is PhoneAction.Type -> {
+                            if (element?.editable != true || action.text.length > 10_000) fail(PhoneFailure.INVALID, "Choose an editable field and text within the input limit")
+                        }
+                        is PhoneAction.Scroll -> if (element != null && !element.scrollable) fail(PhoneFailure.INVALID, "This target is not scrollable")
+                        else -> Unit
+                    }
                 }
-                is PhoneAction.Type -> {
-                    if (element?.editable != true || action.text.length > 10_000) fail(PhoneFailure.INVALID, "Choose an editable field and text within the input limit")
-                }
-                is PhoneAction.Scroll -> if (element != null && !element.scrollable) fail(PhoneFailure.INVALID, "This target is not scrollable")
-                else -> Unit
+                // A pause arriving during the freshness read must not dispatch with the earlier
+                // observation. Release the mutex while waiting so takeover and stop still work.
+                // Once dispatch begins, that one operation may finish; subsequent work waits.
+                if (session.pauseGate != null) return@withLock null
+                live(session)
+                session.observed = null
+                val outcome = session.device.perform(action, element)
+                live(session)
+                PhoneExecution(outcome, publish(session))
             }
+            if (result != null) return result
         }
-        live(session)
-        // Invalidate before dispatch: an exception may mean the action happened but its result was lost.
-        session.observed = null
-        val outcome = session.device.perform(action, element)
-        live(session)
-        PhoneExecution(outcome, publish(session))
+    }
+
+    /** Hardware brightness belongs to the user's display, not the app's virtual display. */
+    suspend fun readBrightness(id: String): DeviceBrightness = brightnessOperation(id) { it.readBrightness() }
+
+    suspend fun setBrightness(id: String, percent: Float, adaptive: Boolean?): DeviceBrightnessChange {
+        if (!percent.isFinite() || percent !in 0f..100f) fail(PhoneFailure.INVALID, "Brightness must be between 0 and 100 percent")
+        return brightnessOperation(id, invalidate = true) { it.setBrightness(percent, adaptive) }
+    }
+
+    private suspend fun <T : Any> brightnessOperation(id: String, invalidate: Boolean = false, operation: suspend (DeviceSession) -> T): T {
+        while (true) {
+            awaitRunning(id)
+            val result = mutex.withLock {
+                val session = active(id)
+                if (session.pauseGate != null) return@withLock null
+                val settings = session.device.settingsPackage
+                if (settings == null || settings !in session.packages) fail(PhoneFailure.APP_SCOPE, "Select Android Settings before controlling device brightness")
+                if (session.handedOver) fail(PhoneFailure.HANDOFF, "The user has control")
+                if (session.device.isLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to control brightness")
+                if (session.pauseGate != null) return@withLock null
+                live(session)
+                currentCoroutineContext().ensureActive()
+                // Any Settings UI may change after a hardware setting. Require a fresh read
+                // before subsequent element actions, without reading unrelated main-screen apps.
+                if (invalidate) session.observed = null
+                val value = operation(session.device)
+                live(session)
+                value
+            }
+            if (result != null) return result
+        }
     }
 
     suspend fun waitForChange(id: String, timeoutMs: Long): PhoneObservation = mutex.withLock {

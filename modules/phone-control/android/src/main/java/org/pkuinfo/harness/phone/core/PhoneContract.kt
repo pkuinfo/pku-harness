@@ -25,11 +25,14 @@ data class PhoneAssessment(
     val packageName: String?,
     val snapshotId: String,
     val ref: String,
+    val submit: Boolean = false,
 )
 
 data class PhoneExecution(val outcome: DeviceOutcome, val observation: PhoneObservation)
-data class PhoneSessionState(val id: String, val packages: Set<String>, val handedOver: Boolean)
+data class PhoneSessionState(val id: String, val packages: Set<String>, val handedOver: Boolean, val paused: Boolean = false)
 
 fun interface ActionPolicy {
     fun assess(frame: DeviceFrame, target: DeviceElement): PhoneEffect
+    fun submit(frame: DeviceFrame, target: DeviceElement): PhoneEffect =
+        if (assess(frame, target) == PhoneEffect.MONEY) PhoneEffect.MONEY else PhoneEffect.PUBLIC
 }

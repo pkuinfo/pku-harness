@@ -2,6 +2,9 @@ package org.pkuinfo.harness.phone.platform
 
 import android.app.KeyguardManager
 import android.content.Context
+import android.content.Intent
+import android.provider.Settings
+import android.os.Bundle
 import android.graphics.Bitmap
 import android.hardware.display.DisplayManager
 import android.os.Build
@@ -25,7 +28,7 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
         check(Build.VERSION.SDK_INT >= 31) { "Phone control requires Android 12 or newer" }
         val accessibility = checkNotNull(ScreenAccessibility.instance.value) { "Enable Copilot accessibility first" }
         val helper = checkNotNull(PhonePlatform.of(context).hub.shell.value) { "Connect the phone helper first" }
-        for (name in allowedPackages) check(context.packageManager.getLaunchIntentForPackage(name) != null) { "App is not installed or cannot be launched: $name" }
+        for (name in allowedPackages) check(runCatching { context.packageManager.getApplicationInfo(name, 0) }.isSuccess) { "App is not installed: $name" }
         val metrics = context.resources.displayMetrics
         val display = LazyDisplay(metrics.widthPixels, metrics.heightPixels) {
             withContext(Dispatchers.Main) { AgentDisplay(helper, metrics.widthPixels, metrics.heightPixels, metrics.densityDpi, context.getSystemService(DisplayManager::class.java)) }
@@ -37,6 +40,26 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
             private var latest: ScreenSnapshot? = null
             private var closed = false
             private val screen = AndroidScreenDriver(accessibility, helper, display, handedOver = { handedOver }, appAccess = PhoneScope.policy)
+
+            override val settingsPackage = context.packageManager.resolveActivity(Intent(Settings.ACTION_SETTINGS), 0)?.activityInfo?.packageName
+
+            private fun brightness(value: Bundle): DeviceBrightness {
+                value.getString("error")?.let { throw PhoneException(PhoneFailure.INVALID, it) }
+                check(value.containsKey("linear") && value.containsKey("percent") && value.containsKey("adaptive")) { "Invalid brightness response" }
+                return DeviceBrightness(value.getInt("displayId"), value.getFloat("percent"), value.getFloat("linear"),
+                    value.getFloat("minimum"), value.getFloat("maximum"), value.getBoolean("adaptive"))
+            }
+            override suspend fun readBrightness(): DeviceBrightness = withContext(Dispatchers.IO) {
+                check(!closed) { "Device session closed" }
+                brightness(checkNotNull(helper.readDeviceBrightness()) { "Device brightness is unavailable" })
+            }
+            override suspend fun setBrightness(percent: Float, adaptive: Boolean?): DeviceBrightnessChange = withContext(Dispatchers.IO) {
+                check(!closed) { "Device session closed" }
+                val value = checkNotNull(helper.setDeviceBrightness(percent, when (adaptive) { null -> -1; false -> 0; true -> 1 }))
+                value.getString("error")?.let { throw PhoneException(PhoneFailure.INVALID, it) }
+                DeviceBrightnessChange(brightness(checkNotNull(value.getBundle("before"))), brightness(checkNotNull(value.getBundle("after"))),
+                    value.getFloat("requestedPercent"), value.getBoolean("verified"))
+            }
 
             override suspend fun isLocked() = context.getSystemService(KeyguardManager::class.java).isKeyguardLocked
 
@@ -55,20 +78,22 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
                 val windows = snapshot.windows.joinToString(";") { "${it.id}:${it.layer}:${it.type}:${it.active}:${it.focused}" }
                 return DeviceFrame(snapshot.packageName ?: snapshot.unreadableApp, packages, snapshot.width, snapshot.height,
                     snapshot.elements.map { e -> DeviceElement(e.ref, e.role, if (e.secret) "" else e.name, e.bounds,
-                        e.resourceId, e.clickable, e.editable, e.scrollable, e.secret, UiStates.DISABLED !in e.states) },
+                        e.resourceId, e.clickable, e.editable, e.scrollable, e.secret, UiStates.DISABLED !in e.states, e.rangeMin, e.rangeMax, e.rangeCurrent) },
                     "${display.current?.displayId}:$windows", snapshot.protected, snapshot.changedDuringRead, snapshot.opened?.onUserScreen == true)
             }
 
             override suspend fun perform(action: PhoneAction, target: DeviceElement?): DeviceOutcome {
-                scope()
+                if (action !is PhoneAction.Launch) scope()
                 check(!isLocked()) { "Unlock the phone to continue" }
                 val snapshotId = latest?.snapshotId
                 // Only registered targets from the engine's fresh read reach these mechanisms.
                 val result = when (action) {
                     is PhoneAction.Launch -> {
                         require(action.packageName in allowedPackages)
-                        screen.openApp(action.packageName)
+                        screen.openApp(action.packageName, cold = action.restart)
                     }
+                    is PhoneAction.SetProgress -> screen.setProgress(requireNotNull(target).key, requireNotNull(snapshotId), action.value)
+                    PhoneAction.Submit -> screen.submitField(requireNotNull(target).key, requireNotNull(snapshotId))
                     PhoneAction.Tap -> screen.tapRef(requireNotNull(target).key, requireNotNull(snapshotId))
                     is PhoneAction.Type -> screen.typeText(requireNotNull(target).key, snapshotId, action.text)
                     is PhoneAction.Scroll -> screen.scroll(target?.key, snapshotId, action.forward)

@@ -6,3 +6,7 @@ PKU Harness does not import or call Mika project modules, plugins or packages.
 
 Mika
 Copyright 2026 wangzan101
+
+BrightnessScale is adapted from Android SettingsLib BrightnessUtils.java.
+Copyright (C) 2018 The Android Open Source Project. Licensed under Apache-2.0.
+https://android.googlesource.com/platform/prebuilts/fullsdk/sources/android-31/+/refs/heads/androidx-savedstate-release/com/android/settingslib/display/BrightnessUtils.java

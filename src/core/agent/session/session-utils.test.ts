@@ -16,6 +16,7 @@ import {
   previewOf,
   relativeTime,
   sectionOf,
+  settleRunningTools,
   toRow,
   turnCaption,
   userText,
@@ -193,3 +194,29 @@ describe('plainText', () => {
   });
 });
 
+
+
+describe('terminal tool cleanup', () => {
+  test('Stop removes an approval-waiting tool spinner while preserving earlier results and text', () => {
+    const parts: ChatMessage['parts'] = [
+      { type: 'text', text: 'Searching your selected browser.' },
+      { type: 'tool', callId: 'read', toolId: 'copilot.observe', status: 'done', output: { snapshotId: 'observed' } },
+      { type: 'tool', callId: 'submit', toolId: 'copilot.submit', status: 'running', input: { sessionId: 'phone' } },
+      { type: 'tool', callId: 'earlier', toolId: 'copilot.tap', status: 'error', error: 'Screen changed' },
+    ];
+    const settled = settleRunningTools(parts, en('chat.reply.stopped'));
+    expect(settled[2]).toEqual({ type: 'tool', callId: 'submit', toolId: 'copilot.submit', input: { sessionId: 'phone' }, status: 'error', error: 'Stopped' });
+    expect(settled.filter((part) => part.type === 'tool' && part.status === 'running')).toEqual([]);
+    expect(settled[0]).toBe(parts[0]);
+    expect(settled[1]).toBe(parts[1]);
+    expect(settled[3]).toBe(parts[3]);
+    expect(parts[2]).toHaveProperty('status', 'running');
+  });
+
+  test('terminal label is localized and completed tools remain untouched', () => {
+    const pending: ChatMessage['parts'] = [{ type: 'tool', callId: 'c', toolId: 'copilot.launch', status: 'running' }];
+    expect(settleRunningTools(pending, zh('chat.reply.stopped'))[0]).toHaveProperty('error', '已停止');
+    const done: ChatMessage['parts'] = [{ type: 'tool', callId: 'c', toolId: 'copilot.launch', status: 'done', output: { ok: true } }];
+    expect(settleRunningTools(done, 'Stopped')).toBe(done);
+  });
+});

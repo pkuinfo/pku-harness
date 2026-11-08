@@ -44,3 +44,90 @@ test('finishing a handoff releases run ownership so a later chat turn can resume
   expect(closed).toBe(1);
   expect(finished).toEqual([false, true]);
 });
+
+test('saved scope may start on a new turn but a stopped run cannot restart', async () => {
+  const a = new AbortController();
+  const b = new AbortController();
+  const closed: string[] = [];
+  const lease = new PhoneSessionLease(async (id) => { closed.push(id); });
+  await lease.begin(async () => ({ sessionId: 'old' }), a.signal);
+  await lease.end('old');
+  await releaseRunResources(a.signal);
+  let reopened = false;
+  await expect(lease.begin(async () => { reopened = true; return { sessionId: 'unexpected' }; }, a.signal)).rejects.toThrow('new user message');
+  expect(reopened).toBe(false);
+  expect(() => lease.claim('replacement-from-ui', a.signal)).toThrow('new user message');
+  await lease.begin(async () => ({ sessionId: 'new' }), b.signal);
+  await releaseRunResources(b.signal);
+  expect(closed).toEqual(['old', 'new']);
+});
+
+test('native stop cannot be bypassed by starting again in the same run', async () => {
+  const run = new AbortController();
+  const lease = new PhoneSessionLease(async () => {});
+  await lease.begin(async () => ({ sessionId: 'phone' }), run.signal);
+  // Native floating Stop closes the session before any JS lease callback is invoked.
+  await expect(lease.begin(async () => ({ sessionId: 'replacement' }), run.signal)).rejects.toThrow('new user message');
+  await releaseRunResources(run.signal);
+});
+
+test('cancellation during native session creation closes its late result', async () => {
+  const run = new AbortController();
+  const closed: string[] = [];
+  const lease = new PhoneSessionLease(async (id) => { closed.push(id); });
+  let resolve!: (value: { sessionId: string }) => void;
+  const opened = lease.begin(() => new Promise<{ sessionId: string }>((done) => { resolve = done; }), run.signal);
+  run.abort();
+  resolve({ sessionId: 'late' });
+  await expect(opened).rejects.toThrow();
+  expect(closed).toEqual(['late']);
+});
+
+test('starting claims cleanup even before the agent performs its first operation', async () => {
+  const run = new AbortController();
+  const closed: string[] = [];
+  const lease = new PhoneSessionLease(async (id) => { closed.push(id); });
+  await lease.begin(async () => ({ sessionId: 'phone' }), run.signal);
+  await releaseRunResources(run.signal);
+  expect(closed).toEqual(['phone']);
+});
+
+test('native Stop cancels only its owning run and releases a pending approval', async () => {
+  const { registerRunCancellation } = await import('../runtime/run-resources');
+  const { ApprovalQueue } = await import('../runtime/approval-queue');
+  const run = new AbortController();
+  const other = new AbortController();
+  registerRunCancellation(run.signal, () => run.abort());
+  registerRunCancellation(other.signal, () => other.abort());
+  const lease = new PhoneSessionLease(async () => {});
+  lease.claim('phone', run.signal);
+  const approvals = new ApprovalQueue<{ sessionId: string }>();
+  const pending = approvals.enqueue({ sessionId: 'phone' }, run.signal);
+  lease.stopRun('old-session');
+  expect(run.signal.aborted).toBe(false);
+  lease.stopRun('phone');
+  expect(run.signal.aborted).toBe(true);
+  expect(other.signal.aborted).toBe(false);
+  expect(await pending).toBe(false);
+  expect(approvals.current()).toBeNull();
+  await releaseRunResources(run.signal);
+  await expect(lease.begin(async () => ({ sessionId: 'replacement' }), run.signal)).rejects.toThrow();
+  await releaseRunResources(other.signal);
+});
+
+test('in-app user Stop cancels the model but normal tool end does not', async () => {
+  const { registerRunCancellation } = await import('../runtime/run-resources');
+  const a = new AbortController();
+  const b = new AbortController();
+  registerRunCancellation(a.signal, () => a.abort());
+  registerRunCancellation(b.signal, () => b.abort());
+  const lease = new PhoneSessionLease(async () => {});
+  lease.claim('user-stops', a.signal);
+  await lease.end('user-stops');
+  expect(a.signal.aborted).toBe(true);
+  lease.claim('agent-finishes', b.signal);
+  await lease.end('agent-finishes', b.signal);
+  expect(b.signal.aborted).toBe(false);
+  await releaseRunResources(a.signal);
+  await releaseRunResources(b.signal);
+});

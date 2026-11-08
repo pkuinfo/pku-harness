@@ -42,3 +42,17 @@ test('an explicitly released resource and another run are left alone', async () 
   await releaseRunResources(b.signal);
   expect(closed).toBe(1);
 });
+
+test('native resource cancellation cannot abort a completed or unrelated run', async () => {
+  const { registerRunCancellation, cancelResourceRun } = await import('./run-resources');
+  const a = new AbortController();
+  const b = new AbortController();
+  registerRunCancellation(a.signal, () => a.abort());
+  registerRunCancellation(b.signal, () => b.abort());
+  await releaseRunResources(a.signal);
+  cancelResourceRun(a.signal);
+  expect(a.signal.aborted).toBe(false);
+  cancelResourceRun(b.signal);
+  expect(b.signal.aborted).toBe(true);
+  await releaseRunResources(b.signal);
+});

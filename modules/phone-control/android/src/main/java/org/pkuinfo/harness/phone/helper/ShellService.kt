@@ -1385,6 +1385,19 @@ class ShellService(
         return exec(command, displayId)
     }
 
+    private val deviceBrightness by lazy { DeviceBrightnessController(displayManager,
+        readMode = {
+            val result = exec("settings --user $myUser get system screen_brightness_mode", null)
+            if (result.getInt("exitCode", -1) == 0) result.getString("output")?.trim()?.toIntOrNull() ?: -1 else -1
+        },
+        writeMode = { mode ->
+            require(mode == 0 || mode == 1)
+            exec("settings --user $myUser put system screen_brightness_mode $mode", null).getInt("exitCode", -1) == 0
+        }) }
+
+    override fun readDeviceBrightness(): Bundle = deviceBrightness.read()
+    override fun setDeviceBrightness(percent: Float, adaptiveMode: Int): Bundle = deviceBrightness.set(percent, adaptiveMode)
+
     override fun runCommand(command: String): Bundle = exec(command, null)
 
     /** 助手进程看 Mika 交来的心愿(见 [setRestoreWish]);Mika 死后据此决定要不要把它拉起来。 */

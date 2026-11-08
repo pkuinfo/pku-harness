@@ -6,6 +6,10 @@ interface DevicePort {
 }
 
 interface DeviceSession {
+    /** Device setting access requires the real Settings package in the saved app scope. */
+    val settingsPackage: String? get() = null
+    suspend fun readBrightness(): DeviceBrightness = throw UnsupportedOperationException("Physical brightness is unavailable")
+    suspend fun setBrightness(percent: Float, adaptive: Boolean?): DeviceBrightnessChange = throw UnsupportedOperationException("Physical brightness is unavailable")
     suspend fun isLocked(): Boolean
     suspend fun read(): DeviceFrame
     suspend fun perform(action: PhoneAction, target: DeviceElement?): DeviceOutcome
@@ -29,6 +33,9 @@ data class DeviceElement(
     val scrollable: Boolean = false,
     val secret: Boolean = false,
     val enabled: Boolean = true,
+    val rangeMin: Float? = null,
+    val rangeMax: Float? = null,
+    val rangeCurrent: Float? = null,
 )
 
 data class DeviceFrame(
@@ -46,10 +53,14 @@ data class DeviceFrame(
 )
 
 data class DeviceOutcome(val ok: Boolean, val message: String? = null, val changed: Boolean? = null, val verification: String? = null)
+data class DeviceBrightness(val displayId: Int, val percent: Float, val linear: Float, val minimum: Float, val maximum: Float, val adaptive: Boolean)
+data class DeviceBrightnessChange(val before: DeviceBrightness, val after: DeviceBrightness, val requestedPercent: Float, val verified: Boolean)
 data class DevicePreview(val bytes: ByteArray, val mimeType: String, val width: Int, val height: Int)
 
 sealed interface PhoneAction {
-    data class Launch(val packageName: String) : PhoneAction
+    data class Launch(val packageName: String, val restart: Boolean = false) : PhoneAction
+    data class SetProgress(val value: Float) : PhoneAction
+    data object Submit : PhoneAction
     data object Tap : PhoneAction
     data class Type(val text: String) : PhoneAction
     data class Scroll(val forward: Boolean) : PhoneAction

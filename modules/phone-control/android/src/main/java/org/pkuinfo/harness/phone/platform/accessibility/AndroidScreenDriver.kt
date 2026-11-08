@@ -507,6 +507,36 @@ class AndroidScreenDriver(
         verified { shell.injectKey(displayId, keyCode) }
     }
 
+    suspend fun setProgress(ref: String, snapshotId: String, value: Float): ActionResult = withContext(Dispatchers.IO) {
+        if (!hasDisplay) return@withContext NO_APP_OPEN
+        val target = resolve(ref, snapshotId) ?: return@withContext ActionResult.Failed("ref_expired")
+        val node = target.first
+        val range = node.rangeInfo ?: return@withContext ActionResult.Failed("This control is not a slider")
+        if (!value.isFinite() || value < range.min || value > range.max || node.isPassword)
+            return@withContext ActionResult.Failed("Invalid slider value")
+        val action = AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS
+        if (node.actionList.none { it.id == action.id }) return@withContext ActionResult.Failed("This slider does not support setting its value")
+        val args = Bundle().apply { putFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE, value) }
+        verified { node.performAction(action.id, args) }
+    }
+
+    /** Field-bound editor action; never send a global key or retry an uncertain submission. */
+    suspend fun submitField(ref: String, snapshotId: String): ActionResult = withContext(Dispatchers.IO) {
+        if (!hasDisplay) return@withContext NO_APP_OPEN
+        val found = when (val field = findField(ref, snapshotId)) {
+            is Field.Found -> field.node
+            is Field.Missing -> return@withContext ActionResult.Failed(field.reason)
+        }
+        if (found.isPassword || !found.isEditable || !found.isFocused) {
+            return@withContext ActionResult.Failed("Select a focused non-password field before submitting")
+        }
+        val action = AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER
+        if (found.actionList.none { it.id == action.id }) {
+            return@withContext ActionResult.Failed("This field does not expose an editor action; use an on-screen button or hand off")
+        }
+        verified { found.performAction(action.id) }
+    }
+
     override suspend fun typeText(ref: String?, snapshotId: String?, text: String): ActionResult = withContext(Dispatchers.IO) {
         if (!hasDisplay) return@withContext NO_APP_OPEN
         val found = when (val f = findField(ref, snapshotId)) {

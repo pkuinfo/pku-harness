@@ -48,6 +48,7 @@ export function ListGroup({
 }
 
 export function ListRow({
+  leading,
   icon,
   iconTint,
   title,
@@ -58,6 +59,7 @@ export function ListRow({
   chevron,
   titleLines = 1,
 }: {
+  leading?: ReactNode;
   icon?: IconName;
   iconTint?: string;
   title: string;
@@ -72,11 +74,11 @@ export function ListRow({
   const c = useTheme();
   const content = (
     <View className="min-h-14 flex-row items-center gap-3 px-4 py-3">
-      {icon ? (
+      {leading ?? (icon ? (
         <View className="h-8 w-8 items-center justify-center rounded-md bg-surface-3" style={{ borderCurve: 'continuous' }}>
           <Icon name={icon} size={18} color={iconTint ?? c.text} />
         </View>
-      ) : null}
+      ) : null)}
       <View className="flex-1 gap-0.5">
         <Text variant="body" numberOfLines={titleLines}>
           {title}

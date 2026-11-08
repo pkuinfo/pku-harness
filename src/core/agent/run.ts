@@ -2,7 +2,7 @@ import { streamText, type LanguageModel, type ModelMessage, type StepResult, typ
 import { AppState } from 'react-native';
 
 import { notifyNow } from '@/core/notify';
-import { releaseRunResources } from '@/core/runtime/run-resources';
+import { registerRunCancellation, releaseRunResources } from '@/core/runtime/run-resources';
 import { recordStep, type ToolCallUsage } from '@/core/usage';
 import { t as tr } from '@/i18n';
 
@@ -10,7 +10,7 @@ import { installRunHooks, newId, sessionStore, type AttachmentPart, type ChatMes
 import { capToolResultOutput, compactForOverflow, isContextOverflowError, maybeCompact } from '@/core/agent/context/compaction';
 import { gatherContext } from '@/core/agent/context/request-context';
 import { aiConfig } from './provider';
-import { attachmentsOf, cutBefore, nextQueued, plainText, textOf, userText } from '@/core/agent/session/session-utils';
+import { attachmentsOf, cutBefore, nextQueued, plainText, settleRunningTools, textOf, userText } from '@/core/agent/session/session-utils';
 import { sessions } from '@/core/agent/session/sessions';
 import { autoTitle } from '@/core/agent/session/title';
 import { asksToRemember } from '@/core/agent/context/assembly';
@@ -121,6 +121,7 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
   const controller = new AbortController();
   controllers.set(sid, controller);
   const signal = controller.signal;
+  registerRunCancellation(signal, () => controller.abort());
 
   const sessionMeta = sessionStore.meta(sid);
   const providerId = sessionMeta?.providerId ?? aiConfig.get().providerId;
@@ -290,7 +291,13 @@ function finishTurn(
   const s = sessionStore.get(sid);
   if (!s) return; // deleted meanwhile
   const tail: ModelMessage[] = t.partial.trim() ? [{ role: 'assistant', content: t.partial }] : [];
-  sessionStore.updateMessage(sid, assistantId, (m) => ({ ...m, meta: { ...t.turn, durationMs: Date.now() - t.started, ...(t.ended ? { ended: t.ended } : null) } }));
+  const terminalToolLabel = t.ended === 'stopped' ? tr('chat.reply.stopped')
+    : t.error ?? tr(t.ended === 'interrupted' ? 'chat.reply.interrupted' : 'chat.reply.error');
+  sessionStore.updateMessage(sid, assistantId, (m) => ({
+    ...m,
+    parts: t.ended ? settleRunningTools(m.parts, terminalToolLabel) : m.parts,
+    meta: { ...t.turn, durationMs: Date.now() - t.started, ...(t.ended ? { ended: t.ended } : null) },
+  }));
   const after = sessionStore.get(sid)!;
   sessionStore.patch(sid, {
     status: 'idle',

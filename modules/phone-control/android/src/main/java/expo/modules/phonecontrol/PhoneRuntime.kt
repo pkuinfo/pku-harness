@@ -27,6 +27,8 @@ object PhoneRuntime {
             PhoneActionPolicy(), context.packageName).also { control = it }
     }
 
+    fun pause(id: String, paused: Boolean) { control?.pause(id, paused) }
+
     fun activeId(): String? = control?.state()?.id
 
     fun readiness(context: Context): Map<String, Any?> {
@@ -50,6 +52,7 @@ object PhoneRuntime {
             "sessionId" to session?.id,
             "packages" to (session?.packages?.toList() ?: emptyList<String>()),
             "handedOver" to (session?.handedOver == true),
+            "paused" to (session?.paused == true),
         )
     }
 
@@ -68,22 +71,42 @@ object PhoneRuntime {
             "width" to image.width, "height" to image.height)
     }
 
-    suspend fun assessTap(id: String, snapshotId: String, ref: String): Map<String, Any?> {
-        val assessment = checkNotNull(control) { "Start a phone session first" }.assess(id, snapshotId, ref)
+    suspend fun assessTap(id: String, snapshotId: String, ref: String, submit: Boolean = false): Map<String, Any?> =
+        trackOperation(id, "review") { assessTarget(id, snapshotId, ref, submit) }
+
+    private suspend fun assessTarget(id: String, snapshotId: String, ref: String, submit: Boolean): Map<String, Any?> {
+        val assessment = checkNotNull(control) { "Start a phone session first" }.assess(id, snapshotId, ref, submit)
         check(assessment.effect != PhoneEffect.MONEY) { "Hand payment or purchase confirmation to the user" }
         return mapOf("effect" to assessment.effect.name.lowercase(),
             "target" to mapOf("label" to assessment.label.take(240), "context" to (assessment.packageName ?: "")))
     }
 
-    suspend fun execute(context: Context, id: String, operation: String, args: Map<String, Any?>): Map<String, Any?> {
+    suspend fun execute(context: Context, id: String, operation: String, args: Map<String, Any?>): Map<String, Any?> =
+        trackOperation(id, operation) { executeOperation(context, id, operation, args) }
+
+    private suspend fun trackOperation(id: String, operation: String, block: suspend () -> Map<String, Any?>): Map<String, Any?> {
+        val ticket = PhoneOverlayBridge.startOperation(id, operation)
+        try {
+            val result = block()
+            PhoneOverlayBridge.finishOperation(ticket, result["ok"] == false)
+            return result
+        } catch (error: Throwable) {
+            PhoneOverlayBridge.finishOperation(ticket, true)
+            throw error
+        }
+    }
+
+    private suspend fun executeOperation(context: Context, id: String, operation: String, args: Map<String, Any?>): Map<String, Any?> {
         val engine = engine(context)
         if (operation == "observe") return wire(engine.observe(id))
         if (operation == "wait") return wire(engine.waitForChange(id, (args["timeoutMs"] as? Number)?.toLong() ?: 1_000))
         val snapshotId = args["snapshotId"] as? String
         val ref = args["ref"] as? String
         val action = when (operation) {
-            "launch" -> PhoneAction.Launch(requireNotNull(args["packageName"] as? String) { "App package is required" })
+            "launch" -> PhoneAction.Launch(requireNotNull(args["packageName"] as? String) { "App package is required" }, args["restart"] == true)
             "tap" -> PhoneAction.Tap
+            "submit" -> PhoneAction.Submit
+            "setProgress" -> PhoneAction.SetProgress(requireNotNull(args["value"] as? Number).toFloat())
             "type" -> PhoneAction.Type(requireNotNull(args["text"] as? String) { "Text is required" })
             "scroll" -> {
                 require(args["direction"] == "up" || args["direction"] == "down") { "Invalid scroll direction" }
@@ -92,7 +115,7 @@ object PhoneRuntime {
             "back" -> PhoneAction.Back
             else -> error("Unknown phone operation")
         }
-        val approval = if (action == PhoneAction.Tap) engine.assess(id, requireNotNull(snapshotId), requireNotNull(ref)).also {
+        val approval = if (action == PhoneAction.Tap || action == PhoneAction.Submit) engine.assess(id, requireNotNull(snapshotId), requireNotNull(ref), action == PhoneAction.Submit).also {
             check(args["authorizedEffect"] == it.effect.name.lowercase()) { "The action no longer matches its approved permission" }
         } else null
         val result = engine.execute(id, action, snapshotId, ref, approval)
@@ -100,6 +123,20 @@ object PhoneRuntime {
             "changed" to result.outcome.changed, "verification" to result.outcome.verification,
             "screen" to wire(result.observation))
     }
+
+    suspend fun readBrightness(context: Context, id: String): Map<String, Any?> = trackOperation(id, "readBrightness") {
+        brightnessWire(engine(context).readBrightness(id))
+    }
+
+    suspend fun setBrightness(context: Context, id: String, percent: Float, adaptive: Boolean?): Map<String, Any?> = trackOperation(id, "setBrightness") {
+        val change = engine(context).setBrightness(id, percent, adaptive)
+        mapOf("before" to brightnessWire(change.before), "after" to brightnessWire(change.after),
+            "requestedPercent" to change.requestedPercent, "verified" to change.verified)
+    }
+
+    private fun brightnessWire(value: DeviceBrightness): Map<String, Any?> = mapOf(
+        "displayId" to value.displayId, "percent" to value.percent, "linear" to value.linear,
+        "minimum" to value.minimum, "maximum" to value.maximum, "adaptive" to value.adaptive)
 
     fun requestStop(id: String? = null) { (id ?: sessionIdentity)?.let { control?.requestStop(it) } }
 
@@ -120,6 +157,7 @@ object PhoneRuntime {
             "ref" to target.ref, "role" to e.role, "text" to e.text, "bounds" to e.bounds,
             "resourceId" to e.resourceId, "clickable" to e.clickable, "editable" to e.editable,
             "scrollable" to e.scrollable, "secret" to e.secret,
+            "range" to e.rangeMin?.let { mapOf("min" to it, "max" to e.rangeMax, "current" to e.rangeCurrent) },
         ) } },
     )
 }

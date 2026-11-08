@@ -69,7 +69,7 @@ internal object ScreenReader {
             if (visible) {
                 n.getBoundsInScreen(rect)
                 hash = mix(hash, n.className, n.text, n.contentDescription, rect.flattenToString(),
-                    states(n))
+                    states(n), n.rangeInfo?.current)
                 if (n.isPassword) password = true
                 val own = if (n.isPassword) n.hintText?.toString()?.trim()?.ifEmpty { null } else ownLabel(n)
                 own?.let(texts::add)
@@ -77,7 +77,7 @@ internal object ScreenReader {
                 clippedBounds = listOf(normalize(rect.left, width), normalize(rect.top, height),
                     normalize(rect.right, width), normalize(rect.bottom, height))
                 val usable = rect.width() >= MIN_SIZE && rect.height() >= MIN_SIZE
-                val interactive = n.isClickable || n.isEditable || n.isScrollable
+                val interactive = n.isClickable || n.isEditable || n.isScrollable || n.rangeInfo != null
                 if (usable && (own != null || interactive)) {
                     val label = labelOf(n, own)
                     val role = roleOf(n)
@@ -102,6 +102,7 @@ internal object ScreenReader {
                             // 安卓的搜索框控件(SearchView 里的输入框)按类名认
                             searchField = n.isEditable && n.className?.toString()?.contains("Search", ignoreCase = true) == true,
                             states = uiStates(n),
+                            rangeMin = n.rangeInfo?.min, rangeMax = n.rangeInfo?.max, rangeCurrent = n.rangeInfo?.current,
                         )
                         val locator = ElementLocator(role, label, rid, rect.centerX(), rect.centerY(), lastLabel, element.hint, inList)
                         entries += NodeEntry(element, locator, n)
@@ -221,7 +222,7 @@ internal object ScreenReader {
             if (n.isVisibleToUser) {
                 n.getBoundsInScreen(rect)
                 hash = mix(hash, n.className, n.text, n.contentDescription, rect.flattenToString(),
-                    states(n))
+                    states(n), n.rangeInfo?.current)
             }
             for (i in 0 until n.childCount) n.getChild(i)?.let { visit(it, depth + 1) }
         }

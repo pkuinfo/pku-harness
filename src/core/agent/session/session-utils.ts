@@ -85,6 +85,14 @@ export type Tr = (key: MessageKey, params?: Params) => string;
 /** Messages that count (notices and compaction markers don't). */
 export const countMessages = (messages: ChatMessage[]) => messages.filter((m) => m.role !== 'event').length;
 
+/** A terminal turn cannot retain tool spinners, including approval waits cut off by Stop. */
+export function settleRunningTools(parts: ChatPart[], label: string): ChatPart[] {
+  if (!parts.some((part) => part.type === 'tool' && part.status === 'running')) return parts;
+  return parts.map((part): ChatPart => part.type === 'tool' && part.status === 'running'
+    ? { ...part, status: 'error', error: label }
+    : part);
+}
+
 /**
  * A record loaded from disk can hold a turn that was still running when the app died. Tools
  * still `running` become errors, and the reply that was streaming (`runningId`) is marked
@@ -93,10 +101,7 @@ export const countMessages = (messages: ChatMessage[]) => messages.filter((m) =>
 export function markInterrupted(messages: ChatMessage[], runningId?: string, label = '已中断'): { messages: ChatMessage[]; changed: boolean } {
   let changed = false;
   const out = messages.map((m) => {
-    let parts = m.parts;
-    if (m.parts.some((p) => p.type === 'tool' && p.status === 'running')) {
-      parts = m.parts.map((p): ChatPart => (p.type === 'tool' && p.status === 'running' ? { ...p, status: 'error', error: label } : p));
-    }
+    const parts = settleRunningTools(m.parts, label);
     const interrupted = m.role === 'assistant' && m.id === runningId && !m.meta?.ended;
     if (parts === m.parts && !interrupted) return m;
     changed = true;

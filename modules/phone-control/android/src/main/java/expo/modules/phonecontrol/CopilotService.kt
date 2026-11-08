@@ -21,6 +21,7 @@ import org.pkuinfo.harness.phone.platform.accessibility.ScreenAccessibility
 class CopilotService : Service() {
     private var sessionId: String? = null
     private var monitor: Job? = null
+    private var overlay: CopilotOverlay? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onBind(intent: Intent?): IBinder? = null
@@ -31,6 +32,7 @@ class CopilotService : Service() {
             // A notification from an older session must not stop its replacement.
             if (stopped == null || stopped != sessionId) return START_NOT_STICKY
             PhoneRuntime.requestStop(stopped)
+            PhoneOverlayBridge.onControlStopped?.invoke(stopped)
             scope.launch { PhoneRuntime.end(applicationContext, stopped) }
             stopSelf(startId)
             return START_NOT_STICKY
@@ -44,6 +46,8 @@ class CopilotService : Service() {
             return START_NOT_STICKY
         }
         sessionId = started
+        overlay?.close()
+        overlay = ScreenAccessibility.instance.value?.let { CopilotOverlay(it, started).also { panel -> panel.show() } }
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.copilot_name), NotificationManager.IMPORTANCE_LOW))
         val stop = PendingIntent.getService(this, 0, Intent(this, CopilotService::class.java).setAction(STOP).putExtra("sessionId", sessionId), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -63,6 +67,7 @@ class CopilotService : Service() {
             }.collect { available ->
                 if (!available) {
                     PhoneRuntime.requestStop(started)
+                    PhoneOverlayBridge.onControlStopped?.invoke(started)
                     PhoneRuntime.end(applicationContext, started)
                 }
             }
@@ -72,6 +77,7 @@ class CopilotService : Service() {
 
     override fun onDestroy() {
         monitor?.cancel()
+        overlay?.close(); overlay = null
         val ended = sessionId
         if (ended != null) {
             PhoneRuntime.requestStop(ended)

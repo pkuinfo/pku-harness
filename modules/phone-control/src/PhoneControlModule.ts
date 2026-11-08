@@ -1,7 +1,11 @@
 import { NativeModule, requireOptionalNativeModule } from 'expo';
-import type { PhoneApp, PhoneReadiness, PhoneResult, PhoneOperation, PhonePreview, PhoneTapAssessment } from '@pku-harness/sdk';
+import type { PhoneApp, PhoneBrightness, PhoneBrightnessChange, PhoneReadiness, PhoneResult, PhoneOperation, PhonePreview, PhoneTapAssessment } from '@pku-harness/sdk';
 
-declare class PhoneControlModule extends NativeModule {
+type NativeFailure = { nativeError: { code: string; message: string } };
+
+declare class PhoneControlModule extends NativeModule<{ onControlStopped: (event: { sessionId: string }) => void; onOverlayAnswer: (answer: { id: number; sessionId: string; allowed: boolean }) => void }> {
+  overlayStatus(value: { sessionId: string; phase: 'waiting' | 'thinking' | 'working' | 'attention'; title: string } | null): Promise<void>;
+  overlayApproval(value: { id: number; sessionId: string; title: string; detail: string } | null): Promise<void>;
   readiness(): Promise<PhoneReadiness>;
   setup(kind: 'accessibility' | 'wireless'): Promise<void>;
   pair(code: string, port: number): Promise<PhoneReadiness>;
@@ -10,8 +14,11 @@ declare class PhoneControlModule extends NativeModule {
   apps(): Promise<PhoneApp[]>;
   begin(packages: string[]): Promise<{ sessionId: string; packages: string[] }>;
   preview(sessionId: string): Promise<PhonePreview | null>;
-  assessTap(sessionId: string, snapshotId: string, ref: string): Promise<PhoneTapAssessment>;
-  execute(sessionId: string, operation: PhoneOperation, args: Record<string, unknown>): Promise<PhoneResult>;
+  readBrightness(sessionId: string): Promise<PhoneBrightness | NativeFailure>;
+  setBrightness(sessionId: string, percent: number, adaptive: boolean | null): Promise<PhoneBrightnessChange | NativeFailure>;
+  assessSubmit(sessionId: string, snapshotId: string, ref: string): Promise<PhoneTapAssessment | NativeFailure>;
+  assessTap(sessionId: string, snapshotId: string, ref: string): Promise<PhoneTapAssessment | NativeFailure>;
+  execute(sessionId: string, operation: PhoneOperation, args: Record<string, unknown>): Promise<PhoneResult | NativeFailure>;
   end(sessionId: string): Promise<void>;
   takeover(sessionId: string): Promise<void>;
   handback(sessionId: string): Promise<void>;

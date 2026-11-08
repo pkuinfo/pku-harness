@@ -1,0 +1,14 @@
+<resources>
+    <dimen name="copilot_overlay_gap">12dp</dimen>
+    <dimen name="copilot_overlay_width">280dp</dimen>
+    <dimen name="copilot_overlay_preview_height">240dp</dimen>
+    <dimen name="copilot_overlay_touch">48dp</dimen>
+    <dimen name="copilot_overlay_corner">20dp</dimen>
+    <dimen name="copilot_overlay_text">14sp</dimen>
+    <dimen name="copilot_overlay_title">16sp</dimen>
+    <color name="copilot_overlay_surface">#FAF8F6</color>
+    <color name="copilot_overlay_text">#161719</color>
+    <color name="copilot_overlay_brand">#8B0012</color>
+    <color name="copilot_overlay_on_brand">#FFFFFF</color>
+    <dimen name="copilot_overlay_compact_width">180dp</dimen>
+</resources>

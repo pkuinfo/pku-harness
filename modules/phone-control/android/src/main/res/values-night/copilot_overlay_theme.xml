@@ -1,0 +1,4 @@
+<resources>
+    <color name="copilot_overlay_surface">#202124</color>
+    <color name="copilot_overlay_text">#F5F5F5</color>
+</resources>

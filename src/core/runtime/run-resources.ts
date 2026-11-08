@@ -1,3 +1,12 @@
+/** Native stop controls can cancel the exact run that owns their resource. */
+const cancellations = new WeakMap<AbortSignal, () => void>();
+export function registerRunCancellation(signal: AbortSignal, cancel: () => void): void {
+  cancellations.set(signal, cancel);
+}
+export function cancelResourceRun(signal: AbortSignal): void {
+  cancellations.get(signal)?.();
+}
+
 /** Host resources acquired by tools live through model thinking, but never past their run. */
 const resources = new WeakMap<AbortSignal, Set<() => Promise<void>>>();
 
@@ -23,6 +32,7 @@ export function registerRunResource(signal: AbortSignal, release: () => Promise<
 
 /** Attempt every release; a failed cleanup must not erase the completed chat response. */
 export async function releaseRunResources(signal: AbortSignal): Promise<void> {
+  cancellations.delete(signal);
   const entries = resources.get(signal);
   resources.delete(signal);
   if (entries) await Promise.allSettled([...entries].map((close) => close()));
