@@ -44,7 +44,7 @@ export function DevTools() {
       });
   }, [tool, input, n, actor]);
   return (
-    <Screen title="Dev" subtitle={tool ?? 'no tool'} back>
+    <Screen appearance="plain" title="Dev" subtitle={tool ?? 'no tool'} back>
       <Surface>
         <Text variant="caption" selectable>
           {__DEV__ ? out || '…' : 'Disabled in release builds.'}

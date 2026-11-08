@@ -27,11 +27,11 @@ function Row({ icon, title, detail, disabled, onPress }: { icon: IconName; title
       onPress={onPress}
       className={cx('flex-row items-center gap-3 rounded-md px-2 py-2.5', disabled && 'opacity-40')}
       style={CURVE}>
-      <View className="size-10 items-center justify-center rounded-md bg-surface-3" style={CURVE}>
+      <View className="size-8 items-center justify-center" style={CURVE}>
         <Icon name={icon} size={20} color={c.text} />
       </View>
       <View className="flex-1 gap-0.5">
-        <Text variant="bodyStrong">{title}</Text>
+        <Text variant="callout">{title}</Text>
         <Text variant="caption" tone="muted" numberOfLines={1}>
           {detail}
         </Text>

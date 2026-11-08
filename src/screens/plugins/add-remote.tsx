@@ -6,7 +6,6 @@ import { Chip } from '@/components/chip';
 import { Field } from '@/components/field';
 import { ListGroup, ListRow } from '@/components/list-group';
 import { SheetScreen } from '@/components/sheet-screen';
-import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import type { McpServerInfo, McpTool } from '@/core/mcp/client';
 import { docPlugins, type DocPreview } from '@/core/runtime/doc-plugins';
@@ -32,10 +31,10 @@ export function DocPermissions({ preview }: { preview: DocPreview }) {
   const nothing = !m.campus?.length && !m.network?.length && !m.abilities?.length;
   return (
     <View className="gap-4">
-      <Surface level={2}>
+      <View className="border-y border-edge py-3">
         <View className="gap-1.5">
           <View className="flex-row items-center justify-between gap-2">
-            <Text variant="headline" numberOfLines={1}>
+            <Text variant="bodyStrong" numberOfLines={1}>
               {en?.name ?? m.name}
             </Text>
             <Chip label={preview.verified ? t('app.plugins.doc.official') : t('app.plugins.doc.community')} tone={preview.verified ? 'accent' : 'neutral'} icon={preview.verified ? 'shield' : 'globe'} />
@@ -45,7 +44,7 @@ export function DocPermissions({ preview }: { preview: DocPreview }) {
           </Text>
           <Text variant="callout">{en?.description ?? m.description}</Text>
         </View>
-      </Surface>
+      </View>
       <ListGroup title={t('app.plugins.doc.reaches')} footer={m.campus?.length ? t('app.plugins.doc.campusNote') : undefined}>
         {m.campus?.length ? <ListRow icon="school" title={t('app.plugins.doc.campus')} subtitle={m.campus.join('、')} /> : null}
         {m.network?.length ? <ListRow icon="globe" title={t('app.plugins.doc.network')} subtitle={m.network.join('、')} /> : null}
@@ -177,11 +176,11 @@ export function AddRemotePlugin({ initialUrl = '', initialName = '', draft }: { 
         <Field label={t('app.plugins.addRemote.token')} value={token} onChangeText={setToken} placeholder="Bearer token" secureTextEntry autoCapitalize="none" />
       ) : null}
       {error ? (
-        <Surface level={2}>
+        <View className="border-y border-edge py-3">
           <Text variant="callout" tone="down" selectable>
             {error}
           </Text>
-        </Surface>
+        </View>
       ) : null}
       {doc ? <DocPermissions preview={doc} /> : null}
       {probe ? (

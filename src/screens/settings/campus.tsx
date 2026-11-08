@@ -5,7 +5,6 @@ import { Chip } from '@/components/chip';
 import { Field, SecretField } from '@/components/field';
 import { ListGroup, ListRow } from '@/components/list-group';
 import { dismiss, SheetScreen } from '@/components/sheet-screen';
-import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { signIn, signOut, useCampusAccount } from '@/core/campus/account';
 import { invokeTool } from '@/core/runtime/invoke';
@@ -108,7 +107,7 @@ const isNetworkError = (e: unknown) => {
 function Status({ message }: { message: { tone: 'up' | 'down'; text: string; network?: boolean } }) {
   const t = useT();
   return (
-    <Surface level={2}>
+    <View className="border-t border-edge py-3">
       <View className="gap-1">
         <Text variant="callout" tone={message.tone}>
           {message.text}
@@ -119,7 +118,7 @@ function Status({ message }: { message: { tone: 'up' | 'down'; text: string; net
           </Text>
         ) : null}
       </View>
-    </Surface>
+    </View>
   );
 }
 

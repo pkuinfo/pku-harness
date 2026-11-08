@@ -51,7 +51,7 @@ export function Settings() {
   const cloud = useCloudProvider();
   const cloudHost = displayHost(cloud.baseURL);
   return (
-    <Screen title={t('app.settings.title')} subtitle={t('app.settings.eyebrow')}>
+    <Screen title={t('app.settings.title')}>
       <FadeIn index={0}>
         <ListGroup title={t('app.settings.account')}>
           <ListRow
@@ -86,12 +86,12 @@ export function Settings() {
       </FadeIn>
       <FadeIn index={3}>
         <View className="gap-2">
-          <Text variant="micro" tone="faint" className="px-4">
-            {t('core.settings.appearance').toUpperCase()}
+          <Text variant="caption" tone="muted" className="px-1">
+            {t('core.settings.appearance')}
           </Text>
           <Segmented options={themeOptions} value={pref} onChange={setThemePreference} />
-          <Text variant="micro" tone="faint" className="mt-3 px-4">
-            {t('core.settings.language').toUpperCase()}
+          <Text variant="caption" tone="muted" className="mt-2 px-1">
+            {t('core.settings.language')}
           </Text>
           <Segmented options={localeOptions} value={localePref} onChange={setLocalePreference} />
         </View>

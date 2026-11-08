@@ -1,64 +1,44 @@
 # pku-harness Design System
 
-> v0, 2026-10-18. Visual source of truth. Tokens live in `src/theme/`; primitives in
-> `src/components/`. Skills to load when designing: `expo-design-system`, `expo-native-ui`,
-> `expo-ui`, `expo-animation`, `apple-design`, `motion-design`, `impeccable`.
+> Updated 2026-11-08. The user's requested direction is a restrained, Codex-inspired utility UI
+> across the full app. This supersedes the earlier Glass + Light / trading-terminal direction.
+> Tokens live in `src/theme/` and `src/global.css`; plugins consume host components through the SDK.
 
-## 1. Direction: "Campus terminal"
+## 1. Direction: a quiet workspace
 
-The feel of a premium trading app (OKX, Binance): dark, dense with live numbers, precise
-type, confident motion, applied to campus life. Simple surfaces, one accent, numbers as the
-heroes. It should feel like an instrument, not a brochure.
+The screen should make the task easy to scan. Use a neutral opaque canvas, compact typography,
+flat settings and work logs, and small explicit controls. Do not imply a pixel-exact reproduction
+of Codex: the desktop window was not available to inspect through this session's app controls.
+Android keeps native switches, pickers, accessible touch targets, and mobile navigation.
 
-- **Dark-first.** Near-black canvas with layered graphite surfaces. Light theme exists and
-  follows the same structure, but dark is the reference design.
-- **One brand accent: PKU red,** tuned for screens. Used for primary actions, the active tab
-  and the agent's presence. Never for errors (errors use their own hue).
-- **Numbers are heroes.** Balances, fees and countdowns use tabular figures, large sizes and
-  animated transitions (rolling digits) when they change.
-- **Signal colours** borrowed from trading UIs: up/positive = green, down/alert = red-orange,
-  neutral = graphite. Always paired with an icon or sign, never colour alone.
-- **Motion is the personality.** Springs, not linear tweens. Everything enters, nothing
-  pops. Lists stagger. While the agent works, the bead orbits the logo.
-- **Restraint where it counts.** No card-for-everything, no emoji icons, nothing decorative
-  behind dense data. Glass stays nearly transparent; light is the only decoration.
+- **Neutral first:** charcoal in dark mode, warm off-white in light. No decorative gradients,
+  background animation, frosted cards, gleams, or glowing status text in everyday task screens.
+- **Compact hierarchy:** fixed compact toolbars; section titles use bodyStrong/headline. Reserve
+  large numbers for actual financial or quantitative content, not setup status or page decoration.
+- **Flat lists:** use rows and subtle separators for settings, app/plugin selection, tool work,
+  and session lists. Cards are appropriate for independent dashboard widgets and charts; avoid
+  wrapping every section in one. Nested cards need a concrete interaction reason.
+- **Controlled accent:** retain PKU identity and semantic signal colors. Red denotes primary
+  actions or selected states where needed, not every icon, row, border, or surface. Navigation
+  uses neutral selection. Errors retain their own semantic role.
+- **Progressive detail:** connection configuration, metadata, and tool details open on demand.
+  Never remove required consent, permission explanations, errors, or recovery actions for density.
+- **Accessible controls:** icon-only actions need labels/tooltips. Keep readable text scaling and
+  native touch targets; do not shrink switches just to make screenshots look compact.
+- **Purposeful motion:** brief press/selection feedback only. No idle background animation or
+  decorative bouncing. Respect reduced motion; task progress must remain explicit in text/state.
 
-## 1b. Brand system (2026-10-18)
+## 1b. Shared defaults and compatibility
 
-- **Mark**: a "P" whose bowl is an open orbit with the agent as a bright bead travelling on it
-  (PKU + harness + agent). Geometry lives once in `src/theme/brand.ts`; `<Logo>` (Skia) draws
-  it in-app and can perform (draw-on intro, orbiting bead); `bun scripts/render-icons.ts`
-  renders the app icon, adaptive icon (fg/bg/monochrome), splash and favicon from the same
-  geometry. Never redraw the mark by hand.
-- **Glass + Light** (2026-10-18, the design language): panels are nearly transparent glass
-  over a dim, slowly drifting light. Restraint first: no milky fills, no outlines, no glare.
-  - **Colour** comes from PKU's official identity (`pkuBrand`, from 《北京大学视觉形象识别系统》
-    A7/A9): 北大红 #8B0012 for brand fills (`theme.brand`: primary buttons, selection, the
-    user's bubble tint), the auxiliary bronze / sand / slate / navy only as light in the
-    aurora or accents. `theme.accent` is the legible red for text and icons.
-  - **Aurora** (`<Aurora>`): three dim radial lights (plain views with native radial-gradient
-    backgrounds, moved by transforms), Lissajous drift over 36 s on the UI thread in ~15 steps a
-    second; paused when its screen is not focused, still with reduced motion, and resting after
-    10 s without a touch (a streaming reply keeps it awake: `useAuroraAwake`). No Skia here: an
-    Android TextureView can't be captured by the tab bar's blur and repainted every frame. The
-    tabs layout paints one for all tabs (`BackdropProvided`); standalone screens and sheets paint
-    their own.
-  - **Glass** (`<Glass>`, `GlassEdges`, `glassMaterial`): iOS 26 → system `GlassView`
-    (expo-glass-effect is iOS-only); elsewhere a fill of 2.5–5 % white (dark) / 22–50 % white
-    (light), one hairline edge, and a 1 px light line along the top edge. Semantic
-    `surface*` tokens are these fills, so every card is glass; overlays use `elevated`.
-  - **Corners are concentric**: outer panels follow the phone's corner (cards 16, hero panels
-    and sheets 20); controls inside get small radii (buttons/inputs 10, chips 6). Capsules only
-    for dots, progress bars and avatars.
-- **Motion** for UX, all on the UI thread: screens settle in on every focus
-  (`useFocusEnter`), large titles hand over to a compact glass bar on scroll, the tab
-  indicator slides and stretches between tabs and the selected icon pops, sent messages grow
-  out of the composer's corner, assistant parts rise in, panels lift and settle on press.
-- **Motion curves** (`curves` in `src/theme/motion.ts`): strong ease-out for entering and
-  responding, ease-in-out for on-screen movement, the iOS sheet curve for sheets. Never
-  ease-in on UI. Off-screen art is unmounted; long-running loops only on the visible page, and
-  they stop when their reason does (the logo's bead glides home when the agent finishes). An
-  idle app draws no frames.
+`Screen` defaults to the plain canvas and compact fixed toolbar. The older standard header is
+still an explicit option. `ListGroup` defaults to flat rows and `ListRow` to compact spacing.
+`Glass` remains an SDK-compatible name for an opaque subtle panel, without native glass or sheen.
+`Aurora` remains a compatibility export that paints only a static theme canvas; its wake hooks
+no longer run an idle animation. Native controls still use the host theme.
+
+The P/orbit logo is retained as the product mark. It is not repeated as decorative page art.
+Onboarding keeps its consent/setup flow but uses a compact mark and relevant icons. Existing
+illustration assets can remain in source without being mounted in the normal flow.
 
 ## 2. Tokens
 
@@ -109,9 +89,9 @@ loading), `style` merged last, accessibility role/state/label.
 | `Text` | Only way to render text. `variant` maps to typography tokens; `tone` maps to text colours. |
 | `Button` | `primary` (accent), `secondary` (surface), `ghost`, `danger`; sizes `sm/md/lg`; press = scale 0.97 spring + haptic. |
 | `IconButton` | Icon-only; requires `label`. |
-| `Surface` | Glass panel (`level` 1–3 fills; level 1 adds edge + top light). Not every group needs one. |
-| `Glass` | The panel material, pressable with lift + spring; `tone` regular / strong / brand. |
-| `Aurora` | The drifting-light backdrop. |
+| `Surface` | Opaque panel (`level` 1–3 fills; level 1 adds a hairline edge). Use only where grouping helps. |
+| `Glass` | Compatibility panel name; opaque regular / strong / brand surfaces with press feedback. |
+| `Aurora` | Static neutral canvas; no idle animation. |
 | `ListGroup` / `ListRow` | Grouped rows with hairlines (settings, plugin lists). Prefer `@expo/ui` list rows where they fit. |
 | `Stat` | Label + big animated number + delta chip. Building block of dashboard widgets. |
 | `AnimatedNumber` | Rolling-digit number transition (Reanimated). |
@@ -120,22 +100,16 @@ loading), `style` merged last, accessibility role/state/label.
 | `Field` (text, secure, number) | Inputs with label, hint, error; focus ring in accent. |
 | `EmptyState` / `Skeleton` | Every data view has loading, empty, error, content states. Skeletons shimmer; no full-screen spinners. |
 | `Logo` | The brand mark (Skia); `orbiting` while the agent works, `intro` draws it on. |
-| `TabBar` | Custom bottom bar over Expo Router tabs: blurred surface, animated active pill, haptics. |
+| `TabBar` | Custom bottom bar over Expo Router tabs: opaque neutral surface, restrained selection, haptics. |
 
 Native-first rule: pickers, switches, sliders, menus, date/time pickers and bottom sheets
 come from `@expo/ui` (Jetpack Compose on Android, SwiftUI on iOS). Only wrap them for theme.
 
 ## 5. Motion rules
 
-- Use Reanimated 4 on the UI thread for everything interactive; CSS-style
-  `transition`/`animation` props for simple state changes.
-- Press feedback within 1 frame: scale 0.97 + opacity, spring back (`snappy`).
-- Enter: fade + 8–16 px rise with `smooth` spring; lists stagger 40 ms, capped at 8 items.
-- Numbers: roll digits on change; colour flash `up`/`down` for 600 ms.
-- Tab switch: content cross-fade + active pill slides with `smooth`.
-- Respect reduced motion (`useReducedMotion`): replace movement with fades.
-- Haptics: light impact on primary press and toggles, success notification on completed
-  agent actions, warning on failures.
+Use short native/host press feedback and restrained selection transitions. Do not animate idle
+surfaces or bounce navigation icons. Preserve reduced-motion support. Enter/exit animations must
+not delay input, hide errors, or leave transparent interactive layers over content.
 
 ## 6. Generative-UI styling
 
@@ -154,12 +128,15 @@ chooses raw colours or sizes. Catalog props expose semantic options only (`tone:
 6. Check against "native slop" tells (`expo-design-system/references/native-slop.md`).
 
 
-## Copilot utility-screen direction (2026-11-08)
 
-Copilot settings use a restrained, desktop-tool-inspired surface: an opaque neutral canvas,
-compact fixed toolbar, flat rows with hairline separators, small app icons, and underlined
-filter tabs. Avoid large promotional headings, tinted background light, and card framing
-for these settings. Native switches retain their touch targets and text still scales.
-`Screen.appearance="plain"`, `ListGroup.variant="plain"`, `ListRow.compact`, and
-`Segmented.variant="tabs"` are opt-in host components exposed through the SDK; other screens
-retain their standard appearance. Connection details remain progressive disclosure.
+## 8. Verification coverage
+
+Every design change needs on-device light/dark captures. A full-app pass must cover Chat (empty,
+conversation, composer, model/session sheets), Dashboard (widgets/editing), Schedule (list/form),
+Settings (main, AI, campus, notifications/cloud), Plugins (list/market/detail), Usage, onboarding,
+and representative SDK-rendered plugin screens. Check keyboard, scrolling, 130% text scaling,
+empty/error/loading states, and core actions without clearing the user's data. Record actual
+coverage and limitations in PLAN.md; passing unit tests alone is not visual verification.
+
+Copilot retains its floating icon controls, safe approvals, app icons, and alphabet quick access.
+Phone-control behavior and app scope must not change as a side effect of this redesign.

@@ -1,8 +1,8 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import { View, useWindowDimensions } from 'react-native';
+import { View } from 'react-native';
 
 import { FadeIn } from '@/components/fade-in';
-import { Glass } from '@/components/glass';
+import { PressableScale } from '@/components/pressable-scale';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
 import { modelInfo } from '@/core/agent/attachments/attachments';
@@ -15,10 +15,9 @@ import { useDeliveryReadiness } from '@/hooks/use-delivery-readiness';
 import { summarize } from '@/screens/plugins/status';
 import { usePluginEntries } from '@/screens/plugins/use-plugin-status';
 import { useT } from '@/i18n';
-import { radius, spacing, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 
 import { remindersSummary, suggestionsFor } from '../flow';
-import { BrandHero } from '../scene/brand-hero';
 import { StepShell } from './step-shell';
 
 function SummaryRow({ icon, label, value, ok, index }: { icon: IconName; label: string; value: string; ok: boolean; index: number }) {
@@ -39,9 +38,8 @@ function SummaryRow({ icon, label, value, ok, index }: { icon: IconName; label: 
 }
 
 /** Step 5 · Done (完成): what was set up, and two or three first questions that fit it. */
-export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: (question?: string) => void; onBack: () => void; live: boolean; forceFallback: boolean }) {
+export function DoneStep({ onFinish, onBack }: { onFinish: (question?: string) => void; onBack: () => void; live: boolean; forceFallback: boolean }) {
   const t = useT();
-  const { width } = useWindowDimensions();
   const { config, hasKey } = useAIConfig();
   const account = useCampusAccount();
   const plugins = usePlugins();
@@ -59,18 +57,13 @@ export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: 
   // Live, not the step's outcome: the user may have fixed a permission since (or saved progress predates the step).
   const { readiness } = useDeliveryReadiness();
   const reminders = readiness ? remindersSummary(readiness) : null;
-  const heroSize = Math.round(Math.min(width - spacing.xxxl * 2, 220));
 
   return (
     <StepShell
       step="done"
       title={t('welcome.done.title')}
       why={hasKey ? t('welcome.done.why') : t('welcome.done.whyNoAI')}
-      hero={
-        <View className="items-center">
-          <BrandHero size={heroSize} active={live} mode="celebrate" forceFallback={forceFallback} />
-        </View>
-      }
+      icon="check"
       primary={t('welcome.done.start')}
       onPrimary={() => onFinish()}
       onBack={onBack}>
@@ -95,14 +88,14 @@ export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: 
           </FadeIn>
           {suggestions.map((q, i) => (
             <FadeIn key={q} index={8 + i}>
-              <Glass radius={radius.md} tone="strong" onPress={() => onFinish(q)} accessibilityLabel={q} accessibilityRole="button">
-                <View className="flex-row items-center gap-3 px-4 py-3">
-                  <Text variant="body" className="flex-1">
+              <PressableScale onPress={() => onFinish(q)} accessibilityLabel={q} accessibilityRole="button">
+                <View className="flex-row items-center gap-3 border-b border-edge py-3">
+                  <Text variant="callout" className="flex-1">
                     {q}
                   </Text>
                   <Icon name="send" size={16} />
                 </View>
-              </Glass>
+              </PressableScale>
             </FadeIn>
           ))}
         </View>

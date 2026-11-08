@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import Animated, { Easing, interpolateColor, useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
 
 import { Text } from '@/components/text';
 import type { ChatMessage } from '@/core/agent/session/chat-store';
 import { getLocale, translate, useLocale, useT, type Locale } from '@/i18n';
-import { typography, useTheme } from '@/theme';
 
 import { AgentOrbit, type OrbitState } from '@/components/agent-orbit';
 
@@ -35,7 +33,6 @@ export function phaseOf(reply: ChatMessage | undefined, locale: Locale = getLoca
  * (thinking / calling a plugin tool / writing), elapsed time and output size.
  */
 export function AgentStatus({ reply, startedAt }: { reply: ChatMessage | undefined; startedAt: number }) {
-  const c = useTheme();
   const tr = useT();
   const locale = useLocale();
   // Elapsed seconds only; the orbit animates on the UI thread, so no fast JS timer.
@@ -45,23 +42,16 @@ export function AgentStatus({ reply, startedAt }: { reply: ChatMessage | undefin
     return () => clearInterval(id);
   }, []);
 
-  // The verb breathes between muted and accent.
-  const pulse = useSharedValue(0);
-  useEffect(() => {
-    pulse.set(withRepeat(withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.quad) }), -1, true));
-  }, [pulse]);
-  const verbStyle = useAnimatedStyle(() => ({ color: interpolateColor(pulse.get(), [0, 1], [c.textMuted, c.accent]) }));
-
   const phase = phaseOf(reply, locale);
   const seconds = Math.max(0, Math.floor((now - startedAt) / 1000));
   const chars = (reply?.parts ?? []).reduce((n, p) => n + (p.type === 'text' || p.type === 'reasoning' ? p.text.length : 0), 0);
 
   return (
     <View accessibilityRole="progressbar" accessibilityLabel={[phase.verb, phase.detail].filter(Boolean).join(' ')} className="flex-row items-center gap-2 py-1">
-      <AgentOrbit state={phase.orbit} size={20} />
-      <Animated.Text style={[typography.callout, verbStyle]}>{`${phase.verb}…`}</Animated.Text>
+      <AgentOrbit state={phase.orbit} size={16} />
+      <Text variant="caption" tone="muted">{`${phase.verb}…`}</Text>
       {phase.detail ? (
-        <Text variant="callout" tone="muted" numberOfLines={1} className="shrink">
+        <Text variant="caption" tone="muted" numberOfLines={1} className="shrink">
           {phase.detail}
         </Text>
       ) : null}

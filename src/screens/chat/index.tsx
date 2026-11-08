@@ -5,11 +5,9 @@ import { KeyboardChatScrollView, useKeyboardState, useReanimatedKeyboardAnimatio
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { useAuroraAwake } from '@/components/aurora';
 import { Button, IconButton } from '@/components/button';
 import { FadeIn } from '@/components/fade-in';
-import { Glass } from '@/components/glass';
-import { Logo } from '@/components/logo';
+import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
 import { AgentOrbit } from '@/components/agent-orbit';
 import { PressableScale } from '@/components/pressable-scale';
@@ -20,7 +18,7 @@ import { interruptedTurn, regenerateLast, retryLast, sendMessage } from '@/core/
 import { sessions, useActiveSessionId, useEditing, useRenameRequest, useSessionMeta, useSessions } from '@/core/agent/session/sessions';
 import { registry } from '@/core/runtime/registry';
 import { t as translateNow, useT } from '@/i18n';
-import { radius, spacing, typography, useTheme } from '@/theme';
+import { spacing, typography, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 import { floatingOverlay } from '@/hooks/use-floating-overlay';
 import { useFocusEnter } from '@/hooks/use-focus-enter';
@@ -58,8 +56,6 @@ export function Chat() {
   // Only what the frame needs; the streaming conversation itself re-renders inside <Messages>.
   const busy = useChatSelector((s) => s.status === 'streaming');
   const empty = useChatSelector((s) => s.messages.length === 0);
-  // The backdrop keeps drifting while the agent works, even if nobody touches the screen.
-  useAuroraAwake(busy);
   const { hasKey, config } = useAIConfig();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
 
@@ -172,7 +168,7 @@ export function Chat() {
 
 
   // The jump pill floats just above the composer, in the tabs' overlay (outside the blur target,
-  // so it frosts the messages like the tab bar does). Hidden while typing and off this tab.
+  // so it stays above the messages). Hidden while typing and off this tab.
   const [composerHeight, setComposerHeight] = useState(0);
   const [focused, setFocused] = useState(true);
   useFocusEffect(
@@ -192,7 +188,7 @@ export function Chat() {
 
   return (
     <View className="flex-1">
-      <View className="flex-row items-center gap-2 px-4 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
+      <View className="flex-row items-center gap-2 border-b border-edge px-3 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
         <SessionsButton />
         <ChatTitle fallbackName={config.name} fallbackModel={config.model} connected={hasKey} />
         {!empty ? <IconButton icon="plus" label={t('chat.header.newChat')} variant="ghost" onPress={() => void sessions.create()} /> : null}
@@ -226,30 +222,30 @@ export function Chat() {
         onContentSizeChange={onContentSizeChange}>
         {empty ? (
           <FadeIn style={styles.heroWrap}>
-            <Glass radius={radius.xl} style={styles.hero}>
-              <Logo size={84} intro orbiting />
-              <Text variant="title" align="center">
+            <View className="gap-6 px-2 py-6">
+              <Text variant="title">
                 {t('chat.empty.title')}
               </Text>
               {!hasKey ? (
-                <FadeIn index={1} style={{ alignItems: 'center', gap: spacing.md }}>
-                  <Text variant="callout" tone="muted" align="center">
+                <FadeIn index={1} style={{ alignItems: 'flex-start', gap: spacing.md }}>
+                  <Text variant="callout" tone="muted">
                     {t('chat.empty.connectHint')}
                   </Text>
                   <Button title={t('chat.empty.connect')} icon="key" onPress={() => router.push('/ai-settings')} />
                 </FadeIn>
               ) : (
-                <View className="flex-row flex-wrap justify-center gap-2">
+                <View className="border-t border-edge">
                   {SUGGESTIONS.map((key) => t(key)).map((s, i) => (
                     <FadeIn key={s} index={i + 1}>
-                      <Glass radius={radius.md} onPress={() => sendMessage(s)} accessibilityLabel={s} style={styles.suggestion}>
-                        <Text variant="callout">{s}</Text>
-                      </Glass>
+                      <PressableScale onPress={() => sendMessage(s)} accessibilityRole="button" accessibilityLabel={s} className="min-h-12 flex-row items-center gap-3 border-b border-edge py-3">
+                        <Text variant="callout" tone="muted" className="flex-1">{s}</Text>
+                        <SuggestionArrow />
+                      </PressableScale>
                     </FadeIn>
                   ))}
                 </View>
               )}
-            </Glass>
+            </View>
           </FadeIn>
         ) : (
           <Messages />
@@ -264,6 +260,11 @@ export function Chat() {
       <View style={{ height: bar }} />
     </View>
   );
+}
+
+function SuggestionArrow() {
+  const c = useTheme();
+  return <Icon name="chevronRight" size={16} color={c.textFaint} />;
 }
 
 function submitForm(callId: string, form: Record<string, unknown>, label?: string) {
@@ -314,7 +315,7 @@ function Messages() {
         </View>
       ) : null}
       {chat.error ? (
-        <View className="rounded-md bg-down-muted p-3">
+        <View className="border-l border-down px-3 py-2">
           <Text variant="callout" tone="down">
             {chat.error}
           </Text>
@@ -392,11 +393,11 @@ function ChatTitle({ fallbackName, fallbackModel, connected }: { fallbackName: s
           selectionColor={c.accent}
           accessibilityLabel={t('chat.header.rename')}
           className="border-b-[0.5px] border-accent p-0"
-          style={[typography.headline, { color: c.text }]}
+          style={[typography.bodyStrong, { color: c.text }]}
         />
       ) : (
         <PressableScale haptic={false} disabled={!canRename} onPress={start} accessibilityRole="button" accessibilityLabel={t('chat.header.titleA11y', { title })}>
-          <Text variant="headline" numberOfLines={1}>
+          <Text variant="bodyStrong" numberOfLines={1}>
             {title}
           </Text>
         </PressableScale>
@@ -432,10 +433,8 @@ function EditBanner() {
   );
 }
 
-// FadeIn, Glass and KeyboardChatScrollView take no className, so their layout stays in style.
+// FadeIn and KeyboardChatScrollView take no className, so their layout stays in style.
 const styles = StyleSheet.create({
   list: { padding: spacing.lg, gap: spacing.xl },
   heroWrap: { alignSelf: 'stretch' },
-  hero: { alignItems: 'center', gap: spacing.lg, paddingHorizontal: spacing.lg, paddingVertical: spacing.xl },
-  suggestion: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
 });

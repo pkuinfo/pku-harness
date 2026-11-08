@@ -1,4 +1,4 @@
-import { BlurTargetView, BlurView } from 'expo-blur';
+import { BlurTargetView } from 'expo-blur';
 import { Redirect, usePathname } from 'expo-router';
 import { TabList, TabSlot, TabTrigger, Tabs } from 'expo-router/ui';
 import { useRef, useState, type ComponentRef, type RefObject } from 'react';
@@ -12,7 +12,7 @@ import { BackdropProvided } from '@/hooks/use-backdrop';
 import { TabsBlurTarget, useFloatingOverlay } from '@/hooks/use-floating-overlay';
 import { TabBarInset } from '@/hooks/use-tab-bar-inset';
 import { useT } from '@/i18n';
-import { glassMaterial, spacing, useTheme, useThemeName } from '@/theme';
+import { spacing, useTheme } from '@/theme';
 
 /**
  * Four-tab shell: Chat · Dashboard · Schedule · Settings (docs/ARCHITECTURE.md §2). The bar is
@@ -24,8 +24,6 @@ const TABS = ['/', '/dashboard', '/schedule', '/settings'];
 export default function TabsLayout() {
   const c = useTheme();
   const t = useT();
-  const name = useThemeName();
-  const m = glassMaterial[name];
   const insets = useSafeAreaInsets();
   const target = useRef<ComponentRef<typeof View> | null>(null);
   const [bar, setBar] = useState({ width: 0, height: 0 });
@@ -52,10 +50,8 @@ export default function TabsLayout() {
         <View
           onLayout={(e) => setBar({ width: e.nativeEvent.layout.width, height: Math.round(e.nativeEvent.layout.height) })}
           style={StyleSheet.flatten([styles.dock, { paddingBottom: Math.max(insets.bottom, spacing.sm) }])}>
-          <BlurView blurTarget={target} blurMethod="dimezisBlurViewSdk31Plus" intensity={60} tint={name === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} />
-          <View pointerEvents="none" style={StyleSheet.flatten([StyleSheet.absoluteFill, { backgroundColor: c.bg, opacity: 0.72 }])} />
-          <View pointerEvents="none" style={StyleSheet.flatten([styles.edge, { backgroundColor: m.edge }])} />
-          <View pointerEvents="none" style={StyleSheet.flatten([styles.light, { backgroundImage: m.topLight }])} />
+          <View pointerEvents="none" style={StyleSheet.flatten([StyleSheet.absoluteFill, { backgroundColor: c.bg }])} />
+          <View pointerEvents="none" style={StyleSheet.flatten([styles.edge, { backgroundColor: c.border }])} />
           <TabIndicator index={active} count={TABS.length} width={bar.width} />
           <TabTrigger name="chat" href="/" asChild>
             <TabButton icon="chat" label={t('app.tabs.chat')} />
@@ -89,6 +85,5 @@ function FloatingOverlay({ target }: { target: RefObject<ComponentRef<typeof Vie
 const styles = StyleSheet.create({
   overlay: { position: 'absolute', left: 0, right: 0, alignItems: 'center' },
   edge: { position: 'absolute', top: 0, left: 0, right: 0, height: StyleSheet.hairlineWidth },
-  light: { position: 'absolute', top: 0, left: '15%', right: '15%', height: 1 },
   dock: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', paddingTop: spacing.xs, paddingHorizontal: spacing.sm },
 });

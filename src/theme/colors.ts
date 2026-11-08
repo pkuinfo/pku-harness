@@ -63,14 +63,14 @@ export type ThemeColors = {
 // Surfaces are glass: nearly transparent over the aurora (docs/DESIGN.md §1). `bg` is the
 // aurora base, painted once at the root.
 const dark: ThemeColors = {
-  bg: '#09090B',
-  surface: 'rgba(255, 255, 255, 0.035)',
-  surface2: 'rgba(255, 255, 255, 0.06)',
-  surface3: 'rgba(255, 255, 255, 0.09)',
+  bg: '#171717',
+  surface: '#202020',
+  surface2: '#282828',
+  surface3: '#333333',
   border: 'rgba(255, 255, 255, 0.08)',
   text: palette.ink50,
-  textMuted: palette.ink300,
-  textFaint: palette.ink400,
+  textMuted: '#B0B0B0',
+  textFaint: '#A3A3A3',
   accent: '#F0606B',
   accentMuted: 'rgba(240, 96, 107, 0.14)',
   onAccent: palette.white,
@@ -84,20 +84,20 @@ const dark: ThemeColors = {
   infoMuted: 'rgba(61, 139, 255, 0.14)',
   glow: 'rgba(240, 68, 79, 0.55)',
   scrim: 'rgba(0, 0, 0, 0.6)',
-  elevated: '#141316',
+  elevated: '#242424',
   brand: '#A3101F',
   onBrand: palette.white,
 };
 
 const light: ThemeColors = {
-  bg: '#F6F5F3',
-  surface: 'rgba(255, 255, 255, 0.5)',
-  surface2: 'rgba(17, 12, 10, 0.04)',
-  surface3: 'rgba(17, 12, 10, 0.07)',
+  bg: '#FAFAF9',
+  surface: '#F3F3F2',
+  surface2: '#EDEDEC',
+  surface3: '#E3E3E2',
   border: 'rgba(17, 12, 10, 0.08)',
   text: '#0B0D10',
-  textMuted: '#59616C',
-  textFaint: '#8D95A1',
+  textMuted: '#595959',
+  textFaint: '#626262',
   accent: '#8B0012',
   accentMuted: 'rgba(139, 0, 18, 0.08)',
   onAccent: palette.white,
@@ -111,7 +111,7 @@ const light: ThemeColors = {
   infoMuted: 'rgba(31, 111, 235, 0.10)',
   glow: 'rgba(200, 16, 46, 0.35)',
   scrim: 'rgba(11, 13, 16, 0.4)',
-  elevated: '#FBFAF9',
+  elevated: '#FFFFFF',
   brand: '#8B0012',
   onBrand: palette.white,
 };
@@ -201,8 +201,8 @@ export const auroraPalettes = {
  */
 export const glassMaterial = {
   dark: {
-    fill: 'rgba(255, 255, 255, 0.025)',
-    fillStrong: 'rgba(255, 255, 255, 0.045)',
+    fill: '#202020',
+    fillStrong: '#282828',
     edge: 'rgba(255, 255, 255, 0.07)',
     /** Top-edge light: horizontal gradient for a 1px line. */
     topLight: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0) 100%)',
@@ -212,12 +212,12 @@ export const glassMaterial = {
     brandEdge: 'rgba(255, 255, 255, 0.16)',
   },
   light: {
-    fill: 'rgba(255, 255, 255, 0.22)',
-    fillStrong: 'rgba(255, 255, 255, 0.4)',
-    edge: 'rgba(255, 255, 255, 0.75)',
+    fill: '#F3F3F2',
+    fillStrong: '#EDEDEC',
+    edge: 'rgba(17, 17, 17, 0.10)',
     topLight: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 50%, rgba(255,255,255,0) 100%)',
     pressed: 'rgba(17, 12, 10, 0.035)',
-    shadow: '0 8px 24px rgba(17, 12, 10, 0.035)' as string | undefined,
+    shadow: undefined as string | undefined,
     brand: '#8B0012',
     brandEdge: 'rgba(255, 255, 255, 0.22)',
   },

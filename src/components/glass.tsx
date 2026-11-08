@@ -1,13 +1,10 @@
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 import type { ReactNode } from 'react';
-import { Platform, Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
 
 import { glassMaterial, radius as radii, springs, useThemeName } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
-/** iOS 26 system glass when the build and device support it (expo-glass-effect docs). */
-const nativeGlass = Platform.OS === 'ios' && isLiquidGlassAvailable();
 
 export type GlassProps = {
   children?: ReactNode;
@@ -22,15 +19,7 @@ export type GlassProps = {
   haptic?: boolean;
 };
 
-/**
- * The panel material (docs/DESIGN.md §1), kept restrained and nearly transparent:
- *
- * - iOS 26: the system liquid glass (`GlassView`).
- * - Elsewhere: a barely-there fill over the aurora, one hairline edge, and a thin light line
- *   along the top edge as the only highlight. No milky sheen, no outlines, no glare.
- *
- * Pressable glass lifts its fill a touch and settles back with the shared spring.
- */
+/** Opaque neutral panels. The legacy component name remains stable for plugin compatibility. */
 export function Glass({ children, style, radius = radii.lg, tone = 'regular', onPress, onLongPress, accessibilityLabel, accessibilityRole, haptic = true }: GlassProps) {
   const m = glassMaterial[useThemeName()];
   const scale = useSharedValue(1);
@@ -42,12 +31,8 @@ export function Glass({ children, style, radius = radii.lg, tone = 'regular', on
 
   const brand = tone === 'brand';
   const shape = { borderRadius: radius, borderCurve: 'continuous' } as const;
-  const inset = Math.min(radius, 24);
 
-  const surface =
-    nativeGlass && !brand ? (
-      <GlassView style={[StyleSheet.absoluteFill, shape]} glassEffectStyle="regular" isInteractive={interactive} />
-    ) : (
+  const surface = (
       <View
         pointerEvents="none"
         className="absolute inset-0 overflow-hidden border-[0.5px]"
@@ -58,13 +43,12 @@ export function Glass({ children, style, radius = radii.lg, tone = 'regular', on
             backgroundColor: brand ? m.brand : tone === 'strong' ? m.fillStrong : m.fill,
           },
         ]}>
-        <View className="absolute top-0 h-px" style={{ left: inset, right: inset, backgroundImage: m.topLight }} />
         {interactive ? <Animated.View className="absolute inset-0" style={[{ backgroundColor: m.pressed }, liftStyle]} /> : null}
       </View>
     );
 
   const body = (
-    <Animated.View style={[shape, { boxShadow: nativeGlass || brand ? undefined : m.shadow }, style, interactive && pressStyle]}>
+    <Animated.View style={[shape, { boxShadow: brand ? undefined : m.shadow }, style, interactive && pressStyle]}>
       {surface}
       {children}
     </Animated.View>
@@ -94,19 +78,14 @@ export function Glass({ children, style, radius = radii.lg, tone = 'regular', on
   );
 }
 
-/**
- * The glass details for a panel that paints its own fill (`theme.surface*`): one hairline edge
- * and the top-edge light. Place as the first child of a positioned, rounded container.
- */
+/** A subtle hairline for containers that paint their own surface fill. */
 export function GlassEdges({ radius = radii.lg }: { radius?: number }) {
   const m = glassMaterial[useThemeName()];
-  const inset = Math.min(radius, 24);
   return (
     <View
       pointerEvents="none"
       className="absolute inset-0 overflow-hidden border-[0.5px]"
       style={{ borderRadius: radius, borderCurve: 'continuous', borderColor: m.edge }}>
-      <View className="absolute top-0 h-px" style={{ left: inset, right: inset, backgroundImage: m.topLight }} />
     </View>
   );
 }

@@ -2,7 +2,6 @@ import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AgentOrbit } from '@/components/agent-orbit';
-import { Aurora } from '@/components/aurora';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icon';
 import { Logo } from '@/components/logo';
@@ -20,16 +19,15 @@ export function DesignBoard() {
   const c = useTheme();
   const t = useT();
   return (
-    <View className="flex-1">
-      <Aurora />
+    <View className="flex-1 bg-bg">
       <ScrollView
         contentContainerClassName="gap-6 px-4"
         contentContainerStyle={{ paddingTop: insets.top + spacing.lg, paddingBottom: insets.bottom + spacing.xxxl }}>
         <View className="gap-1">
           <Text variant="micro" tone="faint">
-            DESIGN · GLASS + LIGHT
+            DESIGN
           </Text>
-          <Text variant="title">{t('app.design.tagline')}</Text>
+          <Text variant="headline">{t('app.design.tagline')}</Text>
         </View>
         <Segmented<ThemePreference>
           options={[

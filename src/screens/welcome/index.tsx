@@ -3,7 +3,6 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { BackHandler, StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { Aurora } from '@/components/aurora';
 import { completeOnboarding, onboardingProgress } from '@/core/boot';
 import { curves, duration } from '@/theme';
 import { haptics } from '@/utils/haptics';
@@ -176,8 +175,6 @@ export function Welcome() {
   return (
     <HeroVariantProvider value={hero}>
       <View className="flex-1 bg-bg">
-        {/* The intro paints its own aurora (it drifts with the pages); setup shares this one. */}
-        {phase.kind === 'setup' ? <Aurora /> : null}
         <Animated.View className="flex-1" style={outStyle}>
           {layers.map((l) => (
             <Layer key={keyOf(l.phase)} leaving={l.leaving} dir={dir}>

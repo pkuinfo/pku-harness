@@ -1,14 +1,12 @@
-import { BlurView } from 'expo-blur';
-import { StyleSheet, View } from 'react-native';
+import { View } from 'react-native';
 import Animated, { FadeIn, FadeOut, useReducedMotion, ZoomIn, ZoomOut } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import { useChat } from '@/core/agent/session/chat-store';
-import { useTabsBlurTarget } from '@/hooks/use-floating-overlay';
 import { useLocale, useT } from '@/i18n';
-import { shadows, springs, useTheme, useThemeName } from '@/theme';
+import { springs, useTheme } from '@/theme';
 
 import { AgentOrbit } from '@/components/agent-orbit';
 
@@ -27,8 +25,6 @@ export function JumpToLatest({ unread, onPress }: { unread: boolean; onPress: ()
   const busy = chat.status === 'streaming';
   const reply = chat.messages.at(-1);
   const c = useTheme();
-  const theme = useThemeName();
-  const blurTarget = useTabsBlurTarget();
   const reduced = useReducedMotion();
   const t = useT();
   const locale = useLocale();
@@ -40,37 +36,25 @@ export function JumpToLatest({ unread, onPress }: { unread: boolean; onPress: ()
 
   return (
     <Animated.View entering={enter} exiting={exit} pointerEvents="box-none" style={{ alignItems: 'center' }}>
-      {/* Frosted glass: a real blur of the messages beneath (same method as the tab
-          bar, rendered outside the blur target via the tabs' floating overlay) under a light 40 % tint of the page colour, so it reads over any text in both themes. */}
       <PressableScale
         onPress={onPress}
         scaleTo={0.94}
         accessibilityRole="button"
         accessibilityLabel={label ? t('chat.jump.toLatestWith', { label }) : t('chat.jump.toLatest')}
-        style={{ maxWidth: 300, borderRadius: 999, borderCurve: 'continuous', boxShadow: shadows.float }}>
-        <View
-          style={{
-            borderRadius: 999,
-            borderCurve: 'continuous',
-            overflow: 'hidden',
-            borderWidth: StyleSheet.hairlineWidth,
-            borderColor: c.border,
-          }}>
-          {blurTarget ? <BlurView blurTarget={blurTarget} blurMethod="dimezisBlurViewSdk31Plus" intensity={80} tint={theme === 'dark' ? 'dark' : 'light'} style={StyleSheet.absoluteFill} /> : null}
-          <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: c.bg, opacity: 0.4 }]} />
-          <View className={label ? 'flex-row items-center gap-2 py-2.5 pl-3.5 pr-3' : 'p-3'}>
-            {phase ? (
-              <AgentOrbit state={phase.orbit} size={18} />
-            ) : unread ? (
-              <View className="h-2 w-2 rounded-full bg-brand" />
-            ) : null}
-            {label ? (
-              <Text variant="callout" tone={phase ? 'muted' : 'default'} numberOfLines={1} className="shrink">
-                {label}
-              </Text>
-            ) : null}
-            <Icon name="down" size={18} color={c.text} />
-          </View>
+        className="max-w-[85%] overflow-hidden rounded-full border border-edge bg-elevated"
+        style={{ borderCurve: 'continuous' }}>
+        <View className={label ? 'min-h-10 flex-row items-center gap-2 px-3 py-2' : 'p-3'}>
+          {phase ? (
+            <AgentOrbit state={phase.orbit} size={18} />
+          ) : unread ? (
+            <View className="h-2 w-2 rounded-full bg-brand" />
+          ) : null}
+          {label ? (
+            <Text variant="caption" tone={phase ? 'muted' : 'default'} numberOfLines={1} className="shrink">
+              {label}
+            </Text>
+          ) : null}
+          <Icon name="down" size={18} color={c.text} />
         </View>
       </PressableScale>
     </Animated.View>

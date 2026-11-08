@@ -6,7 +6,6 @@ import Animated, { FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, w
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
 import { EmptyState } from '@/components/empty-state';
-import { GlassEdges } from '@/components/glass';
 import { FadeIn as Enter } from '@/components/fade-in';
 import { Icon, type IconName } from '@/components/icon';
 import { ListGroup, ListRow } from '@/components/list-group';
@@ -23,17 +22,16 @@ import { registry } from '@/core/runtime/registry';
 import { remotePlugins } from '@/core/runtime/remote';
 import type { PluginDef } from '@/core/runtime/types';
 import { useLocale, useT } from '@/i18n';
-import { radius, springs, useTheme } from '@/theme';
+import { springs, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { CloudSection } from './cloud-section';
 import { DocSection } from './doc-section';
 import { MODE_TONE, effectIcon, effectInfo, effectsOf, modeOptions } from './effects';
 import { PluginTile } from './plugin-tile';
-import { GROUP_TONE, STATUS_LABEL, STATUS_TONE, groupOf, isRunning } from './status';
+import { STATUS_LABEL, STATUS_TONE, isRunning } from './status';
 import { usePluginStatus } from './use-plugin-status';
 
-const CURVE = { borderCurve: 'continuous' } as const;
 /** Tab slots a plugin can fill → their routes (Expo Router tabs). */
 const TAB_ROUTE = { dashboard: '/dashboard', schedule: '/schedule' } as const;
 
@@ -129,10 +127,9 @@ export function PluginDetail({ id }: { id: string }) {
   return (
     <Screen title={name} subtitle={`${plugin.id} · v${plugin.version}`} back>
       <Enter index={0}>
-        <View className="gap-4 rounded-xl bg-surface p-4" style={CURVE}>
-          <GlassEdges radius={radius.xl} />
-          <View className="flex-row items-start gap-4">
-            <PluginTile plugin={plugin} tone={GROUP_TONE[groupOf(plugin)]} size="lg" muted={!live} />
+        <View className="gap-3 border-b border-edge pb-4">
+          <View className="flex-row items-start gap-3">
+            <PluginTile plugin={plugin} tone="neutral" size="lg" muted={!live} />
             <View className="flex-1 gap-2">
               <Text variant="callout" tone="muted">
                 {pluginDescription(plugin, locale)}

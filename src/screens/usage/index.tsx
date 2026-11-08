@@ -12,7 +12,6 @@ import { FadeIn } from '@/components/fade-in';
 import { Screen } from '@/components/screen';
 import { Segmented } from '@/components/segmented';
 import { Skeleton } from '@/components/skeleton';
-import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { useProviderBalance } from '@/core/agent/balance';
 import { useAIConfig } from '@/core/agent/provider';
@@ -44,7 +43,7 @@ export function UsageScreen() {
   const t = useT();
   const { state, reload } = useUsageReport();
   return (
-    <Screen title={t('app.usage.title')} subtitle={t('app.usage.eyebrow')} back>
+    <Screen title={t('app.usage.title')} back>
       {state.status === 'loading' ? (
         <Loading />
       ) : state.status === 'error' ? (
@@ -77,17 +76,17 @@ function Loading() {
 
 function Kpi({ label, value, format, unit }: { label: string; value: number | null; format: (n: number) => string; unit?: string }) {
   return (
-    <Surface className="flex-1 gap-1">
+    <View className="flex-1 gap-1 py-2">
       <Text variant="micro" tone="faint">
         {label}
       </Text>
       {value === null ? (
-        <Text variant="numberL" tone="faint">
+        <Text variant="numberM" tone="faint">
           —
         </Text>
       ) : (
         <View className="flex-row items-baseline gap-1">
-          <AnimatedNumber value={value} variant="numberL" format={format} />
+          <AnimatedNumber value={value} variant="numberM" format={format} />
           {unit ? (
             <Text variant="caption" tone="muted">
               {unit}
@@ -95,7 +94,7 @@ function Kpi({ label, value, format, unit }: { label: string; value: number | nu
           ) : null}
         </View>
       )}
-    </Surface>
+    </View>
   );
 }
 
@@ -131,7 +130,7 @@ function Content({ state, report }: { state: Extract<UsageState, { status: 'read
   return (
     <>
       <FadeIn index={0}>
-        <View className="gap-3">
+        <View className="gap-2">
           <View className="flex-row gap-3">
             <Kpi label={t('app.usage.today')} value={kpis.todayTokens} format={formatCompact} unit="tokens" />
             <Kpi label={t('app.usage.month')} value={kpis.monthTokens} format={formatCompact} unit="tokens" />

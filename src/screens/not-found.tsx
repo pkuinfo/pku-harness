@@ -9,7 +9,7 @@ import { useT } from '@/i18n';
 export function NotFoundScreen() {
   const t = useT();
   return (
-    <Screen title={t('app.notFound.title')} back>
+    <Screen appearance="plain" title={t('app.notFound.title')} back>
       <EmptyState
         icon="help"
         title={t('app.notFound.heading')}

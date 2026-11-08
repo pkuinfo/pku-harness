@@ -17,7 +17,8 @@ import Animated, {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scheduleOnRN, scheduleOnUI } from 'react-native-worklets';
 
-import { Aurora } from '@/components/aurora';
+import { Icon, type IconName } from '@/components/icon';
+import { Logo } from '@/components/logo';
 import { Button } from '@/components/button';
 import { NativeCheckbox } from '@/components/native-checkbox';
 import { Text } from '@/components/text';
@@ -25,17 +26,12 @@ import { useT } from '@/i18n';
 import { curves, duration, spacing } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
-import { BrandHero } from '../scene/brand-hero';
 import { PAGES, type IntroPage } from './copy';
-import { AgentArt } from './illustrations/agent-art';
-import { DashboardArt } from './illustrations/dashboard-art';
-import { PluginArt } from './illustrations/plugin-art';
-import { ReminderArt } from './illustrations/reminder-art';
 
 const EASE_OUT = Easing.bezier(...curves.out);
-/** The copy and footer wait for the hero to light up (scene INTRO timeline ≈ 1.4 s). */
-const COPY_DELAY_MS = 700;
-const FOOTER_DELAY_MS = 1000;
+/** Keep introductory controls available as soon as the page enters. */
+const COPY_DELAY_MS = 0;
+const FOOTER_DELAY_MS = 0;
 
 /**
  * Layered parallax: as the pager moves, each layer travels at its own depth and fades, so the
@@ -62,42 +58,22 @@ function Dot({ scroll, index, width }: { scroll: SharedValue<number>; index: num
   return <Animated.View className="h-1.5 rounded-full bg-fg" style={style} />;
 }
 
-function PageView({ page, index, scroll, width, current, intro, heroSize, forceFallback, live }: { page: IntroPage; index: number; scroll: SharedValue<number>; width: number; current: number; intro: SharedValue<number>; heroSize: number; forceFallback: boolean; live: boolean }) {
+function PageView({ page, index, scroll, width, intro }: { page: IntroPage; index: number; scroll: SharedValue<number>; width: number; intro: SharedValue<number> }) {
   const t = useT();
   const reduced = useReducedMotion();
   const art = useLayer(scroll, index, width, 1.5, reduced);
-  const kicker = useLayer(scroll, index, width, 0.45, reduced);
   const title = useLayer(scroll, index, width, 0.7, reduced);
   const body = useLayer(scroll, index, width, 1, reduced);
-  // First page only: the copy rises in once the hero has lit up.
+  // First page only: a short entrance for the copy.
   const enter = useAnimatedStyle(() => (index === 0 ? { opacity: intro.get(), transform: [{ translateY: (1 - intro.get()) * 14 }] } : {}));
-  const active = current === index;
-  const near = Math.abs(current - index) <= 1;
   return (
-    <View className="flex-1 gap-6 px-6" style={{ width }}>
-      <Animated.View className="items-center justify-center" style={[{ minHeight: heroSize }, art]}>
-        {/* Only the current page and its neighbours mount their (animated) art. */}
-        {!near ? null : index === 0 ? (
-          <BrandHero size={heroSize} active={active && live} forceFallback={forceFallback} />
-        ) : index === 1 ? (
-          <AgentArt active={active} />
-        ) : index === 2 ? (
-          <DashboardArt active={active} />
-        ) : index === 3 ? (
-          <ReminderArt active={active} />
-        ) : (
-          <PluginArt active={active} />
-        )}
+    <View className="flex-1 gap-3 px-6" style={{ width }}>
+      <Animated.View className="pt-8 pb-6" style={art}>
+        {index === 0 ? <Logo size={48} /> : <Icon name={(['sparkles', 'chat', 'dashboard', 'alarm', 'puzzle'] as IconName[])[index]} size={32} />}
       </Animated.View>
       <Animated.View className="gap-3" style={enter}>
-        <Animated.View style={kicker}>
-          {/* Small caps in every language: no-op for Chinese, consistent casing in English. */}
-          <Text variant="micro" tone="accent" style={{ textTransform: 'uppercase' }}>
-            {t(`welcome.intro.${page}.kicker`)}
-          </Text>
-        </Animated.View>
         <Animated.View style={title}>
-          <Text variant="display">{t(`welcome.intro.${page}.title`)}</Text>
+          <Text variant="title">{t(`welcome.intro.${page}.title`)}</Text>
         </Animated.View>
         <Animated.View style={body}>
           <Text variant="body" tone="muted">
@@ -110,31 +86,27 @@ function PageView({ page, index, scroll, width, current, intro, heroSize, forceF
 }
 
 /**
- * The intro: five pages over the aurora (the first one the 3D hero), then the terms. `live`
- * false (leaving for setup) freezes the 3D scene.
+ * Five concise introduction pages followed by explicit terms consent.
  */
-export function Intro({ onAccept, startAtEnd = false, live, forceFallback }: { onAccept: () => void; startAtEnd?: boolean; live: boolean; forceFallback: boolean }) {
+export function Intro({ onAccept, startAtEnd = false }: { onAccept: () => void; startAtEnd?: boolean; live: boolean; forceFallback: boolean }) {
   const t = useT();
   const insets = useSafeAreaInsets();
-  const { width, height } = useWindowDimensions();
+  const { width } = useWindowDimensions();
   const reduced = useReducedMotion();
   const scroll = useSharedValue(0);
   const pager = useAnimatedRef<Animated.ScrollView>();
   const [page, setPage] = useState(0);
   const [agreed, setAgreed] = useState(false);
   const last = page === PAGES.length - 1;
-  const heroSize = Math.round(Math.min(width - spacing.xxl * 2, height * 0.38, 340));
 
   const onScroll = useAnimatedScrollHandler((e) => {
     scroll.set(e.contentOffset.x);
   });
-  const pageProgress = useSharedValue(0);
   // Page index follows the scroll position (programmatic scrolls fire no momentum events).
   useAnimatedReaction(
     () => Math.round(scroll.get() / width),
     (p, prev) => {
       if (prev == null || p === prev) return;
-      pageProgress.set(p);
       scheduleOnRN(setPage, p);
       scheduleOnRN(haptics.select);
     },
@@ -161,7 +133,7 @@ export function Intro({ onAccept, startAtEnd = false, live, forceFallback }: { o
     onAccept();
   };
 
-  // Copy and footer arrive after the mark assembles. Style animations (not layout `entering`),
+  // Copy and footer use style animations (not layout `entering`),
   // so the buttons stay interactive on Android.
   const copyIn = useSharedValue(startAtEnd || reduced ? 1 : 0);
   const footerIn = useSharedValue(startAtEnd || reduced ? 1 : 0);
@@ -184,8 +156,7 @@ export function Intro({ onAccept, startAtEnd = false, live, forceFallback }: { o
   };
 
   return (
-    <View className="flex-1">
-      <Aurora shift={pageProgress} />
+    <View className="flex-1 bg-bg">
       <Animated.ScrollView
         ref={pager}
         horizontal
@@ -196,7 +167,7 @@ export function Intro({ onAccept, startAtEnd = false, live, forceFallback }: { o
         className="flex-1"
         contentContainerStyle={{ paddingTop: insets.top + spacing.xl }}>
         {PAGES.map((p, i) => (
-          <PageView key={p} page={p} index={i} scroll={scroll} width={width} current={page} intro={copyIn} heroSize={heroSize} forceFallback={forceFallback} live={live} />
+          <PageView key={p} page={p} index={i} scroll={scroll} width={width} intro={copyIn} />
         ))}
       </Animated.ScrollView>
 

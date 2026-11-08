@@ -222,8 +222,8 @@ const components: Components<typeof catalog> = {
     </View>
   ),
   Card: ({ props, children }) => (
-    <Surface level={2} style={{ gap: spacing.md }}>
-      {props.title ? <Text variant="headline">{props.title}</Text> : null}
+    <Surface level={1} style={{ gap: spacing.md }}>
+      {props.title ? <Text variant="bodyStrong">{props.title}</Text> : null}
       {props.subtitle ? (
         <Text variant="caption" tone="muted">
           {props.subtitle}

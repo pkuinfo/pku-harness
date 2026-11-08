@@ -20,8 +20,8 @@ const FG: Record<ChipTone, keyof ThemeColors> = { neutral: 'text', accent: 'acce
 
 const SIZE = {
   sm: { box: 'h-7 w-7 rounded-sm', icon: 14 },
-  md: { box: 'h-10 w-10 rounded-md', icon: 20 },
-  lg: { box: 'h-14 w-14 rounded-lg', icon: 28 },
+  md: { box: 'h-8 w-8 rounded-sm', icon: 18 },
+  lg: { box: 'h-10 w-10 rounded-md', icon: 22 },
 } as const;
 
 /** A plugin's icon in a tinted, concentric tile. `muted` greys it out (plugin off or unavailable). */

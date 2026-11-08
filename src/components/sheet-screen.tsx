@@ -73,7 +73,7 @@ export function SheetScreen({
     <KeyboardAvoidingView className="flex-1 bg-bg" behavior="padding">
       <Aurora />
       <View className="flex-row items-center px-4 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
-        <Text variant="headline" className="flex-1">
+        <Text variant="bodyStrong" className="flex-1">
           {title}
         </Text>
         <IconButton icon="close" label={t('core.common.close')} variant="ghost" onPress={() => dismiss()} />
@@ -82,7 +82,7 @@ export function SheetScreen({
         {children}
       </ScrollView>
       <View className="gap-3 border-t-[0.5px] border-edge px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
-        <View pointerEvents="none" className="absolute inset-0 bg-bg opacity-80" />
+        <View pointerEvents="none" className="absolute inset-0 bg-bg" />
         {notice ? (
           <Animated.View
             key={notice.text}

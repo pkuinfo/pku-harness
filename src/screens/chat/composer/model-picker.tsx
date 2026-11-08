@@ -111,11 +111,11 @@ export function ModelPicker() {
                       disabled={!ready}
                       haptic={false}
                       onPress={() => void select(entry.id, m)}
-                      className={cx('flex-row items-center gap-3 rounded-md px-3 py-2.5', selected ? 'bg-accent-muted' : 'bg-surface-2', !ready && 'opacity-40')}
+                      className={cx('flex-row items-center gap-3 rounded-md px-3 py-2.5', selected ? 'bg-surface-2' : 'bg-transparent', !ready && 'opacity-40')}
                       style={CURVE}>
                       <View className="flex-1 gap-1">
                         <View className="flex-row flex-wrap items-center gap-1.5">
-                          <Text variant="bodyStrong" numberOfLines={1}>
+                          <Text variant="callout" numberOfLines={1}>
                             {m.name ?? m.id}
                           </Text>
                           {window ? <Chip label={window} /> : null}

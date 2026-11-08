@@ -5,15 +5,13 @@ import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
 import { FadeIn as Enter } from '@/components/fade-in';
-import { GlassEdges } from '@/components/glass';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
 import { openBatteryOptimizationSettings, requestExactAlarmPermission, requestNotificationPermission } from '@/core/notify';
 import { deliveryBlocker } from '@/core/runtime/types';
 import { useDeliveryReadiness } from '@/hooks/use-delivery-readiness';
 import { useT } from '@/i18n';
-import { radius, useTheme } from '@/theme';
-import { cx } from '@/utils/cx';
+import { useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { permissionsOutcome } from '../flow';
@@ -44,8 +42,8 @@ function PermissionRow({
   const t = useT();
   const c = useTheme();
   return (
-    <View className="min-h-16 flex-row items-center gap-3 px-4 py-3">
-      <View className={cx('h-9 w-9 items-center justify-center rounded-md', on ? 'bg-up-muted' : 'bg-accent-muted')} style={{ borderCurve: 'continuous' }}>
+    <View className="min-h-16 flex-row items-center gap-3 py-3">
+      <View className="h-9 w-9 items-center justify-center" style={{ borderCurve: 'continuous' }}>
         <Icon name={icon} size={18} color={on ? c.up : c.accent} />
       </View>
       <View className="flex-1 gap-1">
@@ -168,11 +166,10 @@ export function PermissionsStep({ onDone, onSkip, onBack }: { onDone: () => void
       onBack={onBack}
       note={t('welcome.permissions.note')}>
       <Enter index={3}>
-        <View className="overflow-hidden rounded-lg bg-surface" style={{ borderCurve: 'continuous' }}>
-          <GlassEdges radius={radius.lg} />
+        <View className="border-y border-edge">
           {rows.map((row, i) => (
             <View key={row.kind}>
-              {i > 0 ? <View className="ml-16 bg-edge" style={{ height: StyleSheet.hairlineWidth }} /> : null}
+              {i > 0 ? <View className="bg-edge" style={{ height: StyleSheet.hairlineWidth }} /> : null}
               {row.el}
             </View>
           ))}

@@ -42,11 +42,11 @@ export function CacheSection({ cache, discount }: { cache: CacheStats; discount:
     <Section title={t('app.usage.cacheTitle')} meta={missTokens > 0 ? t('app.usage.cacheMisses', { tokens: formatCompact(missTokens) }) : undefined}>
       <View className="gap-0.5" accessible accessibilityLabel={chat.rate === null ? t('app.usage.cacheHero') : t('app.usage.cacheHeroA11y', { pct: formatPercent(chat.rate) })}>
         {chat.rate === null ? (
-          <Text variant="numberXL" tone="faint">
+          <Text variant="numberL" tone="faint">
             —
           </Text>
         ) : (
-          <AnimatedNumber value={chat.rate} variant="numberXL" format={formatPercent} />
+          <AnimatedNumber value={chat.rate} variant="numberL" format={formatPercent} />
         )}
         <Text variant="caption" tone="muted">
           {t('app.usage.cacheHero')}

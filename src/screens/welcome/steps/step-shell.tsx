@@ -13,7 +13,6 @@ import { useT } from '@/i18n';
 import { curves, duration, spacing, useTheme } from '@/theme';
 
 import { TASK_STEPS, stepPosition, type SetupStep } from '../flow';
-import { StepArt } from '../intro/illustrations/step-art';
 
 const EASE_OUT = Easing.bezier(...curves.out);
 
@@ -47,7 +46,7 @@ function Segment({ state }: { state: 'done' | 'current' | 'todo' }) {
   const style = useAnimatedStyle(() => ({ width: `${fill.get() * 100}%` }));
   return (
     <View className="h-1 flex-1 overflow-hidden rounded-full bg-surface-3">
-      <Animated.View className="absolute top-0 bottom-0 left-0 rounded-full bg-accent" style={style} />
+      <Animated.View className="absolute top-0 bottom-0 left-0 rounded-full bg-fg" style={style} />
     </View>
   );
 }
@@ -96,22 +95,15 @@ export function StepShell({
         <Progress step={step} />
         <View className="h-10 w-10" />
       </View>
-      <ScrollView className="flex-1" contentContainerClassName="w-full self-center gap-6 px-6 pt-4 pb-8" contentContainerStyle={{ maxWidth: MAX_CONTENT_WIDTH }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView className="flex-1" contentContainerClassName="w-full self-center gap-5 px-4 pt-4 pb-6" contentContainerStyle={{ maxWidth: MAX_CONTENT_WIDTH }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View className="gap-3">
-          {hero ??
-            ((TASK_STEPS as readonly SetupStep[]).includes(step) ? (
-              <FadeIn index={0}>
-                <StepArt step={step} />
-              </FadeIn>
-            ) : (
-              <FadeIn index={0}>
-                <View className="h-12 w-12 items-center justify-center rounded-lg bg-accent-muted" style={{ borderCurve: 'continuous' }}>
-                  <Icon name={icon ?? 'sparkles'} size={24} color={c.accent} />
-                </View>
-              </FadeIn>
-            ))}
+          {hero ?? (
+            <View className="h-10 w-10 items-center justify-center">
+              <Icon name={icon ?? 'sparkles'} size={24} color={c.textMuted} />
+            </View>
+          )}
           <FadeIn index={1}>
-            <Text variant="title" accessibilityRole="header">
+            <Text variant="headline" accessibilityRole="header">
               {title}
             </Text>
           </FadeIn>
@@ -123,7 +115,7 @@ export function StepShell({
         </View>
         {children}
       </ScrollView>
-      <View className="w-full gap-1 self-center px-6 pt-3" style={{ maxWidth: MAX_CONTENT_WIDTH, paddingBottom: Math.max(insets.bottom, spacing.md) }}>
+      <View className="w-full gap-1 self-center border-t border-edge bg-bg px-4 pt-3" style={{ maxWidth: MAX_CONTENT_WIDTH, paddingBottom: Math.max(insets.bottom, spacing.md) }}>
         {note ? (
           <Text variant="caption" tone="faint" align="center" className="mb-1">
             {note}

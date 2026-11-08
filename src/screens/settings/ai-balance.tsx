@@ -18,7 +18,6 @@ import { Button } from '@/components/button';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Skeleton } from '@/components/skeleton';
-import { Surface } from '@/components/surface';
 import { Text } from '@/components/text';
 import { useProviderBalance } from '@/core/agent/balance';
 import { useT } from '@/i18n';
@@ -96,7 +95,7 @@ export function AccountBalance({ providerId }: { providerId: string }) {
         disabled={busy}
         onPress={onPress}
         scaleTo={0.98}>
-        <Surface className="gap-3">
+        <View className="gap-3 border-t border-edge py-3">
           <View className="flex-row items-center justify-between gap-2">
             <Text variant="micro" tone="faint">
               {t('app.ai.balance.title')}
@@ -137,7 +136,7 @@ export function AccountBalance({ providerId }: { providerId: string }) {
             <View className="gap-1">
               {hero ? (
                 <>
-                  <AnimatedNumber value={hero.total} variant="numberL" format={(n) => money(hero.currency, n)} />
+                  <AnimatedNumber value={hero.total} variant="numberM" format={(n) => money(hero.currency, n)} />
                   {hero.granted !== undefined && hero.toppedUp !== undefined ? (
                     <Text variant="caption" tone="muted">
                       {t('app.ai.balance.breakdown', { granted: money(hero.currency, hero.granted), toppedUp: money(hero.currency, hero.toppedUp) })}
@@ -165,7 +164,7 @@ export function AccountBalance({ providerId }: { providerId: string }) {
               </Text>
             </Animated.View>
           ) : null}
-        </Surface>
+        </View>
       </PressableScale>
     </Animated.View>
   );

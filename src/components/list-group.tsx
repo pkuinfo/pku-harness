@@ -16,7 +16,7 @@ export function ListGroup({
   footer,
   children,
   style,
-  variant = 'grouped',
+  variant = 'plain',
 }: {
   variant?: 'grouped' | 'plain';
   title?: string;
@@ -62,7 +62,7 @@ export function ListRow({
   onPress,
   chevron,
   titleLines = 1,
-  compact = false,
+  compact = true,
 }: {
   compact?: boolean;
   leading?: ReactNode;

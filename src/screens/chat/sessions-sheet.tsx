@@ -316,7 +316,7 @@ const SessionRow = memo(function SessionRow({
           >
             <View
               className={cx(
-                "flex-row items-center gap-3 rounded-md px-3 py-2.5",
+                "flex-row items-center gap-3 rounded-md px-3 py-2",
                 active && "bg-surface-2",
               )}
               style={{ borderCurve: "continuous" }}
@@ -325,7 +325,7 @@ const SessionRow = memo(function SessionRow({
                 {renaming ? (
                   <RenameInput session={s} onEnd={onRenameEnd} />
                 ) : (
-                  <Text variant="bodyStrong" numberOfLines={1}>
+                  <Text variant="callout" numberOfLines={1}>
                     {title}
                   </Text>
                 )}

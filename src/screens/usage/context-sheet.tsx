@@ -53,9 +53,9 @@ export function ContextSheet() {
   };
 
   return (
-    <View className="gap-5 px-4 pt-4" style={{ paddingBottom: Math.max(insets.bottom, spacing.lg) }}>
+    <View className="gap-4 px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, spacing.lg) }}>
       <View className="flex-row items-center">
-        <Text variant="headline" className="flex-1">
+        <Text variant="bodyStrong" className="flex-1">
           {t('chat.context.title')}
         </Text>
         <IconButton icon="close" label={t('core.common.close')} variant="ghost" size={36} onPress={() => dismiss('/')} />
@@ -63,7 +63,7 @@ export function ContextSheet() {
 
       <View className="gap-1">
         <View className="flex-row items-baseline gap-1.5" accessible accessibilityLabel={t('chat.context.usedA11y', { used: formatCompact(b.total), budget: formatCompact(b.budget), pct: formatPercent(ratio) })}>
-          <Text variant="numberXL" tone={tone}>
+          <Text variant="numberL" tone={tone}>
             {formatCompact(b.total)}
           </Text>
           <Text variant="numberM" tone="faint">

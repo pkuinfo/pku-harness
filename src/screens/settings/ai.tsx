@@ -41,29 +41,31 @@ function ProviderCard({ entry, selected, onPress }: { entry: ProviderEntry; sele
       onPress={onPress}
       disabled={!enabled}
       className={cx(
-        'flex-row items-center gap-3 rounded-lg border p-3',
-        selected ? 'border-accent bg-accent-muted' : 'border-transparent bg-surface',
+        'min-h-14 flex-row items-center gap-3 rounded-md px-2 py-3',
+        selected ? 'bg-surface-2' : 'bg-transparent',
         enabled ? 'opacity-100' : 'opacity-50',
       )}
       style={{ borderCurve: 'continuous' }}>
       <View
-        className={cx('h-9 w-9 items-center justify-center rounded-md', selected ? 'bg-accent' : 'bg-surface-3')}
+        className="size-8 items-center justify-center"
         style={{ borderCurve: 'continuous' }}>
-        <Icon name={icon} size={18} color={selected ? c.onAccent : c.text} />
+        <Icon name={icon} size={18} color={c.textMuted} />
       </View>
       <View className="flex-1 gap-0.5">
-        <Text variant="bodyStrong">{entry.def.name}</Text>
+        <Text variant="callout">{entry.def.name}</Text>
         <Text variant="caption" tone="muted" numberOfLines={2}>
           {enabled ? entry.def.description : t('app.ai.pluginOff')}
         </Text>
       </View>
-      {active ? <Chip label={t('app.ai.active')} tone="up" icon="check" /> : null}
+      {selected ? <Icon name="check" size={16} color={c.textMuted} /> : null}
+      {active ? <Chip label={t('app.ai.active')} tone="neutral" /> : null}
     </PressableScale>
   );
 }
 
 /** Settings → AI 服务: pick a provider plugin, model, endpoint and credential; test it. */
 export function AISettings() {
+  const c = useTheme();
   const t = useT();
   const { config, keys } = useAIConfig();
   const plugins = usePlugins();
@@ -189,13 +191,14 @@ export function AISettings() {
                     setModel(m.id);
                   }}
                   className={cx(
-                    'gap-0.5 rounded-md border px-4 py-3',
-                    model === m.id ? 'border-accent bg-accent-muted' : 'border-edge bg-surface-2',
+                    'min-h-11 gap-0.5 rounded-md px-3 py-2',
+                    model === m.id ? 'bg-surface-2' : 'bg-transparent',
                   )}
                   style={{ borderCurve: 'continuous' }}>
-                  <Text variant="callout" tone={model === m.id ? 'accent' : 'default'}>
-                    {m.name ?? m.id}
-                  </Text>
+                  <View className="flex-row items-center gap-2">
+                    <Text variant="callout" className="flex-1">{m.name ?? m.id}</Text>
+                    {model === m.id ? <Icon name="check" size={16} color={c.textMuted} /> : null}
+                  </View>
                   {m.description ? (
                     <Text variant="caption" tone="muted">
                       {m.description}

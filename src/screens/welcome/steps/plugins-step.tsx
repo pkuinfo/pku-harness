@@ -3,7 +3,6 @@ import { StyleSheet, View } from 'react-native';
 import { Chip } from '@/components/chip';
 import { useCampusAccount } from '@/core/campus/account';
 import { FadeIn } from '@/components/fade-in';
-import { GlassEdges } from '@/components/glass';
 import { Icon, type IconName } from '@/components/icon';
 import { NativeSwitch } from '@/components/native-switch';
 import { Text } from '@/components/text';
@@ -13,8 +12,7 @@ import { pluginSettings, usePluginSettings } from '@/core/runtime/plugin-setting
 import { registry } from '@/core/runtime/registry';
 import type { PluginDef } from '@/core/runtime/types';
 import { useLocale, useT } from '@/i18n';
-import { radius, useTheme } from '@/theme';
-import { cx } from '@/utils/cx';
+import { useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { groupPlugins, requirementBadges } from '../plugin-groups';
@@ -31,9 +29,9 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
   const badges = requirementBadges(plugin, { signedIn });
   const on = !why && settings.enabled;
   return (
-    <View className="min-h-16 flex-row items-center gap-3 px-4 py-3">
-      <View className={cx('h-9 w-9 items-center justify-center rounded-md', on ? 'bg-accent-muted' : 'bg-surface-3')} style={{ borderCurve: 'continuous' }}>
-        <Icon name={(plugin.icon as IconName | undefined) ?? 'puzzle'} size={18} color={on ? c.accent : c.textMuted} />
+    <View className="min-h-16 flex-row items-center gap-3 py-3">
+      <View className="h-9 w-9 items-center justify-center" style={{ borderCurve: 'continuous' }}>
+        <Icon name={(plugin.icon as IconName | undefined) ?? 'puzzle'} size={18} color={c.textMuted} />
       </View>
       <View className="flex-1 gap-1">
         <Text variant="bodyStrong">{name}</Text>
@@ -89,11 +87,10 @@ export function PluginsStep({ onDone, onSkip, onBack }: { onDone: () => void; on
             <Text variant="micro" tone="faint" className="px-4">
               {t(g.title)}
             </Text>
-            <View className="overflow-hidden rounded-lg bg-surface" style={{ borderCurve: 'continuous' }}>
-              <GlassEdges radius={radius.lg} />
+            <View className="border-y border-edge">
               {g.plugins.map((p, i) => (
                 <View key={p.id}>
-                  {i > 0 ? <View className="ml-16 bg-edge" style={{ height: StyleSheet.hairlineWidth }} /> : null}
+                  {i > 0 ? <View className="bg-edge" style={{ height: StyleSheet.hairlineWidth }} /> : null}
                   <PluginRow plugin={p} />
                 </View>
               ))}

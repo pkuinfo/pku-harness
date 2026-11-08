@@ -147,3 +147,47 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] Copilot modern visual pass: neutral canvas, compact toolbar, flat app rows and underlined tabs through opt-in SDK/host styles. Installed release checked in both themes and at 130% text size; tab interactions passed. Main 1,658 pass/3 skip; plugins 1,245 pass (2026-11-08).
 
 - [x] Copilot app alphabet index: All apps is grouped by initial with a pinned, scrollable letter rail; tap jumps to the group. Search and Allowed apps retain their existing behavior. Latin accents normalize to base letters, other names group under #. C/S navigation checked on the emulator in light/dark; main 1,660 pass/3 skip, plugins 1,247 pass (2026-11-08).
+
+## Full-app UI refinement (2026-11-08)
+
+- [x] Apply the restrained Codex-inspired direction across Chat, Dashboard, Schedule,
+  Settings, Plugins, Usage, onboarding, and shared SDK-rendered screens. Three parallel
+  review/implementation agents contributed; host primitives now default to a compact
+  toolbar, opaque neutral canvas, flatter rows, and quieter typography. Native controls,
+  permission flows, app scope, QR/OTP sizes, and financial figures remain available.
+- [x] Host verification: typecheck/lint and 1,660 tests passed, 3 skipped. Plugin
+  verification: typecheck/registry/bundled-document checks and 1,247 tests passed.
+  Release x86_64 build succeeded and was installed on emulator-5554. APK SHA-256:
+  `3597ae38c91dcbf0f104ffaef6cca45fe06e4de4e6f2ee7a42849a921c9abcd1`.
+- [x] Settled light-theme release captures inspected: Chat conversation/composer,
+  Dashboard, Schedule, Settings, Plugins, AI settings, Usage, Wallet, and welcome intro.
+  Schedule date/week and plugin counts remain visible in compact header subtitles.
+  A capture during focus animation looked faded; a settled direct device capture
+  confirmed normal contrast. Subsequent capture workflow waits for transitions.
+- [x] Settled dark-theme release captures inspected: Chat, Dashboard, Schedule, Settings,
+  Plugins, Ledger, Authenticator setup, and payment-code share form. No layout or contrast
+  issue observed in those states; share creation and authenticator setup were not submitted.
+  Final shared-primitives code review found no new functional regression.
+- [x] 130% font-size inspection passed for Settings, Plugins, AI settings, payment-code
+  sharing, and Copilot setup. Restored system font size to 100% and system theme to light.
+- [x] Light-theme Chats sheet, model picker, widget gallery, Ledger entry form, and Cloud
+  settings inspected. Copilot helper restarted after installation; on-device status shows
+  phone helper/accessibility ready with the same four allowed apps. No form was submitted.
+- [x] Empty chat, draft typing/clearing, slash-command menu, regular Gboard keyboard
+  avoidance, and attachment sheet inspected. No test message sent; keyboard preferences
+  restored. Campus, Notifications, Marketplace, and plugin details inspected in light.
+  AI settings, Usage, Wallet, and intro inspected in dark.
+- [x] Fixed the native attachment sheet remaining over deep-linked screens by dismissing
+  it on Chat blur. Rebuilt release installed; open sheet → Usage → return to Chat confirms
+  dismissal with no stale overlay. Host verification again passed 1,660 tests/3 skips.
+- [x] Theme comparisons passed for the model/session/attachment sheets, widget gallery,
+  Cloud, Ledger, Authenticator setup, sharing, Memory, and reminder form.
+- [x] Timetable switching and Dashboard edit/Done interactions passed without changing
+  records or widget layout. Intro → Skip intro displays readable consent in both themes;
+  Agree remains disabled before consent.
+- [x] Final installed-release Copilot check: helper/accessibility ready, four allowed apps
+  preserved, All apps opens the alphabet rail, and S jumps to the Settings section.
+- [x] Publish the verified host and plugin commits to main. Review uses representative UI
+  states without resetting the user’s account,
+  creating payment links, replacing authenticators, or submitting financial forms. It does
+  not repeat the previously recorded phone-control engine tests.

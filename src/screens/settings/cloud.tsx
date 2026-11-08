@@ -5,7 +5,6 @@ import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { Chip } from '@/components/chip';
 import { Field } from '@/components/field';
-import { GlassEdges } from '@/components/glass';
 import { Icon, type IconName } from '@/components/icon';
 import { ListGroup, ListRow } from '@/components/list-group';
 import { PressableScale } from '@/components/pressable-scale';
@@ -15,7 +14,7 @@ import { OFFICIAL_URL, checkBaseURL, displayHost, type ProviderMode } from '@/co
 import { cloudProvider, fetchMeta, useCloudProvider } from '@/core/cloud/provider';
 import { deleteCloudData, registerNow, resetCloudIdentity, useCloudDevice } from '@/core/cloud/runtime';
 import { useT } from '@/i18n';
-import { radius, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
 
@@ -37,18 +36,19 @@ function ModeCard({ icon, title, hint, selected, active, onPress }: { icon: Icon
       accessibilityLabel={title}
       accessibilityHint={hint}
       onPress={onPress}
-      className={cx('flex-row items-center gap-3 rounded-lg border p-3', selected ? 'border-accent bg-accent-muted' : 'border-transparent bg-surface')}
+      className={cx('min-h-14 flex-row items-center gap-3 rounded-md px-2 py-3', selected ? 'bg-surface-2' : 'bg-transparent')}
       style={CURVE}>
-      <View className={cx('h-9 w-9 items-center justify-center rounded-md', selected ? 'bg-accent' : 'bg-surface-3')} style={CURVE}>
-        <Icon name={icon} size={18} color={selected ? c.onAccent : c.text} />
+      <View className="size-8 items-center justify-center" style={CURVE}>
+        <Icon name={icon} size={18} color={c.textMuted} />
       </View>
       <View className="flex-1 gap-0.5">
-        <Text variant="bodyStrong">{title}</Text>
+        <Text variant="callout">{title}</Text>
         <Text variant="caption" tone="muted" numberOfLines={2}>
           {hint}
         </Text>
       </View>
-      {active ? <Chip label={t('app.cloud.active')} tone="up" icon="check" /> : null}
+      {selected ? <Icon name="check" size={16} color={c.textMuted} /> : null}
+      {active ? <Chip label={t('app.cloud.active')} tone="neutral" /> : null}
     </PressableScale>
   );
 }
@@ -58,14 +58,13 @@ function ServerCard({ meta, host }: { meta: MetaResponse; host: string }) {
   const t = useT();
   const ch = meta.limits.channels;
   return (
-    <Animated.View entering={FadeIn} className="gap-3 rounded-lg bg-surface p-4" style={CURVE}>
-      <GlassEdges radius={radius.lg} />
+    <Animated.View entering={FadeIn} className="gap-3 border-y border-edge py-4" style={CURVE}>
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1 gap-0.5">
-          <Text variant="micro" tone="faint">
-            {t('app.cloud.operator').toUpperCase()}
+          <Text variant="caption" tone="muted">
+            {t('app.cloud.operator')}
           </Text>
-          <Text variant="headline" numberOfLines={2}>
+          <Text variant="bodyStrong" numberOfLines={2}>
             {meta.operator.name}
           </Text>
           <Text variant="caption" tone="muted" numberOfLines={1}>
@@ -76,8 +75,8 @@ function ServerCard({ meta, host }: { meta: MetaResponse; host: string }) {
         <Chip label={`v${meta.protocol}`} />
       </View>
       <View className="gap-1.5">
-        <Text variant="micro" tone="faint">
-          {t('app.cloud.services').toUpperCase()}
+        <Text variant="caption" tone="muted">
+          {t('app.cloud.services')}
         </Text>
         <View className="flex-row flex-wrap gap-1">
           {meta.services.map((s) => (
@@ -86,8 +85,8 @@ function ServerCard({ meta, host }: { meta: MetaResponse; host: string }) {
         </View>
       </View>
       <View className="gap-0.5">
-        <Text variant="micro" tone="faint">
-          {t('app.cloud.limits').toUpperCase()}
+        <Text variant="caption" tone="muted">
+          {t('app.cloud.limits')}
         </Text>
         {meta.services.includes('channels') ? (
           <Text variant="callout" tone="muted">
@@ -104,7 +103,7 @@ function ServerCard({ meta, host }: { meta: MetaResponse; host: string }) {
   );
 }
 
-/** Device identity: the fingerprint as the hero, registration status, reset and delete. */
+/** Device identity, registration status, reset and delete. */
 function DeviceGroup() {
   const c = useTheme();
   const t = useT();
@@ -150,16 +149,15 @@ function DeviceGroup() {
 
   return (
     <View className="gap-2">
-      <Text variant="micro" tone="faint" className="px-4">
-        {t('app.cloud.device').toUpperCase()}
+      <Text variant="caption" tone="muted" className="px-1">
+        {t('app.cloud.device')}
       </Text>
-      <View className="gap-2 rounded-lg bg-surface p-4" style={CURVE}>
-        <GlassEdges radius={radius.lg} />
+      <View className="gap-2 py-3">
         <Text variant="caption" tone="faint">
           {t('app.cloud.fingerprint')}
         </Text>
         {device.fingerprint ? (
-          <Text variant="numberM" selectable accessibilityLabel={`${t('app.cloud.fingerprint')} ${device.fingerprint}`}>
+          <Text variant="callout" selectable accessibilityLabel={`${t('app.cloud.fingerprint')} ${device.fingerprint}`}>
             {device.fingerprint}
           </Text>
         ) : (
@@ -171,7 +169,7 @@ function DeviceGroup() {
           <View className="flex-row items-center gap-2">
             <Chip label={status.label} tone={status.tone} icon={status.icon} className="shrink" />
             {device.state === 'error' || device.state === 'none' ? (
-              <PressableScale accessibilityRole="button" accessibilityLabel={t('app.cloud.retry')} onPress={() => void registerNow().catch(() => haptics.warning())} hitSlop={8}>
+              <PressableScale accessibilityRole="button" accessibilityLabel={t('app.cloud.retry')} onPress={() => void registerNow().catch(() => haptics.warning())} className="min-h-11 justify-center px-2">
                 <Text variant="callout" tone="accent">
                   {t('app.cloud.retry')}
                 </Text>

@@ -1,4 +1,4 @@
-import { router, type Href } from 'expo-router';
+import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
 import { TextInput, View, type TextInputContentSizeChangeEvent } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition, useReducedMotion, withSpring, ZoomIn, ZoomOut, type LayoutAnimationFunction } from 'react-native-reanimated';
@@ -39,7 +39,7 @@ import { QueueChips } from './queue-chips';
 import { applyModel, useActiveSessionId, useSessionBusy, useSessionEmpty, useSessionModel } from './session';
 import { ComposerToast, composerToast } from './toast';
 
-const LINE = typography.body.lineHeight;
+const LINE = typography.callout.lineHeight;
 /** Grows to 6 lines, then scrolls (§4.3). */
 const MAX_INPUT_HEIGHT = LINE * MAX_LINES;
 const CURVE = { borderCurve: 'continuous' } as const;
@@ -79,6 +79,8 @@ export function Composer() {
 
   const [pending, setPending] = useState(0);
   const [sheet, setSheet] = useState(false);
+  // Native sheets outlive the tab view unless explicitly dismissed on navigation.
+  useFocusEffect(useCallback(() => () => setSheet(false), []));
   const [preview, setPreview] = useState<AttachmentPart | null>(null);
   const [editor, setEditor] = useState(false);
   const [tall, setTall] = useState(false);
@@ -303,7 +305,7 @@ export function Composer() {
   ) : null;
 
   return (
-    <View className="gap-2 px-3 py-2">
+    <View className="gap-2 px-3 pb-2 pt-1">
       <ComposerToast />
       <QueueChips queue={queue} paused={paused} onPull={pullBack} onRemove={removeQueued} onResume={onResume} />
       <CommandMenu draft={text} busy={busy} onRun={runCommand} onComplete={completeCommand} />
@@ -311,11 +313,11 @@ export function Composer() {
         layout={reduced ? undefined : growFromBottom}
         // Opaque: messages and suggestions scroll under the composer (keyboard open), and a
         // translucent surface let their text show through the input.
-        className="overflow-hidden rounded-lg border-[0.5px] border-edge bg-elevated"
+        className="overflow-hidden rounded-lg border border-edge bg-elevated"
         style={CURVE}>
         {attachments.length || pending ? <AttachmentTray items={attachments} pending={pending} onOpen={setPreview} onRemove={removeAttachment} /> : null}
 
-        <View className="pl-4 pr-2 pt-1.5">
+        <View className="pl-3 pr-2 pt-1">
           <TextInput
             ref={input}
             value={text}
@@ -329,19 +331,19 @@ export function Composer() {
             scrollEnabled
             textAlignVertical="top"
             className={cx('px-0 py-2', tall ? 'pr-9' : 'pr-2')}
-            style={[typography.body, { maxHeight: MAX_INPUT_HEIGHT, color: command ? 'transparent' : c.text }]}
+            style={[typography.callout, { maxHeight: MAX_INPUT_HEIGHT, color: command ? 'transparent' : c.text }]}
             accessibilityLabel={t('chat.composer.inputA11y')}
           />
           {command ? (
             // Mirror of the input with the command token as a chip and the argument hint as
             // ghost text. Same font and padding, so it lines up with the (transparent) input.
-            <View pointerEvents="none" importantForAccessibility="no-hide-descendants" className={cx('absolute left-4 top-1.5 py-2', tall ? 'right-11' : 'right-4')}>
-              <Text numberOfLines={MAX_LINES}>
-                <Text tone="accent" style={{ backgroundColor: c.accentMuted }}>
+            <View pointerEvents="none" importantForAccessibility="no-hide-descendants" className={cx('absolute left-3 top-1 py-2', tall ? 'right-11' : 'right-4')}>
+              <Text variant="callout" numberOfLines={MAX_LINES}>
+                <Text variant="callout" style={{ backgroundColor: c.surface2 }}>
                   {token}
                 </Text>
                 {text.slice(token.length)}
-                {ghost ? <Text tone="faint">{ghost}</Text> : null}
+                {ghost ? <Text variant="callout" tone="faint">{ghost}</Text> : null}
               </Text>
             </View>
           ) : null}
@@ -366,7 +368,7 @@ export function Composer() {
           </Animated.View>
         ) : null}
 
-        <View className="flex-row items-center gap-1 px-2 pb-2 pt-1">
+        <View className="flex-row items-center gap-1 px-2 pb-1.5 pt-0.5">
           <IconButton icon="plus" label={t('chat.composer.add')} variant="ghost" size={36} onPress={() => setSheet(true)} />
           <ModelPill label={modelLabel(providerId, model) || t('chat.composer.noModel')} />
           {empty ? null : <ContextRing sessionId={sessionId} />}
@@ -458,9 +460,9 @@ function ModelPill({ label }: { label: string }) {
       accessibilityRole="button"
       accessibilityLabel={t('chat.composer.model', { model: label })}
       onPress={() => router.push('/model-picker' as Href)}
-      className="h-8 flex-row items-center gap-1 rounded-md px-2"
+      className="h-9 max-w-[50%] flex-row items-center gap-1 rounded-md px-2"
       style={CURVE}>
-      <Text variant="callout" tone="muted" numberOfLines={1}>
+      <Text variant="caption" tone="muted" numberOfLines={1} className="shrink">
         {label}
       </Text>
       <Icon name="chevronDown" size={14} color={c.textFaint} />

@@ -23,9 +23,9 @@ const CONTENT = { maxWidth: MAX_CONTENT_WIDTH } as const;
 const HEADER = { maxWidth: MAX_CONTENT_WIDTH, transformOrigin: 'left bottom' } as const;
 
 /**
- * Standard screen: aurora backdrop (unless a layout already paints it), large title header and
- * scrolling content. Scrolling, the large title drifts up and fades while a compact glass bar
- * with the small title fades in, all on the UI thread.
+ * Shared screen: a compact toolbar and neutral scrolling canvas by default.
+ * Explicit standard appearance retains the collapsible large-header layout for callers
+ * that need it. Both appearances share scroll refs, focus transitions, and overlays.
  */
 export function Screen({
   title,
@@ -33,7 +33,7 @@ export function Screen({
   trailing,
   children,
   scroll = true,
-  appearance = 'standard',
+  appearance = 'plain',
   scrollRef,
   overlay,
   back,
@@ -116,7 +116,7 @@ export function Screen({
       <View className="flex-1 bg-bg" style={{ paddingTop: insets.top, paddingBottom: bar }}>
         <View className="w-full flex-row items-center gap-2 self-center border-b border-edge px-4 py-2" style={CONTENT}>
           {backButton}
-          <View className="flex-1"><Text variant="bodyStrong" accessibilityRole="header">{title}</Text></View>
+          <View className="flex-1 gap-0.5"><Text variant="bodyStrong" accessibilityRole="header">{title}</Text>{subtitle ? <Text variant="caption" tone="muted">{subtitle}</Text> : null}</View>
           {trailing}
         </View>
         {scroll ? <Animated.ScrollView

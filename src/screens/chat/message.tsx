@@ -3,7 +3,7 @@ import { Image } from 'expo-image';
 import { memo, useState } from 'react';
 import type { Spec } from '@json-render/core';
 import { Pressable, View } from 'react-native';
-import Animated, { FadeIn as Appear, FadeOut, withSpring, withTiming, type EntryAnimationsValues } from 'react-native-reanimated';
+import Animated, { FadeIn as Appear, FadeOut } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
 import { FadeIn } from '@/components/fade-in';
@@ -17,7 +17,7 @@ import { sessions } from '@/core/agent/session/sessions';
 import { GenUIView } from '@/genui/view';
 import { checkSpec } from '@/genui/check';
 import { useT } from '@/i18n';
-import { radius, springs, useTheme } from '@/theme';
+import { radius, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { isPastedText } from './composer/attachment-tray';
@@ -27,18 +27,6 @@ import { formatCount } from './composer/logic';
 import { ReplyActions } from './reply-actions';
 import { ToolGroup } from './tool-chip';
 import { ThinkingPill } from './thinking-pill';
-
-/** A sent message grows out of the composer: from its bottom-right corner, with a spring. */
-function bubbleIn(_values: EntryAnimationsValues) {
-  'worklet';
-  return {
-    initialValues: { opacity: 0, transform: [{ translateY: 16 }, { scale: 0.9 }] },
-    animations: {
-      opacity: withTiming(1, { duration: 160 }),
-      transform: [{ translateY: withSpring(0, springs.snappy) }, { scale: withSpring(1, springs.snappy) }],
-    },
-  };
-}
 
 /** The spec's top (through single-child wrappers) is a Card: it brings its own surface, don't nest two. */
 function hasOwnCard(spec: Spec) {
@@ -197,7 +185,7 @@ function UserBubble({ message }: { message: ChatMessage }) {
   const files = attachments.filter((a) => !(a.kind === 'image' && a.uri));
   return (
     <View className="items-end gap-2">
-      <Animated.View entering={bubbleIn} className="max-w-[85%] items-end gap-2" style={{ transformOrigin: 'right bottom' }}>
+      <Animated.View entering={Appear.duration(160)} className="max-w-[85%] items-end gap-2" style={{ transformOrigin: 'right bottom' }}>
         {images.length ? <ImageGrid images={images} /> : null}
         {files.length ? (
           <View className="flex-row flex-wrap justify-end gap-1.5">
@@ -214,7 +202,7 @@ function UserBubble({ message }: { message: ChatMessage }) {
             }}
             delayLongPress={350}
             accessibilityHint={t('chat.message.longPressHint')}
-            className="rounded-lg rounded-br-sm border-[0.5px] border-edge bg-accent-muted px-4 py-3"
+            className="rounded-lg bg-surface-2 px-4 py-3"
             style={{ borderCurve: 'continuous' }}>
             <Text variant="body">{text}</Text>
           </Pressable>

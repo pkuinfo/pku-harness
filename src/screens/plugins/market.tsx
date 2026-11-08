@@ -49,14 +49,14 @@ function EntryCard({ entry, installed }: { entry: RegistryEntry; installed: bool
     }
   };
   return (
-    <View className="gap-3 rounded-lg bg-surface p-4" style={{ borderCurve: 'continuous' }}>
+    <View className="gap-3 border-b border-edge py-4" style={{ borderCurve: 'continuous' }}>
       <View className="flex-row items-center gap-3">
-        <View className="h-10 w-10 items-center justify-center rounded-md bg-accent-muted" style={{ borderCurve: 'continuous' }}>
-          <Icon name={(entry.icon as IconName) ?? 'puzzle'} size={20} color={c.accent} />
+        <View className="size-8 items-center justify-center rounded-sm bg-surface-2" style={{ borderCurve: 'continuous' }}>
+          <Icon name={(entry.icon as IconName) ?? 'puzzle'} size={18} color={c.textMuted} />
         </View>
         <View className="flex-1 gap-0.5">
           <View className="flex-row items-center gap-1">
-            <Text variant="bodyStrong" numberOfLines={1} className="shrink">
+            <Text variant="callout" numberOfLines={1} className="shrink">
               {text.name}
             </Text>
             {entry.verified ? <Icon name="shield" size={14} color={c.up} /> : null}

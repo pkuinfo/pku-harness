@@ -12,7 +12,7 @@ type Size = 'sm' | 'md' | 'lg';
 
 // Primary is solid 北大红 with a lit top edge; secondary is glass with a hairline edge.
 const SURFACE: Record<Variant, string> = {
-  primary: 'bg-brand shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]',
+  primary: 'bg-brand',
   secondary: 'bg-surface-2 border-[0.5px] border-edge',
   ghost: 'bg-transparent',
   danger: 'bg-down-muted',

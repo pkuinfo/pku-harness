@@ -37,15 +37,15 @@
 @layer theme {
   :root {
     @variant dark {
-      --color-bg: #09090b;
-      --color-surface: rgba(255, 255, 255, 0.035);
-      --color-surface-2: rgba(255, 255, 255, 0.06);
-      --color-surface-3: rgba(255, 255, 255, 0.09);
-      --color-elevated: #141316;
+      --color-bg: #171717;
+      --color-surface: #202020;
+      --color-surface-2: #282828;
+      --color-surface-3: #333333;
+      --color-elevated: #242424;
       --color-edge: rgba(255, 255, 255, 0.08);
       --color-fg: #f5f6f8;
-      --color-fg-muted: #8d95a1;
-      --color-fg-faint: #5e6672;
+      --color-fg-muted: #b0b0b0;
+      --color-fg-faint: #a3a3a3;
       --color-accent: #f0606b;
       --color-accent-muted: rgba(240, 96, 107, 0.14);
       --color-brand: #a3101f;
@@ -60,15 +60,15 @@
       --color-info-muted: rgba(61, 139, 255, 0.14);
     }
     @variant light {
-      --color-bg: #f6f5f3;
-      --color-surface: rgba(255, 255, 255, 0.5);
-      --color-surface-2: rgba(17, 12, 10, 0.04);
-      --color-surface-3: rgba(17, 12, 10, 0.07);
-      --color-elevated: #fbfaf9;
+      --color-bg: #fafaf9;
+      --color-surface: #f3f3f2;
+      --color-surface-2: #ededec;
+      --color-surface-3: #e3e3e2;
+      --color-elevated: #ffffff;
       --color-edge: rgba(17, 12, 10, 0.08);
       --color-fg: #0b0d10;
-      --color-fg-muted: #59616c;
-      --color-fg-faint: #8d95a1;
+      --color-fg-muted: #595959;
+      --color-fg-faint: #626262;
       --color-accent: #8b0012;
       --color-accent-muted: rgba(139, 0, 18, 0.08);
       --color-brand: #8b0012;

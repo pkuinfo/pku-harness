@@ -41,7 +41,7 @@ export function Field({
             input.onBlur?.(e);
           }}
           className="min-h-12 flex-1 px-4 text-fg"
-          style={[typography.body, style]}
+          style={[typography.callout, style]}
         />
         {trailing}
       </View>

@@ -36,10 +36,10 @@ export function Segmented<T extends string>({
       onLayout={(e) => setWidth(e.nativeEvent.layout.width)}
       className={cx('min-h-10 flex-row', variant === 'tabs' ? 'border-b border-edge' : 'rounded-md border-[0.5px] border-edge bg-surface-2 p-0.5')}
       style={CURVE}>
-      {/* Thumb: glass lit from the top on dark, a raised card on light. */}
+      {/* Selection uses a neutral fill, or an underline for the tabs variant. */}
       {width > 0 ? (
         <Animated.View
-          className={variant === 'tabs' ? 'absolute bottom-0 h-0.5 bg-fg' : cx('absolute top-0.5 bottom-0.5 rounded-[8px]', 'dark:bg-surface-3 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]', 'light:bg-elevated light:shadow-[0_1px_3px_rgba(11,13,16,0.12)]')}
+          className={variant === 'tabs' ? 'absolute bottom-0 h-0.5 bg-fg' : cx('absolute top-0.5 bottom-0.5 rounded-[8px]', 'dark:bg-surface-3', 'light:bg-elevated')}
           style={[CURVE, thumb]}
         />
       ) : null}

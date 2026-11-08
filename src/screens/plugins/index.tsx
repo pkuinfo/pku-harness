@@ -17,14 +17,14 @@ import { duration, fonts, radius, spacing, springs, typography, useTheme } from 
 
 import { ActionCard } from './action-card';
 import { PluginCard } from './plugin-card';
-import { GROUP_TONE, columnsFor, groupPlugins, matches, summarize } from './status';
+import { GROUP_TONE, groupPlugins, matches, summarize } from './status';
 import { usePluginEntries } from './use-plugin-status';
 
-const GAP = spacing.md;
+const GAP = 0;
 
 /**
- * Settings → Plugins: every plugin as a card in one grid, grouped (campus services, system, AI
- * providers, remote), each with its live status and switch. Tapping a card opens the plugin's
+ * Settings → Plugins: every plugin as a compact row, grouped (campus services, system, AI
+ * providers, remote), each with its live status and switch. Tapping a row opens the plugin's
  * page (settings, permissions, tools). Groups come from manifest fields, never plugin ids.
  */
 export function PluginsScreen() {
@@ -38,18 +38,18 @@ export function PluginsScreen() {
   // Screen content is centred at MAX_CONTENT_WIDTH with the standard side padding.
   const { contentWidth } = useLayout();
   const inner = Math.min(contentWidth, MAX_CONTENT_WIDTH) - spacing.lg * 2;
-  const columns = columnsFor(inner);
+  const columns = 1;
   const cardWidth = Math.floor((inner - GAP * (columns - 1)) / columns);
 
   const searching = query.trim().length > 0;
   const shown = entries.filter(({ plugin }) => matches(query, [pluginName(plugin, locale), plugin.name, pluginDescription(plugin, locale), plugin.id]));
-  // Remote stays when not searching: it holds the add / marketplace tiles.
+  // Keep the remote section available for its add / marketplace actions.
   const groups = groupPlugins(
     shown.map((e) => ({ id: e.plugin.id, core: e.plugin.core, remote: e.plugin.remote, providers: e.plugin.providers, entry: e })),
     searching ? [] : ['remote'],
   );
   const { on, total } = summarize(entries.map((e) => e.status));
-  // Stagger order across the whole grid, not per group.
+  // Keep stable ordering across groups.
   const order = new Map(groups.flatMap((g) => g.plugins).map((p, i) => [p.id, i]));
   const layout = reduced ? undefined : LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness);
 
@@ -78,7 +78,7 @@ export function PluginsScreen() {
         // Plugins register at startup; this only shows for a moment on a cold start.
         <View className="flex-row flex-wrap" style={{ gap: GAP }} accessibilityLabel={t('app.plugins.loading')}>
           {Array.from({ length: columns * 2 }, (_, i) => (
-            <Skeleton key={i} width={cardWidth} height={116} rounded={radius.lg} />
+            <Skeleton key={i} width={cardWidth} height={spacing.xxxl + spacing.lg} rounded={radius.lg} />
           ))}
         </View>
       ) : groups.length === 0 ? (
@@ -89,11 +89,11 @@ export function PluginsScreen() {
         groups.map((g) => (
           <Animated.View key={g.id} layout={layout} entering={FadeIn.duration(duration.base)} exiting={FadeOut.duration(duration.fast)} className="gap-2">
             <View className="flex-row items-baseline justify-between px-1" accessibilityRole="header">
-              <Text variant="micro" tone="faint">
-                {t(g.title).toUpperCase()}
+              <Text variant="caption" tone="muted">
+                {t(g.title)}
               </Text>
               {g.plugins.length ? (
-                <Text variant="micro" tone="faint">
+                <Text variant="caption" tone="muted">
                   {g.plugins.length}
                 </Text>
               ) : null}

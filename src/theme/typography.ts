@@ -14,8 +14,8 @@ export const fonts = {
  */
 export const typography = {
   display: { fontFamily: fonts.bold, fontSize: 40, lineHeight: 46, letterSpacing: -1.2 },
-  title: { fontFamily: fonts.bold, fontSize: 28, lineHeight: 36, letterSpacing: -0.6 },
-  headline: { fontFamily: fonts.semibold, fontSize: 20, lineHeight: 28, letterSpacing: -0.3 },
+  title: { fontFamily: fonts.semibold, fontSize: 24, lineHeight: 32, letterSpacing: -0.4 },
+  headline: { fontFamily: fonts.semibold, fontSize: 18, lineHeight: 26, letterSpacing: -0.2 },
   body: { fontFamily: fonts.regular, fontSize: 16, lineHeight: 24 },
   bodyStrong: { fontFamily: fonts.semibold, fontSize: 16, lineHeight: 24 },
   callout: { fontFamily: fonts.medium, fontSize: 14, lineHeight: 20 },

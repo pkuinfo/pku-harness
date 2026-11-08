@@ -18,7 +18,7 @@ type ToolPart = Extract<ChatPart, { type: 'tool' }>;
 function StatusIcon({ status }: { status: ToolPart['status'] }) {
   const c = useTheme();
   if (status === 'running') return <AgentOrbit state="tool" size={16} />;
-  return <Icon name={status === 'error' ? 'warning' : 'check'} size={14} color={status === 'error' ? c.down : c.up} />;
+  return <Icon name={status === 'error' ? 'warning' : 'check'} size={14} color={status === 'error' ? c.down : c.textFaint} />;
 }
 
 /** Compact line showing a tool the agent is running / ran. */
@@ -26,7 +26,7 @@ export function ToolChip({ part }: { part: ToolPart }) {
   const t = useT();
   const title = toolLabel(part.toolId, useLocale());
   return (
-    <View className="max-w-full flex-row items-center self-start gap-2 rounded-sm border-[0.5px] border-edge bg-surface-2 px-3 py-1.5">
+    <View className="max-w-full flex-row items-center self-start gap-2 py-1.5">
       <StatusIcon status={part.status} />
       <Text variant="caption" tone={part.status === 'error' ? 'down' : 'muted'} numberOfLines={2} className="shrink">
         {part.status === 'error' ? t('chat.tools.error', { title, error: part.error ?? '' }) : title}
@@ -62,7 +62,7 @@ export function ToolGroup({ parts }: { parts: ToolPart[] }) {
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}
         accessibilityLabel={label}
-        className="max-w-full flex-row items-center self-start gap-2 rounded-sm border-[0.5px] border-edge bg-surface-2 px-3 py-1.5"
+        className="max-w-full flex-row items-center self-start gap-2 py-1.5"
         style={{ borderCurve: 'continuous' }}>
         <StatusIcon status={running ? 'running' : failed.length ? 'error' : 'done'} />
         <Text variant="caption" tone="muted" numberOfLines={1} className="shrink">
@@ -71,7 +71,7 @@ export function ToolGroup({ parts }: { parts: ToolPart[] }) {
         {!running && <Chevron open={open} color={c.textFaint} />}
       </PressableScale>
       {(open ? parts : failed).length > 0 && (
-        <View className="ml-[18px] gap-2 border-l-[1.5px] border-edge py-1 pl-3">
+        <View className="ml-2 gap-2 border-l border-edge py-1 pl-3">
           {(open ? parts : failed).map((p) => (
             <Animated.View key={p.callId} entering={FadeIn.duration(180)} exiting={FadeOut.duration(120)} className="flex-row items-center gap-2">
               <StatusIcon status={p.status} />
