@@ -1,0 +1,8 @@
+Phone-control components derived from Mika (https://github.com/wangzan101/Mika).
+Upstream revision 9fbbc89e. Licensed under Apache-2.0.
+Adapted into Harness-owned packages and helper interfaces. Reworked behind a Harness-owned
+DevicePort/session engine for Expo integration, scoped actions, cancellation and handoff.
+PKU Harness does not import or call Mika project modules, plugins or packages.
+
+Mika
+Copyright 2026 wangzan101

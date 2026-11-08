@@ -1,3 +1,4 @@
+import { phoneService } from '@/core/phone/service';
 import { awaitSmsCode } from '@/core/campus/sms';
 import * as Crypto from 'expo-crypto';
 import * as DocumentPicker from 'expo-document-picker';
@@ -33,6 +34,7 @@ import { t } from '@/i18n';
  * app's stores. Plugins (pkuinfo/pku-harness-plugins) see only this object via `ctx.services`.
  */
 const host: HostServices = {
+  phone: phoneService,
   browser: {
     // Custom Tabs / SFSafariViewController: the page runs in the system browser, isolated from the
     // app, and the browser itself hands weixin:// / alipays:// links to those apps.

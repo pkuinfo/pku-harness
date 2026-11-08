@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
 
 import { EmptyState } from '@/components/empty-state';
 import { Screen } from '@/components/screen';
@@ -14,6 +15,11 @@ import { useLocale, useT } from '@/i18n';
 
 /** Mounts a plugin-contributed screen with the host UI kit, services, its own store and its cloud client. */
 export function PluginScreenHost({ pluginId, screen, params }: { pluginId: string; screen: string; params: Record<string, string | undefined> }) {
+  const [focused, setFocused] = useState(false);
+  useFocusEffect(useCallback(() => {
+    setFocused(true);
+    return () => setFocused(false);
+  }, []));
   const t = useT();
   const locale = useLocale();
   const plugin = usePlugin(pluginId);
@@ -42,5 +48,5 @@ export function PluginScreenHost({ pluginId, screen, params }: { pluginId: strin
     );
   }
   const Component = contribution.component;
-  return <Component host={hostUI} services={services} kv={store} invoke={invoke} params={screenParams} cloud={cloud} />;
+  return <Component host={hostUI} services={services} kv={store} invoke={invoke} params={screenParams} cloud={cloud} focused={focused} />;
 }

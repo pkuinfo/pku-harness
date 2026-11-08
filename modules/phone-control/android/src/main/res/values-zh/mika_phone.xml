@@ -1,0 +1,10 @@
+<resources>
+  <string name="ui_locale">zh-Hans</string>
+  <string name="selfcheck_target_title">Mika 自检页</string>
+  <string name="selfcheck_target_note">这是 Mika 自己的测试页。兼容性自检在这里点按和打字,不会操作你的其他 App。</string>
+  <string name="selfcheck_target_taps">点了 %1$d 次</string>
+  <string name="selfcheck_target_button">点我</string>
+  <string name="selfcheck_target_input">在这里打字</string>
+  <string name="selfcheck_target_tick">计时 %1$d</string>
+  <string name="selfcheck_target_row">第 %1$d 行</string>
+</resources>

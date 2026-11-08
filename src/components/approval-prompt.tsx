@@ -79,6 +79,13 @@ export function ApprovalPrompt() {
         <Text variant="callout" tone="muted">
           {t(plugin?.remote ? 'chat.approval.fromRemote' : 'chat.approval.from', from)}
         </Text>
+        {req.assessment?.target ? (
+          <View className="gap-1 rounded-md bg-surface-2 p-3" style={CURVE}>
+            <Text variant="caption" tone="faint">{t('chat.approval.observedTarget')}</Text>
+            <Text variant="body" selectable numberOfLines={4}>{req.assessment.target.label}</Text>
+            {req.assessment.target.context ? <Text variant="caption" tone="muted" selectable>{req.assessment.target.context}</Text> : null}
+          </View>
+        ) : null}
         {fields.length ? (
           <View className="gap-1 rounded-md bg-surface-2 p-3" style={CURVE}>
             {fields.map(([k, v]) => (
@@ -97,11 +104,11 @@ export function ApprovalPrompt() {
           <Button title={t('chat.approval.deny')} variant="secondary" onPress={() => answer(false)} className="flex-1" />
           <Button title={t('chat.approval.allow')} onPress={() => answer(true)} className="flex-[2]" />
         </View>
-        <PressableScale accessibilityRole="button" accessibilityLabel={t('chat.approval.alwaysA11y')} haptic={false} onPress={() => answer(true, true)} className="self-center py-1">
+        {!req.assessment?.target ? <PressableScale accessibilityRole="button" accessibilityLabel={t('chat.approval.alwaysA11y')} haptic={false} onPress={() => answer(true, true)} className="self-center py-1">
           <Text variant="caption" tone="muted">
             {t('chat.approval.always')}
           </Text>
-        </PressableScale>
+        </PressableScale> : null}
       </Animated.View>
     </View>
   );

@@ -1,0 +1,5 @@
+-keep class org.pkuinfo.harness.phone.ipc.PhoneHelperMain { public static void main(java.lang.String[]); }
+-keep class org.pkuinfo.harness.phone.ipc.IPhoneController$* { *; }
+-keep class org.pkuinfo.harness.phone.ipc.PhoneHandoffProvider { *; }
+-keep class org.pkuinfo.harness.phone.platform.accessibility.PhoneAccessibilityService { *; }
+-keep class org.pkuinfo.harness.phone.diagnostics.SelfCheckTargetActivity { *; }

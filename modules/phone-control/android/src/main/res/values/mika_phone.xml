@@ -1,0 +1,17 @@
+<resources>
+  <item name="selfcheck_title" type="id" />
+  <item name="selfcheck_note" type="id" />
+  <item name="selfcheck_count" type="id" />
+  <item name="selfcheck_button" type="id" />
+  <item name="selfcheck_input" type="id" />
+  <item name="selfcheck_tick" type="id" />
+  <item name="selfcheck_list" type="id" />
+  <string name="ui_locale">en</string>
+  <string name="selfcheck_target_title">Mika self-check page</string>
+  <string name="selfcheck_target_note">This is Mika’s own test page. The compatibility self-check taps and types here; it doesn’t touch your other apps.</string>
+  <string name="selfcheck_target_taps">Taps: %1$d</string>
+  <string name="selfcheck_target_button">Tap me</string>
+  <string name="selfcheck_target_input">Type here</string>
+  <string name="selfcheck_target_tick">Tick %1$d</string>
+  <string name="selfcheck_target_row">Row %1$d</string>
+</resources>

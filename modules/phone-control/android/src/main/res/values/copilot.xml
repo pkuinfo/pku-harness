@@ -1,0 +1,6 @@
+<resources>
+<string name="copilot_name">Copilot</string>
+<string name="copilot_accessibility_description">Read and operate apps on Copilot’s separate screen when you start a task.</string>
+<string name="copilot_running">Copilot is operating an app</string>
+<string name="copilot_stop">Stop</string>
+</resources>

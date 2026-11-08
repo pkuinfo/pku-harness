@@ -1,7 +1,8 @@
-import { isStepCount, streamText, type LanguageModel, type ModelMessage, type StepResult, type ToolSet, type UserContent } from 'ai';
+import { streamText, type LanguageModel, type ModelMessage, type StepResult, type ToolSet, type UserContent } from 'ai';
 import { AppState } from 'react-native';
 
 import { notifyNow } from '@/core/notify';
+import { releaseRunResources } from '@/core/runtime/run-resources';
 import { recordStep, type ToolCallUsage } from '@/core/usage';
 import { t as tr } from '@/i18n';
 
@@ -14,13 +15,13 @@ import { sessions } from '@/core/agent/session/sessions';
 import { autoTitle } from '@/core/agent/session/title';
 import { asksToRemember } from '@/core/agent/context/assembly';
 import { modelFor, requestPrefix } from '@/core/agent/context/request';
-import { fromModelName } from './tools';
+import { agentToolStepLimits, fromModelName } from './tools';
+import { DEFAULT_STEP_LIMIT, stepBudget } from './step-budget';
 
 /** What the composer (and everything else) sends: plain text, or text plus attachments. */
 export type SendInput = string | { text: string; attachments?: AttachmentPart[] };
 
 const UI_TOOL = 'ui__render';
-const STEP_LIMIT = 10;
 
 /** One reply streams at a time per session; replies in different sessions may overlap. */
 const controllers = new Map<string, AbortController>();
@@ -154,10 +155,15 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     const toolMs = new Map<string, number>();
     // The conversation's prefix (system → tools → history), shared with title and summary requests.
     const prefix = await requestPrefix(history, { signal, turn: taint });
+    const toolLimits = agentToolStepLimits(Object.keys(prefix.tools ?? {}));
+    let stepLimit = DEFAULT_STEP_LIMIT;
     const result = streamText({
       model: model!,
       ...prefix,
-      stopWhen: isStepCount(STEP_LIMIT),
+      stopWhen: ({ steps }) => {
+        stepLimit = stepBudget(steps.flatMap((step) => step.toolCalls.map((call) => call.toolName)), toolLimits);
+        return steps.length >= stepLimit;
+      },
       abortSignal: signal,
       onStepEnd: (step) => {
         finishedSteps++;
@@ -231,7 +237,7 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     }
     // A step cut short keeps its text for the model only if it never finished.
     if (startedSteps <= finishedSteps) partial = '';
-    if (!signal.aborted && finishedSteps >= STEP_LIMIT) {
+    if (!signal.aborted && finishedSteps >= stepLimit) {
       const last = produced.at(-1);
       if (last?.role === 'tool') sessions.notice(tr('chat.agent.stepLimit'), 'warn', { sessionId: sid });
     }
@@ -266,6 +272,7 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     }
   } finally {
     if (signal.aborted) ended = 'stopped';
+    await releaseRunResources(signal);
     if (controllers.get(sid) === controller) controllers.delete(sid);
     finishTurn(sid, assistant.id, { turn, started, ended, error, produced, partial, model, providerId, modelName });
   }

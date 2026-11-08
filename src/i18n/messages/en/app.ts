@@ -365,6 +365,7 @@ export const app: Messages['app'] = {
     enable: 'Turn on {name}',
     unsupported: 'Needs {list}, which this device doesn’t support yet',
     capability: {
+      phoneControl: 'Phone control',
       network: 'internet access',
       campusNetwork: 'the campus network',
       campusSession: 'campus sign-in',

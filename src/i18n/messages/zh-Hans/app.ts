@@ -369,6 +369,7 @@ export const app = {
     enable: '启用 {name}',
     unsupported: '需要{list}，这台设备暂不支持',
     capability: {
+      phoneControl: '手机操作',
       network: '网络',
       campusNetwork: '校园网',
       campusSession: '校园账号登录',

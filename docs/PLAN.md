@@ -131,3 +131,6 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [~] T12.3 Library: loans + renew, seat reservation, catalog search, hours
 - [~] T12.4 Campus life: notices (official sites / info-spider), shuttle timetables, canteens, portal apps
 - [x] T12.5 Plugin `ledger` (记账): on-device bookkeeping by keypad sheet or chat (add / addMany with import dedupe / list / summary / update / delete / budgets / categories), month home with donut + daily columns, year report, budget editor, category manager, `month` + `trend` widgets; host chart components for plugins (`ColumnChart`, `LineChart`, `DonutChart`, `Legend`) and a `Chart` genUI element (2026-11-05)
+
+## Copilot mode
+- [~] Build Copilot as a plugin over a Harness-owned Android Expo module and session engine. Adapt reusable Mika source with attribution, without calling Mika project modules or packages. The rewritten backend builds; 15 native tests and 1,414 Harness tests pass. Device verification is postponed at the user's request. See `docs/COPILOT.md` for remaining work (2026-11-07).

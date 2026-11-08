@@ -141,5 +141,14 @@ issues.
 
 ## License
 
-[MIT](LICENSE). PKU Harness is a student project and is not affiliated with or endorsed by Peking
-University.
+[MIT](LICENSE), except for third-party components carrying their own license notices. PKU
+Harness is a student project and is not affiliated with or endorsed by Peking University.
+
+## Acknowledgments
+
+Thanks to [Mika](https://github.com/wangzan101/Mika) and its contributors for their work on
+Android phone interaction. Copilot reuses and adapts portions of that work within
+Harness-owned native modules and plugin interfaces, with an independent session engine.
+Copilot does not import or call Mika project modules, plugins, or packages, and requires no
+separate Mika installation or service. Adapted source retains its
+[Apache-2.0 license](modules/phone-control/LICENSE) and [attribution](modules/phone-control/NOTICE).

@@ -153,7 +153,8 @@ by the website's marketplace scanner.
 | `author` | string | yes | GitHub handle or name. |
 | `icon` | icon name | no | From the harness icon set. |
 | `homepage` | URL | no | Source / docs. |
-| `requires` | `Capability[]` | no | `network`, `campus-network`, `campus-session`, `notifications`, `background`, `cloud`, `ongoing`. Derived automatically from `campus`/`network`/`abilities`; listing is optional. |
+| `requires` | `Capability[]` | no | `network`, `campus-network`, `campus-session`, `notifications`, `background`, `cloud`, `ongoing`, `phone-control`. Derived automatically from `campus`/`network`/`abilities`; listing is optional. |
+| `maxAgentSteps` | integer 10–60 | no | Model-step allowance once a tool from this plugin is used in a run. Defaults to 10; the host caps it at 60. |
 | `campus` | `CampusService[]` | no | Campus services the plugin may call with the user's session (`card`, `its`, `treehole`, `blackboard`, `elective`, `cwfw`, `cwpay`, `bdkj`, `library`, `library-space`, …). |
 | `network` | host[] | no | Public hosts it may call (exact host or `*.example.com`). HTTPS only. |
 | `abilities` | ability[] | no | Host abilities it uses (§7), e.g. `todos`, `timetable`, `browser`, `otp`, `sms`. |

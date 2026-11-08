@@ -283,7 +283,11 @@ full output.
 
 ### 5.6 Steps
 
-`stopWhen` stays at 10 steps; hitting it adds a notice "已达到单次回复的步骤上限" with 继续.
+`stopWhen` defaults to 10 steps. A plugin can request `maxAgentSteps` (10–60); its allowance
+applies only after a tool from that plugin is used in the current run. The host caps all
+requests at 60. Copilot requests 40 steps for observe/action sequences. Hitting the limit adds
+a notice "已达到单次回复的步骤上限" with 继续. Run-owned host resources are released on success,
+error, cancellation, and exhaustion of the step budget.
 
 ### 5.7 Memory
 

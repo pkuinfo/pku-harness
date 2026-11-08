@@ -269,6 +269,7 @@ export const chat: Messages['chat'] = {
   },
   approval: {
     eyebrow: 'AI wants to run',
+    observedTarget: 'Observed action target',
     read: 'Read',
     write: 'Change',
     money: 'Money',

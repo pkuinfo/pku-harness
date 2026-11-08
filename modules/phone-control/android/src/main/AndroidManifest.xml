@@ -1,0 +1,20 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <uses-permission android:name="android.permission.INTERNET" />
+  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+  <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <queries><intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent></queries>
+  <application>
+    <service android:name="expo.modules.phonecontrol.CopilotService" android:exported="false" android:foregroundServiceType="specialUse">
+      <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started Copilot phone interaction on a separate virtual display with a stop notification" />
+    </service>
+    <service android:name="org.pkuinfo.harness.phone.platform.accessibility.PhoneAccessibilityService" android:exported="true" android:label="@string/copilot_name" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+      <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+      <meta-data android:name="android.accessibilityservice" android:resource="@xml/copilot_accessibility" />
+    </service>
+    <provider android:name="org.pkuinfo.harness.phone.ipc.PhoneHandoffProvider" android:authorities="${applicationId}.helper" android:exported="true" android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+    <activity android:name="org.pkuinfo.harness.phone.diagnostics.SelfCheckTargetActivity" android:exported="true" android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" android:excludeFromRecents="true" android:launchMode="singleInstance" android:taskAffinity="" />
+  </application>
+</manifest>

@@ -6,7 +6,8 @@ import { t } from '@/i18n';
 import { pluginName, toolTitle } from './localize';
 import { pluginSettings } from './plugin-settings';
 import { registry, type ToolEntry } from './registry';
-import type { Actor, HostServices, TurnInfo } from './types';
+import { assertToolPermission, authorizeTool, ToolPermissionDenied } from './tool-authorization';
+import type { Actor, HostServices, TurnInfo, ToolAssessment } from './types';
 
 export class ToolError extends Error {
   constructor(
@@ -17,7 +18,7 @@ export class ToolError extends Error {
   }
 }
 
-type AskHandler = (entry: ToolEntry, input: unknown) => Promise<boolean>;
+type AskHandler = (entry: ToolEntry, input: unknown, signal?: AbortSignal, assessment?: ToolAssessment) => Promise<boolean>;
 
 let askHandler: AskHandler | null = null;
 export const services = {} as HostServices;
@@ -58,27 +59,50 @@ export async function invokeTool(
 
   const why = registry.unavailable(entry.pluginId);
   if (why) throw new ToolError(why, 'disabled');
-  const settings = pluginSettings.get(entry.pluginId);
   const plugin = registry.get(entry.pluginId);
-  if (!settings.enabled) throw new ToolError(t('app.plugins.runtime.pluginOff', { name: plugin ? pluginName(plugin) : entry.pluginId }), 'disabled');
 
   if (entry.def.userOnly && opts.actor !== 'user') throw new ToolError(t('app.plugins.runtime.userOnly', { title: toolTitle(plugin, entry.name, entry.def.title) }), 'declined');
 
   const parsed = entry.def.input.safeParse(rawInput ?? {});
   if (!parsed.success) throw new ToolError(parsed.error.message, 'invalid_input');
 
-  const mode = settings.modes[entry.def.effect];
   const title = toolTitle(plugin, entry.name, entry.def.title);
-  if (mode === 'off') throw new ToolError(t('app.plugins.runtime.toolBlocked', { title }), 'disabled');
-  // Unattended runs only read, whatever the per-plugin modes say: the stored task is not consent
-  // to change, pay or post (docs/ARCHITECTURE.md §8).
-  if (opts.actor === 'scheduler' && entry.def.effect !== 'read') throw new ToolError(t('app.plugins.runtime.scheduledReadOnly', { title }), 'declined');
-  // A scheduled run has no one to ask (and may be headless): an `ask` tool is declined, never prompted.
-  if (mode === 'ask' && opts.actor === 'scheduler') throw new ToolError(t('app.plugins.runtime.scheduledNoAsk', { title }), 'declined');
-  // A user tapping a button has already expressed intent; only agent calls prompt.
-  if (mode === 'ask' && opts.actor !== 'user') {
-    const ok = askHandler ? await askHandler(entry, parsed.data) : false;
-    if (!ok) throw new ToolError(t('app.plugins.runtime.declined', { title }), 'declined');
+  const readPermissions = () => {
+    // Resolution creates a new entry wrapper; compare the installed definition and id.
+    const current = registry.tool(id);
+    if (current?.id !== entry.id || current.def !== entry.def) throw new ToolError(t('app.plugins.runtime.noTool', { id }), 'not_found');
+    const unavailable = registry.unavailable(entry.pluginId);
+    if (unavailable) throw new ToolError(unavailable, 'disabled');
+    return pluginSettings.get(entry.pluginId);
+  };
+  let effect = entry.def.effect;
+  try {
+    const authorization = await authorizeTool({
+      base: entry.def.effect,
+      actor: opts.actor,
+      signal: opts.signal,
+      state: readPermissions,
+      classify: entry.def.resolveEffect ? () => entry.def.resolveEffect!(parsed.data, services) : undefined,
+      ask: async (effective, assessment) => {
+        const classified = effective === entry.def.effect ? entry : { ...entry, def: { ...entry.def, effect: effective } };
+        return askHandler ? askHandler(classified, parsed.data, opts.signal, assessment) : false;
+      },
+    });
+    effect = authorization.effect;
+    opts.signal?.throwIfAborted();
+    assertToolPermission(readPermissions(), entry.def.effect, effect, opts.actor, authorization.approved);
+  } catch (error) {
+    if (error instanceof ToolError) throw error;
+    if (error instanceof ToolPermissionDenied) {
+      switch (error.reason) {
+        case 'disabled': throw new ToolError(t('app.plugins.runtime.pluginOff', { name: plugin ? pluginName(plugin) : entry.pluginId }), 'disabled');
+        case 'blocked': throw new ToolError(t('app.plugins.runtime.toolBlocked', { title }), 'disabled');
+        case 'scheduledWrite': throw new ToolError(t('app.plugins.runtime.scheduledReadOnly', { title }), 'declined');
+        case 'scheduledAsk': throw new ToolError(t('app.plugins.runtime.scheduledNoAsk', { title }), 'declined');
+        case 'declined': throw new ToolError(t('app.plugins.runtime.declined', { title }), 'declined');
+      }
+    }
+    throw new ToolError(scrubShareLinks(error instanceof Error ? error.message : String(error)), 'failed');
   }
 
   const turn = opts.turn ? { sessionId: opts.turn.sessionId, tainted: opts.turn.tainted, userAsked: opts.turn.userAsked } : undefined;
@@ -87,6 +111,7 @@ export async function invokeTool(
   try {
     const out = await entry.def.execute(parsed.data, {
       pluginId: entry.pluginId,
+      effect,
       actor: opts.actor,
       turn,
       kv: kv(`plugin:${entry.pluginId}`),
@@ -95,7 +120,7 @@ export async function invokeTool(
       cloud: cloudFor(entry.pluginId, { interactive: opts.actor === 'user' }),
       signal: opts.signal,
     });
-    if (entry.def.effect !== 'read') writeListeners.forEach((l) => l(entry.pluginId, id));
+    if (entry.def.effect !== 'read' || effect !== 'read') writeListeners.forEach((l) => l(entry.pluginId, id));
     // Share links never reach the model or stored job results (docs/CLOUD.md §2.8); a screen
     // calling as the user may get its SecretLink objects back.
     return scrubOutput(out, { keepLinks: opts.actor === 'user' });

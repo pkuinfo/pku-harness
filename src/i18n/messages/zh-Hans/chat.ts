@@ -274,6 +274,7 @@ export const chat = {
   },
   approval: {
     eyebrow: 'AI 请求执行',
+    observedTarget: '当前界面的操作对象',
     read: '读取',
     write: '修改',
     money: '资金',

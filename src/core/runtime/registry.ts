@@ -1,5 +1,6 @@
 import { Platform } from 'react-native';
 
+import PhoneControl from '../../../modules/phone-control';
 import CampusHttpModule from '../../../modules/campus-http';
 
 import { t, type MessageKey } from '@/i18n';
@@ -16,6 +17,7 @@ export type ToolEntry = { id: string; pluginId: string; name: string; def: ToolD
  */
 export const HOST_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
   'network',
+  ...(PhoneControl != null && Platform.OS === 'android' && Number(Platform.Version) >= 31 ? (['phone-control'] as const) : []),
   'campus-network',
   'notifications',
   'background',
@@ -33,6 +35,7 @@ export function hostHas(c: Capability): boolean {
 
 const CAPABILITY_LABEL: Record<Capability, MessageKey> = {
   network: 'app.plugins.capability.network',
+  'phone-control': 'app.plugins.capability.phoneControl',
   'campus-network': 'app.plugins.capability.campusNetwork',
   'campus-session': 'app.plugins.capability.campusSession',
   notifications: 'app.plugins.capability.notifications',
