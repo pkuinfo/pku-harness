@@ -34,8 +34,6 @@ export function hostHas(c: Capability): boolean {
   return HOST_CAPABILITIES.has(c) || hasDynamicCapability(c);
 }
 
-
-
 export type ProviderEntry = { id: string; pluginId: string; def: ProviderDef };
 /** A plugin's `contributes.commands` entry; the commands module names and filters them. */
 export type CommandEntry = { pluginId: string; name: string; def: CommandContribution };

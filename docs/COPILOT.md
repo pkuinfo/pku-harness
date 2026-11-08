@@ -70,6 +70,30 @@ Scheduled tasks cannot access Copilot sessions.
 
 ## Attribution and platform references
 
+### Reference review (2026-11-08)
+
+The cloned DSH Go revision `9be93dd9` was reviewed alongside Mika revision `9fbbc89e`:
+
+- DSH Go's `phone/PhoneTasks.kt` separates task identity, pause, in-flight calls, and stop.
+  Harness retains its own session IDs and run leases; stopped sessions cannot be silently
+  restarted by a model retry, and deliberate handoff survives normal reply completion.
+- DSH Go's `phone/background/BackgroundGateState.kt` rejects results from superseded probes.
+  Copilot now independently versions screen reads: delayed status/preview results cannot
+  replace a newer stop, handoff, refresh, or navigation state. Polling pauses during user actions.
+- DSH Go's `phone/PhoneTaskReturn.kt` distinguishes requesting a return from actually being
+  visible. This remains a device-verification requirement for Harness handoff/resume, not an
+  assumption inferred from a successful Android call.
+- Mika's `core/action/ActionOutcome.kt` and `core/agent/OutcomeJudge.kt` distinguish dispatch,
+  observed effects, and task completion. Copilot's tool instructions now explicitly require
+  observed evidence, forbid blind retries of uncertain submissions, and call for handoff when
+  repeated observations make no progress. This is guidance, not an automatic success judge.
+
+DSH Go is AGPL-3.0 licensed. This review uses its design ideas; no DSH Go source was copied
+into Harness. Mika adaptations retain the module's existing source attribution and license.
+
+The integration merges current app `master` (including the thinking display and release 1.0.3
+configuration) and current plugin `main`. It does not tag or publish a new APK release.
+
 Selected Android mechanisms were adapted from Mika revision `9fbbc89e`, under Apache-2.0.
 The module's `LICENSE` and `NOTICE` retain attribution; the root README thanks Mika and its
 contributors. No Mika application, agent loop, model client, browser, or Linux runtime is a

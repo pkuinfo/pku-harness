@@ -152,3 +152,7 @@ Harness-owned native modules and plugin interfaces, with an independent session 
 Copilot does not import or call Mika project modules, plugins, or packages, and requires no
 separate Mika installation or service. Adapted source retains its
 [Apache-2.0 license](modules/phone-control/LICENSE) and [attribution](modules/phone-control/NOTICE).
+
+Thanks also to [DSH Go](https://github.com/ccch1mneyyy/dsh-go) for design references on phone-task
+lifecycle and recovery. Copilot's corresponding state handling is independently implemented;
+DSH Go is not a dependency.
