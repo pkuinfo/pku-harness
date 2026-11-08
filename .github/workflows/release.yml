@@ -77,6 +77,18 @@ jobs:
       # android/ is generated from the committed app.json and config plugins (CNG).
       - run: bunx expo prebuild --platform android --no-install --clean
 
+      # The wrapper fetches Gradle from services.gradle.org, which 504s at times (it failed two
+      # approved v1.0.2 runs). Fetch it up front with retries so Build finds it cached.
+      - name: Gradle distribution
+        working-directory: android
+        run: |
+          for i in 1 2 3 4 5 6 7 8; do
+            ./gradlew --version --no-daemon >/dev/null && exit 0
+            echo "::warning::Gradle download failed (attempt $i), retrying in $((i * 30))s"
+            sleep $((i * 30))
+          done
+          exit 1
+
       - name: Signing key
         env:
           KEYSTORE_BASE64: ${{ secrets.PKU_HARNESS_KEYSTORE_BASE64 }}
