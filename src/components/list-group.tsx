@@ -3,7 +3,7 @@ import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { cx } from '@/utils/cx';
 
-import { radius, useTheme } from '@/theme';
+import { radius, shadows, useTheme, useThemeName } from '@/theme';
 
 import { GlassEdges } from './glass';
 import { Icon, type IconName } from './icon';
@@ -25,6 +25,7 @@ export function ListGroup({
   style?: StyleProp<ViewStyle>;
 }) {
   const items = Children.toArray(children);
+  const dark = useThemeName() === 'dark';
   return (
     <View className="gap-2" style={style}>
       {title ? (
@@ -32,8 +33,8 @@ export function ListGroup({
           {title.toUpperCase()}
         </Text>
       ) : null}
-      <View className={cx("overflow-hidden", variant === 'grouped' && "rounded-lg bg-surface")} style={{ borderCurve: 'continuous' }}>
-        {variant === 'grouped' ? <GlassEdges radius={radius.lg} /> : null}
+      <View className={cx("overflow-hidden dark:rounded-xl dark:bg-surface", variant === 'grouped' && "rounded-lg bg-surface")} style={{ borderCurve: 'continuous', boxShadow: dark ? shadows.darkCard : undefined }}>
+        {variant === 'grouped' || dark ? <GlassEdges radius={dark ? radius.xl : radius.lg} /> : null}
         {items.map((child, i) => (
           <Fragment key={i}>
             {/* Inset under the text, past the 32 px icon well. */}
@@ -79,7 +80,7 @@ export function ListRow({
 }) {
   const c = useTheme();
   const content = (
-    <View className={cx('min-h-14 flex-row items-center gap-3', compact ? 'py-1' : 'px-4 py-3')}>
+    <View className={cx('min-h-14 flex-row items-center gap-3', compact ? 'py-1 dark:px-3' : 'px-4 py-3')}>
       {leading ?? (icon ? (
         <View className="h-8 w-8 items-center justify-center rounded-md bg-surface-3" style={{ borderCurve: 'continuous' }}>
           <Icon name={icon} size={18} color={iconTint ?? c.text} />

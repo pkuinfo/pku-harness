@@ -27,7 +27,7 @@ export function Field({
           {label}
         </Text>
       ) : null}
-      <View className={cx('min-h-12 flex-row items-center rounded-md border bg-surface-2', ring, trailing ? 'pr-1' : undefined)} style={{ borderCurve: 'continuous' }}>
+      <View className={cx('min-h-12 flex-row items-center rounded-md dark:rounded-lg border bg-surface-2', ring, trailing ? 'pr-1' : undefined)} style={{ borderCurve: 'continuous' }}>
         <TextInput
           placeholderTextColor={c.textFaint}
           selectionColor={c.accent}

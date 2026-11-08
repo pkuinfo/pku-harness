@@ -1,3 +1,5 @@
+import { shadows } from './shadows';
+
 /**
  * Colour tokens. `palette` holds raw values; `themes` maps them to semantic roles.
  * Dark is the reference design (see docs/DESIGN.md). Static hex values only, so they are
@@ -64,9 +66,9 @@ export type ThemeColors = {
 // aurora base, painted once at the root.
 const dark: ThemeColors = {
   bg: '#171717',
-  surface: '#202020',
-  surface2: '#282828',
-  surface3: '#333333',
+  surface: '#232323',
+  surface2: '#2B2B2B',
+  surface3: '#353535',
   border: 'rgba(255, 255, 255, 0.08)',
   text: palette.ink50,
   textMuted: '#B0B0B0',
@@ -84,7 +86,7 @@ const dark: ThemeColors = {
   infoMuted: 'rgba(61, 139, 255, 0.14)',
   glow: 'rgba(240, 68, 79, 0.55)',
   scrim: 'rgba(0, 0, 0, 0.6)',
-  elevated: '#242424',
+  elevated: '#2D2D2D',
   brand: '#A3101F',
   onBrand: palette.white,
 };
@@ -201,13 +203,13 @@ export const auroraPalettes = {
  */
 export const glassMaterial = {
   dark: {
-    fill: '#202020',
-    fillStrong: '#282828',
+    fill: '#232323',
+    fillStrong: '#2B2B2B',
     edge: 'rgba(255, 255, 255, 0.07)',
     /** Top-edge light: horizontal gradient for a 1px line. */
     topLight: 'linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.22) 50%, rgba(255,255,255,0) 100%)',
     pressed: 'rgba(255, 255, 255, 0.04)',
-    shadow: undefined as string | undefined,
+    shadow: shadows.darkCard,
     brand: '#A3101F',
     brandEdge: 'rgba(255, 255, 255, 0.16)',
   },

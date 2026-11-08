@@ -13,6 +13,9 @@ Android keeps native switches, pickers, accessible touch targets, and mobile nav
 
 - **Neutral first:** charcoal in dark mode, warm off-white in light. No decorative gradients,
   background animation, frosted cards, gleams, or glowing status text in everyday task screens.
+- **Dark depth:** use stepped charcoal fills, soft card/control shadows, 20 px panel corners,
+  and 16 px button/input corners. Contained list sections may use rounded dark surfaces;
+  retain compact rows and avoid stacking shadows inside cards. Light styling remains flatter.
 - **Compact hierarchy:** fixed compact toolbars; section titles use bodyStrong/headline. Reserve
   large numbers for actual financial or quantitative content, not setup status or page decoration.
 - **Flat lists:** use rows and subtle separators for settings, app/plugin selection, tool work,
@@ -31,7 +34,7 @@ Android keeps native switches, pickers, accessible touch targets, and mobile nav
 ## 1b. Shared defaults and compatibility
 
 `Screen` defaults to the plain canvas and compact fixed toolbar. The older standard header is
-still an explicit option. `ListGroup` defaults to flat rows and `ListRow` to compact spacing.
+still an explicit option. `ListGroup` defaults to flat light rows and rounded dark sections; `ListRow` keeps compact spacing.
 `Glass` remains an SDK-compatible name for an opaque subtle panel, without native glass or sheen.
 `Aurora` remains a compatibility export that paints only a static theme canvas; its wake hooks
 no longer run an idle animation. Native controls still use the host theme.
@@ -53,7 +56,7 @@ stay for Reanimated, Skia and native props that can't take a className.
 | Spacing | `src/theme/spacing.ts` | 4-pt grid: `xxs 2 · xs 4 · sm 8 · md 12 · lg 16 · xl 24 · xxl 32 · xxxl 48`. Screen padding = `lg`. |
 | Typography | `src/theme/typography.ts` | Named styles: `display`, `title`, `headline`, `body`, `callout`, `caption`, `micro`, plus `number` variants with tabular figures. |
 | Radius | `src/theme/radius.ts` | Concentric: `sm 6` chips · `md 10` controls · `lg 16` cards · `xl 20` hero/sheets · `full` dots only. Always with `borderCurve: 'continuous'`. |
-| Elevation | `src/theme/shadows.ts` | Dark UIs separate layers by surface tone, not shadow. Shadows only for floating elements (`float`, `overlay`). Use `boxShadow` strings. |
+| Elevation | `src/theme/shadows.ts` | Dark surfaces combine tonal separation with `darkCard` and `darkControl` shadows. Reserve stronger `float` / `overlay` shadows for floating elements. Use `boxShadow` strings. |
 | Motion | `src/theme/motion.ts` | Durations `fast 140 · base 240 · slow 420`; springs `snappy`, `smooth`, `bouncy`; stagger `40ms`. |
 
 ### Semantic colour roles (dark)

@@ -191,3 +191,11 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
   states without resetting the user’s account,
   creating payment links, replacing authenticators, or submitting financial forms. It does
   not repeat the previously recorded phone-control engine tests.
+
+- [x] Dark-mode depth refinement (2026-11-08): stepped charcoal fills, soft panel/control
+  shadows, rounded dark list sections and panels (20 px), and buttons/fields (16 px).
+  Light styling retained. Installed release inspected on emulator-5554: dark Settings,
+  Wallet, AI settings and Copilot; light Settings/Wallet checked for regressions.
+  Faint-text contrast across revised dark surfaces is 4.86:1 or higher. Host verification:
+  1,660 passed, 3 skipped; release build succeeded. No phone-control logic changed.
+  APK SHA-256: `503cab4e73e2f6f84ea0a84ea648484a3d8549ef8f14efddd8b5a7654c4cbb8e`.

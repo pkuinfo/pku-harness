@@ -1,6 +1,6 @@
 /*
  * Uniwind (Tailwind v4 for React Native, docs.uniwind.dev; recommended by docs.expo.dev/guides/tailwind).
- * Design tokens for the Glass + Light system (docs/DESIGN.md). Mirrors src/theme so classNames
+ * Design tokens for the neutral surface system (docs/DESIGN.md). Mirrors src/theme so classNames
  * and the JS tokens (Reanimated, Skia) agree; change both together.
  */
 @import 'tailwindcss';
@@ -38,10 +38,10 @@
   :root {
     @variant dark {
       --color-bg: #171717;
-      --color-surface: #202020;
-      --color-surface-2: #282828;
-      --color-surface-3: #333333;
-      --color-elevated: #242424;
+      --color-surface: #232323;
+      --color-surface-2: #2b2b2b;
+      --color-surface-3: #353535;
+      --color-elevated: #2d2d2d;
       --color-edge: rgba(255, 255, 255, 0.08);
       --color-fg: #f5f6f8;
       --color-fg-muted: #b0b0b0;

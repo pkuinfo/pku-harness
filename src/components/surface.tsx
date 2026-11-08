@@ -1,14 +1,14 @@
 import type { ReactNode } from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { radius } from '@/theme';
+import { radius, shadows, useThemeName } from '@/theme';
 import { cx } from '@/utils/cx';
 
 import { GlassEdges } from './glass';
 
 const FILL = { 1: 'bg-surface', 2: 'bg-surface-2', 3: 'bg-surface-3' } as const;
 
-/** A glass panel. Level 1–3 maps to surface fills; level 1 adds the edge and top light. */
+/** Contained surface with stepped fills; dark panels add soft elevation and rounder corners. */
 export function Surface({
   level = 1,
   padded = true,
@@ -22,9 +22,10 @@ export function Surface({
   style?: StyleProp<ViewStyle>;
   className?: string;
 }) {
+  const dark = useThemeName() === 'dark';
   return (
-    <View className={cx('rounded-lg', FILL[level], padded && 'p-4', className)} style={[{ borderCurve: 'continuous' }, style]}>
-      {level === 1 ? <GlassEdges radius={radius.lg} /> : null}
+    <View className={cx('rounded-lg dark:rounded-xl', FILL[level], padded && 'p-4', className)} style={[{ borderCurve: 'continuous', boxShadow: dark ? shadows.darkCard : undefined }, style]}>
+      {level === 1 ? <GlassEdges radius={dark ? radius.xl : radius.lg} /> : null}
       {children}
     </View>
   );

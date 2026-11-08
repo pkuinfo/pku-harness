@@ -1,6 +1,6 @@
 import { ActivityIndicator, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { useTheme, type ThemeColors } from '@/theme';
+import { shadows, useTheme, useThemeName, type ThemeColors } from '@/theme';
 import { cx } from '@/utils/cx';
 
 import { Icon, type IconName } from './icon';
@@ -10,7 +10,7 @@ import { Text, type TextTone } from './text';
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
-// Primary is solid 北大红 with a lit top edge; secondary is glass with a hairline edge.
+// Primary retains PKU red; secondary uses a neutral fill with a subtle edge.
 const SURFACE: Record<Variant, string> = {
   primary: 'bg-brand',
   secondary: 'bg-surface-2 border-[0.5px] border-edge',
@@ -48,6 +48,7 @@ export function Button({
   className?: string;
 }) {
   const fg = useTheme()[FG[variant]];
+  const dark = useThemeName() === 'dark';
   const s = SIZE[size];
   return (
     <PressableScale
@@ -56,8 +57,8 @@ export function Button({
       accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       disabled={disabled || loading}
       onPress={onPress}
-      className={cx('items-center justify-center rounded-md', SURFACE[variant], s.box, disabled && 'opacity-40', className)}
-      style={[CURVE, style]}>
+      className={cx('items-center justify-center rounded-md dark:rounded-lg', SURFACE[variant], s.box, disabled && 'opacity-40', className)}
+      style={[CURVE, { boxShadow: dark && variant !== 'ghost' && !disabled ? shadows.darkControl : undefined }, style]}>
       {loading ? (
         <ActivityIndicator color={fg} />
       ) : (
@@ -92,6 +93,7 @@ export function IconButton({
   className?: string;
 }) {
   const fg = useTheme()[FG[variant]];
+  const dark = useThemeName() === 'dark';
   return (
     <PressableScale
       accessibilityRole="button"
@@ -100,8 +102,8 @@ export function IconButton({
       disabled={disabled}
       onPress={onPress}
       scaleTo={0.92}
-      className={cx('items-center justify-center rounded-md', SURFACE[variant], disabled && 'opacity-40', className)}
-      style={[CURVE, { width: size, height: size }, style]}>
+      className={cx('items-center justify-center rounded-md dark:rounded-lg', SURFACE[variant], disabled && 'opacity-40', className)}
+      style={[CURVE, { width: size, height: size, boxShadow: dark && variant !== 'ghost' && !disabled ? shadows.darkControl : undefined }, style]}>
       <Icon name={icon} size={Math.round(size * 0.48)} color={fg} />
     </PressableScale>
   );
