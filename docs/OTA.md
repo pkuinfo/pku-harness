@@ -17,7 +17,7 @@ An update is code that runs inside the app holding the student's IAAA password, 
   anything unsigned or signed by another key. Asset hashes are inside the signed manifest.
 - **The server holds no key and runs no code.** It's a folder served by Caddy. A compromised
   server can withhold updates but can't forge one.
-- **Built from public commits.** The workflow runs only on `master`, runs `bun run check` and
+- **Built from public commits.** The workflow runs only on `main`, runs `bun run check` and
   `bun test` first, and records the commit in `history/`. The `ota` environment requires a
   maintainer's approval for each run.
 - **Runtime-safe.** `runtimeVersion` uses the `fingerprint` policy: any native change produces a
@@ -48,7 +48,7 @@ root: `server/updates/setup.sh "<CI public SSH key>"`.
 
 ## Publishing
 
-GitHub → Actions → **OTA update** → Run workflow (on `master`):
+GitHub → Actions → **OTA update** → Run workflow (on `main`):
 
 - **publish**: `expo export` → manifest → sign → upload assets, then history, then the manifest
   (a phone never sees a manifest before its assets) → prune assets not used by the newest 5

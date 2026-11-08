@@ -39,7 +39,7 @@ bun run android        # development build on an emulator or device (JDK 17 + An
 
 1. Open an issue describing what you want to change. Small fixes can go straight to a pull
    request.
-2. Branch from `master` and make small, focused commits with
+2. Branch from `main` and make small, focused commits with
    [Conventional Commits](https://www.conventionalcommits.org) messages: `feat(chat): …`,
    `fix(campus): …`, `docs: …`.
 3. For plugin changes, commit and push in the `plugins/` submodule first, then commit the

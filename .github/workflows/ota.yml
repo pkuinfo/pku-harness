@@ -1,5 +1,5 @@
 name: OTA update
-# Publishes a signed over-the-air update (JS + assets) from a public master commit to the static
+# Publishes a signed over-the-air update (JS + assets) from a public main commit to the static
 # update server. Manual only; the `ota` environment holds the signing key and upload key and
 # requires a maintainer's approval. See docs/OTA.md.
 on:
@@ -23,7 +23,7 @@ permissions:
 
 jobs:
   ota:
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: ota
     steps:

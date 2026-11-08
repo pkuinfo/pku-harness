@@ -41,7 +41,7 @@ gh secret set PKU_HARNESS_KEY_PASSWORD --env release -R pkuinfo/pku-harness
 
 ## Cutting a release
 
-1. In **one commit** on `master`, bump `expo.version` (e.g. `1.0.0` → `1.1.0`) **and**
+1. In **one commit** on `main`, bump `expo.version` (e.g. `1.0.0` → `1.1.0`) **and**
    `expo.android.versionCode` (an integer, +1 per release: Android only upgrades to a larger
    versionCode) in `app.json`; let CI pass. Versions come only from committed files, so the OTA
    runtime fingerprint can be resolved from the same commit. The workflow refuses a tag that
