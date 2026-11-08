@@ -392,3 +392,27 @@ Evidence in `/tmp/copilot-e2e-evidence/`: `icons-approval-light.png`, `icons-pau
 Checks: main 1,658 pass/3 skip, native 34 pass; release build succeeded in 1m 53s and installed.
 Logs: `/tmp/copilot-icons-verify.log`, `/tmp/copilot-icons-release.log`. APK SHA-256:
 `2a3571eec2b8e1c0c6fd2004b3a994732fbbcdc212753b1dc524ec4d755b00f9`.
+
+
+### Copilot settings refinement (2026-11-08)
+
+The plugin settings now lead with the enable switch, collapse connection details when ready,
+and default to the saved allowed-app list. All/Allowed filters, smaller real app icons, search
+with clear/empty state, and a header refresh replace the long setup-heavy page. Reconnect and
+first-time pairing use separate modes. Active-task preview is opt-in, with compact icon controls.
+Readiness labels distinguish enabled configuration from a disconnected helper.
+
+Emulator checks covered enable off/on with the four-app scope retained, All/Allowed filters,
+unmatched search and clear recovery, reconnect/pair form layouts, automatic readiness recovery,
+light/dark appearance, and 130% font scaling with scrolling. Final release installed successfully;
+normal font scale and light mode restored, helper connected, Copilot enabled. Wireless pairing
+was inspected as a form only, not executed. Active-task controls were not re-exercised in this
+settings-only pass; previous floating/task E2E evidence remains above.
+
+Checks: main verification 1,658 pass/3 skip; plugin verification 1,245 pass; release build
+succeeded in 1m 50s. Logs: `/tmp/copilot-settings-main-verify.log`,
+`/tmp/copilot-settings-plugin-verify.log`, `/tmp/copilot-settings-final-release.log`.
+APK SHA-256: `286757bae1d7eb9107835a1531ae77b1b4861c3f9c8ac19077793fab23b86282`.
+Evidence in `/tmp/copilot-e2e-evidence/`: `settings-ready-light.png`, `settings-all-dark.png`,
+`settings-ready-large-dark.png`, `settings-setup-large-dark.png`, `settings-pair.png`,
+and `settings-empty-search.png`.
