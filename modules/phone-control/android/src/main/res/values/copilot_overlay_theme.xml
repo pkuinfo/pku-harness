@@ -1,7 +1,7 @@
 <resources>
     <dimen name="copilot_overlay_gap">12dp</dimen>
-    <dimen name="copilot_overlay_width">280dp</dimen>
-    <dimen name="copilot_overlay_preview_height">240dp</dimen>
+    <dimen name="copilot_overlay_width">264dp</dimen>
+    <dimen name="copilot_overlay_preview_height">192dp</dimen>
     <dimen name="copilot_overlay_touch">48dp</dimen>
     <dimen name="copilot_overlay_corner">20dp</dimen>
     <dimen name="copilot_overlay_text">14sp</dimen>
@@ -10,5 +10,14 @@
     <color name="copilot_overlay_text">#161719</color>
     <color name="copilot_overlay_brand">#8B0012</color>
     <color name="copilot_overlay_on_brand">#FFFFFF</color>
-    <dimen name="copilot_overlay_compact_width">180dp</dimen>
+    <dimen name="copilot_overlay_compact_width">200dp</dimen>
+    <dimen name="copilot_overlay_small_gap">8dp</dimen>
+    <dimen name="copilot_overlay_inner_corner">12dp</dimen>
+    <dimen name="copilot_overlay_action_icon">20dp</dimen>
+    <dimen name="copilot_overlay_elevation">8dp</dimen>
+    <color name="copilot_overlay_text_muted">#5F6368</color>
+    <color name="copilot_overlay_accent">#8B0012</color>
+    <color name="copilot_overlay_error">#B3261E</color>
+    <color name="copilot_overlay_preview_surface">#EEEAE7</color>
+    <color name="copilot_overlay_ripple">#1F161719</color>
 </resources>

@@ -40,4 +40,6 @@
 <string name="copilot_compact_ready">Copilot · Ready</string>
 <string name="copilot_operation_read_brightness">Checking screen brightness</string>
 <string name="copilot_operation_set_brightness">Adjusting screen brightness</string>
+<string name="copilot_more">More options</string>
+<string name="copilot_preview_loading">Waiting for app preview</string>
 </resources>

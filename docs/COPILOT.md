@@ -81,6 +81,15 @@ optional takeover/return, and pending approvals. The window does not take keyboa
 allows touches outside it to reach the underlying app. The foreground-app guard refuses to
 move an app the user is currently using; concurrent work targets other selected apps.
 
+The native panel uses Android Material-themed Views: a draggable title, collapse icon, and
+native overflow menu for takeover/return and opening Harness. Pause and Stop remain directly
+visible as text/icon actions. Only Allow once uses a filled accent button. The panel is 264dp
+wide with a 192dp preview; its compact status control is 48dp tall. Controls retain at least
+48dp touch targets, with ripples, accessibility labels, scalable text, and light/dark resource
+colors. Content scrolls on short screens so the action row stays reachable. Native overlay
+tokens live in `modules/phone-control/android/src/main/res/values/copilot_overlay_theme.xml`;
+this accessibility-service window does not depend on the React UI lifecycle.
+
 When Harness is in the background, its existing Copilot approval request is mirrored into the
 floating panel with the observed target and relevant action details. Allow once or Deny answers
 that same request; it does not change saved permission modes. When Harness is foregrounded,
@@ -350,3 +359,25 @@ and the test stopwatch reset. Saved Copilot configuration remains enabled.
 
 These results establish the requested emulator experience, not universal app compatibility.
 Wireless pairing, reboot recovery, and broader physical-device/OEM coverage remain unverified.
+
+
+### Compact native panel verification (2026-11-08)
+
+The subsequent UI-only release replaces the oversized filled controls with the native panel
+specified above. `bun run verify` passed (1,658 tests, 3 skipped); native JVM tests passed
+(34); release assembly succeeded in 3m 39s. Installed APK SHA-256:
+`6bfa74ca5b985a71505974468dcc6faf98854d12180edcf6d3e1f3782a019666`.
+Logs: `/tmp/copilot-compact-verify.log`, `/tmp/copilot-compact-release.log`.
+
+On the installed release, the actual model searched Chrome for PKU library with Clock running.
+The compact control expanded, the native overflow menu exposed takeover/Open Harness,
+light-to-dark switching repainted the panel, Pause held the pending submission, Allow once
+removed the approval without resuming, and Resume allowed completion without handover.
+A subsequent Chrome preview test captured a real browser frame in the redesigned panel.
+Only Display 0 remained after completion; Clock was then stopped/reset and system light mode
+restored. No phone-engine or approval-policy behavior changed in this UI refinement.
+
+Evidence: `/tmp/copilot-e2e-evidence/material-compact-light.png`,
+`material-approval-light.png`, `material-approval-dark.png`, `material-menu-light.png`,
+`material-paused-dark.png`, `material-search-agent-result.png`, and `material-preview-1.png`
+in that same evidence directory. Large-font and physical-device layout coverage remains untested.

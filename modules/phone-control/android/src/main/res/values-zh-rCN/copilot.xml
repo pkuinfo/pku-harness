@@ -39,4 +39,6 @@
 <string name="copilot_compact_ready">Copilot · 待命</string>
 <string name="copilot_operation_read_brightness">正在读取屏幕亮度</string>
 <string name="copilot_operation_set_brightness">正在调整屏幕亮度</string>
+<string name="copilot_more">更多选项</string>
+<string name="copilot_preview_loading">等待应用预览</string>
 </resources>

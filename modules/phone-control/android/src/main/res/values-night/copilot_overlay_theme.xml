@@ -1,4 +1,9 @@
 <resources>
     <color name="copilot_overlay_surface">#202124</color>
     <color name="copilot_overlay_text">#F5F5F5</color>
+    <color name="copilot_overlay_text_muted">#BDC1C6</color>
+    <color name="copilot_overlay_accent">#FFB3B8</color>
+    <color name="copilot_overlay_error">#F2B8B5</color>
+    <color name="copilot_overlay_preview_surface">#141518</color>
+    <color name="copilot_overlay_ripple">#33F5F5F5</color>
 </resources>
