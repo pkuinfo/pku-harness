@@ -12,6 +12,8 @@ import { usePlugins } from '@/core/runtime/hooks';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import { useDeliveryReadiness } from '@/hooks/use-delivery-readiness';
+import { summarize } from '@/screens/plugins/status';
+import { usePluginEntries } from '@/screens/plugins/use-plugin-status';
 import { useT } from '@/i18n';
 import { radius, spacing, useTheme } from '@/theme';
 
@@ -50,7 +52,9 @@ export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: 
     () => (stored ? new Set(plugins.filter((p) => !p.remote && !registry.unavailable(p.id) && pluginSettings.get(p.id).enabled).map((p) => p.id)) : new Set<string>()),
     [plugins, stored],
   );
-  const services = plugins.filter((p) => !p.core && !p.providers && !p.remote && enabled.has(p.id)).length;
+  // Counted exactly like Settings › Plugins ("16 on · 12 need sign-in"), so the two screens agree.
+  const { on: services, signIn } = summarize(usePluginEntries().map((e) => e.status));
+  const servicesText = [t('welcome.done.servicesOn', { count: services }), signIn ? t('app.settings.pluginsSignIn', { count: signIn }) : ''].filter(Boolean).join(t('app.ui.listSep'));
   const suggestions = suggestionsFor({ ai: hasKey, campus: account.signedIn, enabled }).map((k) => t(k));
   // Live, not the step's outcome: the user may have fixed a permission since (or saved progress predates the step).
   const { readiness } = useDeliveryReadiness();
@@ -73,7 +77,7 @@ export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: 
       <View>
         <SummaryRow index={3} icon="sparkles" label={t('welcome.done.ai')} ok={hasKey} value={hasKey ? `${config.name} · ${modelInfo(config.providerId, config.model)?.name ?? config.model}` : t('welcome.done.notConnected')} />
         <SummaryRow index={4} icon="person" label={t('welcome.done.account')} ok={account.signedIn} value={account.signedIn ? (account.name ?? account.username ?? t('welcome.done.signedIn')) : t('welcome.done.notSignedIn')} />
-        <SummaryRow index={5} icon="puzzle" label={t('welcome.done.services')} ok={services > 0} value={t('welcome.done.servicesOn', { count: services })} />
+        <SummaryRow index={5} icon="puzzle" label={t('welcome.done.services')} ok={services > 0} value={servicesText} />
         <SummaryRow
           index={6}
           icon="alarm"

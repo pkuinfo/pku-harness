@@ -5,6 +5,7 @@ import * as Crypto from 'expo-crypto';
 import { kv } from '@/core/store/kv';
 import { t as tNow } from '@/i18n';
 
+import { bundledUpgrade } from './bundled-upgrade';
 import { registry } from './registry';
 
 /**
@@ -154,16 +155,29 @@ export const docPlugins = {
   /** Bundled documents first (shipped with the app), then installed ones (may be newer). */
   async load() {
     docs = (await store.get<InstalledDoc[]>('all')) ?? [];
+    let upgraded = false;
     for (const [id, b] of Object.entries(bundledDocuments)) {
-      if (docs.some((d) => d.id === id)) continue;
+      const cur = docs.find((d) => d.id === id);
       try {
         const doc = await parse(b.files);
         const now = Date.now();
-        docs.push({ id, link: b.link, base: null, source: 'bundled', verified: true, installedAt: now, updatedAt: now, ...versionOf(doc, await sha256(fingerprintText(doc.files))) });
+        const next = versionOf(doc, await sha256(fingerprintText(doc.files)));
+        if (!cur) {
+          docs.push({ id, link: b.link, base: null, source: 'bundled', verified: true, installedAt: now, updatedAt: now, ...next });
+        } else if (bundledUpgrade(cur, { link: b.link, version: next.version }) === 'apply' && cur.pending?.hash !== next.hash) {
+          // This build ships a newer version than the device stored: apply it like a link update.
+          if (widens(cur.decl, next.decl)) cur.pending = next;
+          else {
+            cur.previous = { files: cur.files, hash: cur.hash, version: cur.version, decl: cur.decl };
+            Object.assign(cur, next, { base: null, source: 'bundled', updatedAt: now, pending: undefined });
+          }
+          upgraded = true;
+        }
       } catch (e) {
         console.warn(`bundled document ${id} is invalid`, e);
       }
     }
+    if (upgraded) await save();
     for (const d of docs) await register(d);
     emit();
   },

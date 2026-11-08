@@ -86,7 +86,8 @@ export function ToolGroup({ parts }: { parts: ToolPart[] }) {
   );
 }
 
-function Chevron({ open, color }: { open: boolean; color: string }) {
+/** Expand/collapse indicator shared by the chat's foldable rows. */
+export function Chevron({ open, color }: { open: boolean; color: string }) {
   const style = useAnimatedStyle(() => ({ transform: [{ rotate: withSpring(open ? '180deg' : '0deg', springs.snappy) }] }));
   return (
     <Animated.View style={style}>

@@ -30,7 +30,15 @@ jobs:
       - uses: actions/checkout@v5
         with:
           submodules: recursive
+      # Bun pinned in .bun-version, so the binary is cached between runs. If GitHub's release
+      # download fails anyway (it 504s at times), install the same version from npm instead.
       - uses: oven-sh/setup-bun@v2
+        id: bun
+        continue-on-error: true
+        with:
+          bun-version-file: .bun-version
+      - if: steps.bun.outcome == 'failure'
+        run: npm install -g "bun@$(cat .bun-version)" && bun --version
       - run: bun install --frozen-lockfile
       # Never ship a commit that fails the normal checks.
       - run: bun run check

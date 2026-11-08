@@ -3,8 +3,9 @@ import { Platform } from 'react-native';
 import PhoneControl from '../../../modules/phone-control';
 import CampusHttpModule from '../../../modules/campus-http';
 
-import { t, type MessageKey } from '@/i18n';
+import { t } from '@/i18n';
 
+import { unavailableReason } from './availability';
 import { hasDynamicCapability, subscribeCapabilities } from './capabilities';
 import { buildAliases, type LegacyAliases } from './legacy';
 import { modelText, providerText } from './localize';
@@ -33,18 +34,7 @@ export function hostHas(c: Capability): boolean {
   return HOST_CAPABILITIES.has(c) || hasDynamicCapability(c);
 }
 
-const CAPABILITY_LABEL: Record<Capability, MessageKey> = {
-  network: 'app.plugins.capability.network',
-  'phone-control': 'app.plugins.capability.phoneControl',
-  'campus-network': 'app.plugins.capability.campusNetwork',
-  'campus-session': 'app.plugins.capability.campusSession',
-  notifications: 'app.plugins.capability.notifications',
-  background: 'app.plugins.capability.background',
-  shell: 'app.plugins.capability.shell',
-  filesystem: 'app.plugins.capability.filesystem',
-  cloud: 'app.plugins.capability.cloud',
-  ongoing: 'app.plugins.capability.ongoing',
-};
+
 
 export type ProviderEntry = { id: string; pluginId: string; def: ProviderDef };
 /** A plugin's `contributes.commands` entry; the commands module names and filters them. */
@@ -89,8 +79,7 @@ export const registry = {
   },
   /** Why a plugin can't run on this device (in the app language), or null. */
   unavailable(id: string): string | null {
-    const missing = (this.get(id)?.requires ?? []).filter((c) => !hostHas(c));
-    return missing.length ? t('app.plugins.unsupported', { list: missing.map((c) => t(CAPABILITY_LABEL[c])).join(t('app.ui.listSep')) }) : null;
+    return unavailableReason((this.get(id)?.requires ?? []).filter((c) => !hostHas(c)), t);
   },
   /**
    * Resolve `<plugin>.<tool>`. Old ids of replaced tools (stored jobs, widgets, screens) resolve

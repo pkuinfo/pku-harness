@@ -1,4 +1,7 @@
+import { dayKey } from '@pku-harness/sdk';
+
 import { invokeTool, onToolWrite } from '@/core/runtime/invoke';
+import { registry } from '@/core/runtime/registry';
 import { markStale, readCache, writeCache } from '@/core/store/cache';
 
 import { createLiveStore } from './live';
@@ -10,6 +13,8 @@ export const live = createLiveStore({
   write: writeCache,
   markStale,
   now: Date.now,
+  dayScoped: (tool) => registry.tool(tool)?.def.dayScoped === true,
+  dayKey,
 });
 
 // A write through any plugin (e.g. calendar.syncSemester) makes that plugin's cached reads stale.

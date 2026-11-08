@@ -99,6 +99,8 @@ export default function RootLayout() {
           />
           {/* Usage screen (docs/AGENT-HARNESS.md §6.4): a pushed screen. */}
           <Stack.Screen name="usage" />
+          {/* Settings › 时区: a pushed list. */}
+          <Stack.Screen name="timezone" />
         </Stack>
         <ApprovalPrompt />
         <CloudConsentPrompt />

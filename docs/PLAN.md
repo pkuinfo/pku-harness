@@ -68,6 +68,7 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 - [x] T8.2 Remote plugins: dependency-free MCP Streamable-HTTP client (tested against the official SDK server), manifest cached on device, tools mapped via `z.fromJSONSchema`, effects from MCP annotations, untrusted defaults (write/money/public ask), add/refresh/remove UI, `plugins.*` tools (2026-10-18)
 - [x] T8.4 "Ask first" approvals: agent calls whose effect is set to ask raise a native prompt (allow / deny / always allow) over any screen (2026-10-18)
 - [x] T8.3 Notifications (permission, exact alarms, background status, test), appearance (system/dark/light, persisted), data export (JSON, no secrets) and full reset (2026-10-18)
+- [x] T8.5 Time zone: Settings › 时区 follows the system by default or any zone from a searchable city list (zh/en, offset in force now); one choice drives the SDK clock for agent, scheduler (alarms re-armed on change), to-dos, timetable, ledger, Schedule and pickers; named zones get exact DST through Intl (2026-11-07)
 
 ## M10 Plugin ecosystem
 - [x] T10.1 `pkuinfo/pku-harness-plugins`: SDK (contract + pure helpers + tests), all bundled plugins ported, registry + schema + validator, remote template, demo-canteen example, CI, CONTRIBUTING; app consumes it as submodule `./plugins` and implements `HostServices` (2026-10-18)
@@ -83,7 +84,9 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
   - [x] T10.6g library, treehole as documents (parity-tested, TS removed); document screens get route params, translated strings, one-tap SMS fill, tool results and refresh after actions (2026-11-05)
   - [x] T10.6h room-booking, course-sync as documents (parity-tested, TS removed) (2026-11-05)
   - [x] T10.6i finance as a document (cwfw request encoding in shared.yaml via `base64`; `json(text, fallback)`)
-  - [ ] T10.6j Still TypeScript: courses (multipart upload), wallet (signing, secure payment-code screen): need new abilities first (§13). calendar, authenticator and card-share stay TypeScript (core / host features)
+  - [x] T10.6j courses as a document: per-tool request budget for the semester crawl, multipart submission from the 交作业 screen (files.pick and submit are `userOnly`; draft revision check), 课程回放 through a `userOnly` play tool (signed URL only to the browser), screen commands (2026-11-07)
+  - [x] T10.6k wallet as a document (1.1.0): `cardRecharge` signs its form declaratively (`authIn: form` + `sign`; the card token never reaches the plugin) and opens the cashier only in the browser; the 付款码 screen is `secure` with a 30 s memory-only `refreshSeconds` binding to a `userOnly` payCode tool; `legacy` ids from campus-card / netfee / utilities carry over (verified plugins only); parity-tested, TS removed (2026-11-07)
+  - Stay TypeScript (core / host features): calendar, authenticator, card-share
   - [x] T10.6d Agent authoring tools `plugins.reference / validate / tryTool / source / install` (install opens the review sheet) (2026-10-23)
   - [ ] T10.6e `{ fn }` bindings for cloud server functions once `functions.invoke` is live (CLOUD-FUNCTIONS.md)
 - [ ] T10.7 Self-hosted, code-signed OTA updates (ARCHITECTURE §14; owned by the website/deploy session)
