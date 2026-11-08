@@ -213,6 +213,8 @@ export const app: Messages['app'] = {
     signIn: 'Sign in',
     test: 'Test connection',
     signOut: 'Sign out',
+    signOutTitle: 'Sign out of your campus account?',
+    signOutMessage: 'The saved password and every campus session are deleted from this phone. Plugins stop working until you sign in again.',
     signedInAt: 'Signed in {time}',
     signedInNote: 'Plugins sign in to campus services through this phone and never see your password. Signing out deletes the saved password and every session.',
     intro: 'Use your IAAA login: the same student ID and password as the portal. Your password stays in this phone’s secure storage and is only sent to PKU’s sign-in service.',

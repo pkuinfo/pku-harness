@@ -214,6 +214,8 @@ export const app = {
     signIn: '登录',
     test: '测试连接',
     signOut: '退出登录',
+    signOutTitle: '退出校园账号？',
+    signOutMessage: '会删除本机保存的密码和所有校园服务会话，重新登录前插件将无法使用。',
     signedInAt: '登录于 {time}',
     signedInNote: '插件通过本机代为登录各个校园服务，拿不到你的密码。退出登录会删除本机保存的密码和所有会话。',
     intro: '使用 IAAA 统一身份认证（与门户相同的学号和密码）。密码只保存在本机安全存储中，只会发送给学校的登录服务。',

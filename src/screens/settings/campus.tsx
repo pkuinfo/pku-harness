@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 
 import { Chip } from '@/components/chip';
 import { Field, SecretField } from '@/components/field';
@@ -58,10 +58,20 @@ export function CampusAccountScreen() {
 
   if (account.signedIn) {
     return (
-      <SheetScreen title={t('app.campus.title')} primary={t('app.campus.test')} onPrimary={test} loading={busy} danger={t('app.campus.signOut')} onDanger={async () => {
+      <SheetScreen title={t('app.campus.title')} primary={t('app.campus.test')} onPrimary={test} loading={busy} danger={t('app.campus.signOut')} onDanger={() => {
+        // Signing out deletes the saved password: getting back in means typing it (and maybe a code) again.
         haptics.warning();
-        await signOut();
-        setMessage(null);
+        Alert.alert(t('app.campus.signOutTitle'), t('app.campus.signOutMessage'), [
+          { text: t('core.common.cancel'), style: 'cancel' },
+          {
+            text: t('app.campus.signOut'),
+            style: 'destructive',
+            onPress: async () => {
+              await signOut();
+              setMessage(null);
+            },
+          },
+        ]);
       }}>
         <ListGroup>
           <ListRow icon="person" title={account.name ?? account.username ?? t('app.ui.signedIn')} subtitle={[account.name ? account.username : null, account.signedInAt ? t('app.campus.signedInAt', { time: formatDateTime(new Date(account.signedInAt)) }) : null].filter(Boolean).join(' · ')} accessory={<Chip label={t('app.ui.signedIn')} tone="up" icon="check" />} />
