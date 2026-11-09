@@ -24,6 +24,9 @@ export const widgetText = (p: PluginDef | undefined, widget: string, src: { titl
   return { title: o?.title ?? src.title, description: o?.description ?? src.description };
 };
 
+/** An access scope as shown under a plugin's "Access" (host names stay as they are). */
+export const scopeLabel = (p: PluginDef | undefined, scope: string, locale: Locale = getLocale()) => overlay(p, locale)?.scopes?.[scope] ?? scope;
+
 export const screenTitle = (p: PluginDef | undefined, screen: string, fallback: string, locale: Locale = getLocale()) =>
   overlay(p, locale)?.screens?.[screen]?.title ?? fallback;
 

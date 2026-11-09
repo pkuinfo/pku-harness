@@ -16,7 +16,7 @@ import { OptionMenu } from '@/components/option-menu';
 import { Text } from '@/components/text';
 import { docPlugins } from '@/core/runtime/doc-plugins';
 import { usePlugin } from '@/core/runtime/hooks';
-import { pluginDescription, pluginName, screenTitle, settingsRowText, toolTitle, widgetText } from '@/core/runtime/localize';
+import { pluginDescription, pluginName, scopeLabel, screenTitle, settingsRowText, toolTitle, widgetText } from '@/core/runtime/localize';
 import { pluginSettings, usePluginSettings, type EffectMode } from '@/core/runtime/plugin-settings';
 import { registry } from '@/core/runtime/registry';
 import { remotePlugins } from '@/core/runtime/remote';
@@ -266,7 +266,7 @@ export function PluginDetail({ id }: { id: string }) {
               s.startsWith('campus:') ? (
                 <ListRow key={s} icon="school" title={t('app.plugins.doc.campusScope', { service: s.slice(7) })} subtitle={t('app.plugins.doc.campusNote')} />
               ) : (
-                <ListRow key={s} icon="globe" title={s} />
+                <ListRow key={s} icon="globe" title={scopeLabel(plugin, s)} />
               ),
             )}
           </ListGroup>
