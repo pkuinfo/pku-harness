@@ -56,12 +56,8 @@ gh secret set PKU_HARNESS_KEY_PASSWORD --env release -R pkuinfo/pku-harness
    native libraries are for another ABI, and creates the release with the APKs (arm64 first: the
    website offers the first as the main download) and notes: versionCode, each APK's SHA-256, the
    signing certificate's SHA-256, the runtime fingerprint (to match OTA updates) and the commit.
-
-To add ABIs to a release that already exists (e.g. one published when the workflow built arm64
-only), run the workflow manually with `tag` set to that release's tag. It builds the tag's commit
-with the release key, checks the certificate and runtime fingerprint against the published notes,
-uploads only the APKs the release lacks and appends their hashes to the notes. Published APKs are
-never replaced.
+   The `release` environment accepts only `v*` tags, so the signing key is never reachable from
+   a branch run; a release can't be amended later, only superseded by a new version.
 
 To try the pipeline without publishing anything, run the workflow manually (Actions → Release
 APK → Run workflow): it builds the same APK signed with a throwaway key and uploads it as a

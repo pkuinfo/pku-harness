@@ -7,8 +7,6 @@ name: Release APK
 #   maintainers' key from the `release` environment and publish the release.
 # - Manual run (Actions → Release APK → Run workflow): a dry run that builds the same APKs signed
 #   with a throwaway key and uploads them as a workflow artifact; nothing is published.
-# - Manual run with `tag` (e.g. v1.0.4): builds that tag's commit with the maintainers' key and
-#   uploads only the ABIs its existing release lacks. APKs already published are never replaced.
 #
 # One APK per ABI (ABIS below), arm64-v8a first: real phones are arm64, and the website offers the
 # first APK as the main download. A universal APK would be ~3x larger.
@@ -20,13 +18,8 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
-    inputs:
-      tag:
-        description: 'Existing release tag to add missing ABI APKs to (empty = dry run)'
-        required: false
-        default: ''
 
-concurrency: release-${{ inputs.tag || github.ref }}
+concurrency: release-${{ github.ref }}
 permissions:
   contents: write
 
@@ -34,18 +27,16 @@ jobs:
   apk:
     runs-on: ubuntu-latest
     timeout-minutes: 120
-    # Release secrets (the signing key) live only in the `release` environment; dry runs never see them.
-    environment: ${{ (github.event_name == 'push' || inputs.tag != '') && 'release' || 'apk-dry-run' }}
+    # Release secrets (the signing key) live only in the `release` environment, which only `v*`
+    # tags may use; dry runs never see them.
+    environment: ${{ github.event_name == 'push' && 'release' || 'apk-dry-run' }}
     env:
-      DRY_RUN: ${{ github.event_name != 'push' && inputs.tag == '' }}
-      # create: publish a new release (tag push). backfill: add missing ABIs to an existing one.
-      MODE: ${{ github.event_name == 'push' && 'create' || 'backfill' }}
-      TAG: ${{ inputs.tag || github.ref_name }}
+      DRY_RUN: ${{ github.event_name != 'push' }}
+      TAG: ${{ github.ref_name }}
       ABIS: arm64-v8a armeabi-v7a x86_64
     steps:
       - uses: actions/checkout@v5
         with:
-          ref: ${{ inputs.tag || github.ref }}
           submodules: recursive
       # Bun pinned in .bun-version, so the binary is cached between runs. If GitHub's release
       # download fails anyway (it 504s at times), install the same version from npm instead.
@@ -76,16 +67,11 @@ jobs:
             if [ "$TAG" != "v$VERSION" ]; then
               echo "::error::tag $TAG does not match app.json version $VERSION (bump version and versionCode in one commit, then tag that commit v$VERSION)"; exit 1
             fi
-            if [ "$MODE" = "backfill" ]; then
-              # Backfill only adds to a published release built from this same tag.
-              gh release view "$TAG" --json tagName >/dev/null || { echo "::error::no release $TAG to add APKs to"; exit 1; }
-            else
-              # Android upgrades need a larger versionCode than what's installed: compare with the
-              # latest published release (its notes record the versionCode).
-              PREV=$(gh release view --json body -q .body 2>/dev/null | grep -oP 'versionCode \| `\K[0-9]+' || true)
-              if [ -n "$PREV" ] && [ "$CODE" -le "$PREV" ]; then
-                echo "::error::versionCode $CODE must be greater than the latest release's $PREV"; exit 1
-              fi
+            # Android upgrades need a larger versionCode than what's installed: compare with the
+            # latest published release (its notes record the versionCode).
+            PREV=$(gh release view --json body -q .body 2>/dev/null | grep -oP 'versionCode \| `\K[0-9]+' || true)
+            if [ -n "$PREV" ] && [ "$CODE" -le "$PREV" ]; then
+              echo "::error::versionCode $CODE must be greater than the latest release's $PREV"; exit 1
             fi
           fi
 
@@ -199,8 +185,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           FIRST="pku-harness-${{ steps.version.outputs.version }}-${ABIS%% *}.apk"
-          if [ "$MODE" = "create" ]; then
-            cat > notes.md <<EOF
+          cat > notes.md <<EOF
           PKU Harness ${TAG} for Android 7.0+. Most phones need \`arm64-v8a\`; \`armeabi-v7a\` is for
           older 32-bit phones and \`x86_64\` for emulators and x86 devices.
 
@@ -209,7 +194,7 @@ jobs:
           | versionCode | \`${{ steps.version.outputs.code }}\` |
           | Signing certificate SHA-256 | \`${{ steps.apk.outputs.cert }}\` |
           | Runtime fingerprint (OTA) | \`${{ steps.apk.outputs.fingerprint }}\` |
-          | Commit | $(git rev-parse HEAD) |
+          | Commit | ${GITHUB_SHA} |
 
           | APK | SHA-256 |
           |---|---|
@@ -219,25 +204,6 @@ jobs:
           an install signed differently (e.g. a debug build from source) must be uninstalled first.
           Later JS and plugin updates arrive over the air, signed by the maintainers.
           EOF
-            # The website offers a release's first asset as the main download: upload arm64 alone first.
-            gh release create "$TAG" "dist/$FIRST" --title "PKU Harness ${TAG}" --notes-file notes.md --verify-tag
-            for f in dist/*.apk; do [ "$f" = "dist/$FIRST" ] || gh release upload "$TAG" "$f"; done
-          else
-            HAVE=$(gh release view "$TAG" --json assets -q '.assets[].name')
-            gh release view "$TAG" --json body -q .body > notes.md
-            # Same key and same runtime as what is already published, or nothing is added.
-            for v in "${{ steps.apk.outputs.cert }}" "${{ steps.apk.outputs.fingerprint }}"; do
-              grep -qF "\`$v\`" notes.md || { echo "::error::$v is not in the published $TAG notes"; exit 1; }
-            done
-            ADDED=
-            for ABI in $ABIS; do
-              NAME="pku-harness-${{ steps.version.outputs.version }}-$ABI.apk"
-              if grep -qxF "$NAME" <<< "$HAVE"; then echo "$NAME already published, kept"; continue; fi
-              gh release upload "$TAG" "dist/$NAME"
-              ADDED="$ADDED$(grep -F "\`$NAME\`" dist/rows.md)"$'\n'
-            done
-            if [ -n "$ADDED" ]; then
-              printf '\n### More architectures\n\nAdded later, built from the same commit with the same key (certificate and runtime fingerprint as above).\n\n| APK | SHA-256 |\n|---|---|\n%s' "$ADDED" >> notes.md
-              gh release edit "$TAG" --notes-file notes.md
-            fi
-          fi
+          # The website offers a release's first asset as the main download: upload arm64 alone first.
+          gh release create "$TAG" "dist/$FIRST" --title "PKU Harness ${TAG}" --notes-file notes.md --verify-tag
+          for f in dist/*.apk; do [ "$f" = "dist/$FIRST" ] || gh release upload "$TAG" "$f"; done
