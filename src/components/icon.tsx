@@ -54,6 +54,8 @@ export const icons = {
   battery: { ios: 'battery.100percent', android: 'battery_full' },
   send2: { ios: 'paperplane', android: 'send' },
   drag: { ios: 'line.3.horizontal', android: 'drag_handle' },
+  menu: { ios: 'line.3.horizontal', android: 'menu' },
+  paste: { ios: 'doc.on.clipboard', android: 'content_paste' },
   calendarClock: { ios: 'calendar.badge.clock', android: 'event_upcoming' },
   calendar: { ios: 'calendar', android: 'calendar_today' },
   server: { ios: 'server.rack', android: 'dns' },

@@ -107,7 +107,7 @@ export function ListRow({
   );
   if (!onPress) return content;
   return (
-    <PressableScale accessibilityRole="button" accessibilityLabel={title} onPress={onPress} scaleTo={0.985}>
+    <PressableScale accessibilityRole="button" accessibilityLabel={[title, subtitle, value].filter((x) => typeof x === 'string' && x).join(', ')} onPress={onPress} scaleTo={0.985}>
       {content}
     </PressableScale>
   );

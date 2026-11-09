@@ -14,6 +14,7 @@ export const core = {
     goSettings: '去设置',
     loading: '加载中…',
     loadFailed: '加载失败',
+    cannotUndo: '此操作无法撤销。',
   },
   settings: {
     appearance: '外观',

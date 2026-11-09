@@ -15,6 +15,7 @@ export const core: Messages['core'] = {
     goSettings: 'Settings',
     loading: 'Loading…',
     loadFailed: 'Couldn’t load',
+    cannotUndo: 'This can’t be undone.',
   },
   settings: {
     appearance: 'Appearance',

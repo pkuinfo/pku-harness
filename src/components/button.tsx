@@ -19,10 +19,12 @@ const SURFACE: Record<Variant, string> = {
 };
 const TONE: Record<Variant, TextTone> = { primary: 'onAccent', secondary: 'default', ghost: 'default', danger: 'down' };
 const FG: Record<Variant, keyof ThemeColors> = { primary: 'onBrand', secondary: 'text', ghost: 'text', danger: 'down' };
-const SIZE: Record<Size, { box: string; row: string; icon: number }> = {
-  sm: { box: 'min-h-8 px-3', row: 'gap-1', icon: 16 },
-  md: { box: 'min-h-11 px-4', row: 'gap-2', icon: 18 },
-  lg: { box: 'min-h-13 px-6', row: 'gap-2', icon: 20 },
+// Material 3 heights: 32 (compact), 40 (standard), 48 (the one prominent action on a screen).
+// hitSlop keeps every touch target at least 48 dp.
+const SIZE: Record<Size, { box: string; row: string; icon: number; slop: number }> = {
+  sm: { box: 'min-h-8 px-3', row: 'gap-1', icon: 16, slop: 8 },
+  md: { box: 'min-h-10 px-4', row: 'gap-2', icon: 18, slop: 4 },
+  lg: { box: 'min-h-12 px-6', row: 'gap-2', icon: 20, slop: 0 },
 };
 const CURVE = { borderCurve: 'continuous' } as const;
 
@@ -57,6 +59,7 @@ export function Button({
       accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       disabled={disabled || loading}
       onPress={onPress}
+      hitSlop={s.slop}
       className={cx('items-center justify-center rounded-md dark:rounded-lg', SURFACE[variant], s.box, disabled && 'opacity-40', className)}
       style={[CURVE, { boxShadow: dark && variant !== 'ghost' && !disabled ? shadows.darkControl : undefined }, style]}>
       {loading ? (
@@ -101,6 +104,8 @@ export function IconButton({
       accessibilityState={{ disabled: !!disabled }}
       disabled={disabled}
       onPress={onPress}
+      // Touch target at least 48 dp, however small the drawn button.
+      hitSlop={Math.max(0, Math.ceil((48 - size) / 2))}
       scaleTo={0.92}
       className={cx('items-center justify-center rounded-md dark:rounded-lg', SURFACE[variant], disabled && 'opacity-40', className)}
       style={[CURVE, { width: size, height: size, boxShadow: dark && variant !== 'ghost' && !disabled ? shadows.darkControl : undefined }, style]}>

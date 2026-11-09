@@ -122,6 +122,8 @@ export function Screen({
         {scroll ? <Animated.ScrollView
           ref={nativeScroll}
           style={enter}
+          // A tap on a button while typing should press it, not just close the keyboard.
+          keyboardShouldPersistTaps="handled"
           contentContainerStyle={[{ paddingBottom: spacing.xxxl }, contentContainerStyle]}
           {...scrollProps}>
           <View className="w-full gap-6 self-center px-4 pt-4" style={CONTENT}>{children}</View>
@@ -147,6 +149,7 @@ export function Screen({
       {backdrop}
       <Animated.ScrollView
         ref={nativeScroll}
+        keyboardShouldPersistTaps="handled"
         className="flex-1"
         style={enter}
         contentContainerStyle={[{ paddingTop: insets.top, paddingBottom: spacing.xxxl + bar }, contentContainerStyle]}

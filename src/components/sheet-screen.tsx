@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
-import { useEffect, useState, type ReactNode } from 'react';
-import { KeyboardAvoidingView, ScrollView, View } from 'react-native';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { Alert, ScrollView, View } from 'react-native';
+import { KeyboardAvoidingView, useKeyboardState } from 'react-native-keyboard-controller';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,6 +9,7 @@ import { MAX_CONTENT_WIDTH } from '@/hooks/use-layout';
 import { useT } from '@/i18n';
 import { spacing, useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
+import { haptics } from '@/utils/haptics';
 
 import { Aurora } from './aurora';
 import { Button, IconButton } from './button';
@@ -50,11 +52,13 @@ export function SheetScreen({
   title: string;
   children: ReactNode;
   primary: string;
-  onPrimary: () => void;
+  /** May be async: the button shows a spinner meanwhile, ignores repeat taps, and a thrown error shows as the notice. */
+  onPrimary: () => void | Promise<void>;
   primaryDisabled?: boolean;
   loading?: boolean;
   danger?: string;
-  onDanger?: () => void;
+  /** Asked to confirm first (it deletes something); may be async like onPrimary. */
+  onDanger?: () => void | Promise<void>;
   secondary?: string;
   onSecondary?: () => void;
   notice?: SheetNotice;
@@ -69,6 +73,35 @@ export function SheetScreen({
     const id = setTimeout(() => setArmed(true), ARM_MS);
     return () => clearTimeout(id);
   }, []);
+  // The keyboard covers the navigation bar: no safe-area padding under the actions while it's up.
+  const keyboard = useKeyboardState((k) => k.isVisible);
+  const [running, setRunning] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const busy = useRef(false);
+  const run = async (action: () => void | Promise<void>) => {
+    if (busy.current) return;
+    busy.current = true;
+    setRunning(true);
+    setFailure(null);
+    try {
+      await action();
+    } catch (e) {
+      haptics.warning();
+      setFailure(e instanceof Error ? e.message : String(e));
+    } finally {
+      busy.current = false;
+      setRunning(false);
+    }
+  };
+  const confirmDanger = () => {
+    if (!danger || !onDanger) return;
+    haptics.warning();
+    Alert.alert(`${danger}?`, t('core.common.cannotUndo'), [
+      { text: t('core.common.cancel'), style: 'cancel' },
+      { text: danger, style: 'destructive', onPress: () => void run(onDanger) },
+    ]);
+  };
+  const shownNotice: SheetNotice | undefined = notice ?? (failure ? { tone: 'down', text: failure } : undefined);
   return (
     <KeyboardAvoidingView className="flex-1 bg-bg" behavior="padding">
       <Aurora />
@@ -81,27 +114,27 @@ export function SheetScreen({
       <ScrollView pointerEvents={armed ? 'auto' : 'none'} contentContainerClassName="w-full self-center gap-4 p-4 pb-8" contentContainerStyle={{ maxWidth: MAX_CONTENT_WIDTH }} keyboardShouldPersistTaps="handled">
         {children}
       </ScrollView>
-      <View className="gap-3 border-t-[0.5px] border-edge px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
+      <View className="gap-3 border-t-[0.5px] border-edge px-4 pt-3" style={{ paddingBottom: keyboard ? spacing.md : Math.max(insets.bottom, spacing.md) }}>
         <View pointerEvents="none" className="absolute inset-0 bg-bg" />
-        {notice ? (
+        {shownNotice ? (
           <Animated.View
-            key={notice.text}
+            key={shownNotice.text}
             entering={FadeIn}
             accessibilityRole="alert"
             accessibilityLiveRegion="polite"
-            className={cx('flex-row items-center gap-2 rounded-md p-3', NOTICE_BG[notice.tone])}
+            className={cx('flex-row items-center gap-2 rounded-md p-3', NOTICE_BG[shownNotice.tone])}
             style={{ borderCurve: 'continuous' }}>
-            <Icon name={NOTICE_ICON[notice.tone]} size={16} color={c[notice.tone]} />
-            <Text variant="caption" tone={notice.tone} className="flex-1">
-              {notice.text}
+            <Icon name={NOTICE_ICON[shownNotice.tone]} size={16} color={c[shownNotice.tone]} />
+            <Text variant="caption" tone={shownNotice.tone} className="flex-1">
+              {shownNotice.text}
             </Text>
-            {notice.action ? <Button title={notice.action.label} variant="secondary" size="sm" onPress={notice.action.onPress} /> : null}
+            {shownNotice.action ? <Button title={shownNotice.action.label} variant="secondary" size="sm" onPress={shownNotice.action.onPress} /> : null}
           </Animated.View>
         ) : null}
         <View className="flex-row gap-2">
-          {danger && onDanger ? <Button title={danger} variant="danger" onPress={onDanger} className="flex-1" /> : null}
+          {danger && onDanger ? <Button title={danger} variant="danger" onPress={confirmDanger} disabled={running} className="flex-1" /> : null}
           {secondary && onSecondary ? <Button title={secondary} variant="secondary" onPress={onSecondary} className="flex-1" /> : null}
-          <Button title={primary} onPress={onPrimary} disabled={primaryDisabled} loading={loading} className="flex-2" />
+          <Button title={primary} onPress={() => void run(onPrimary)} disabled={primaryDisabled} loading={loading || running} className="flex-2" />
         </View>
       </View>
     </KeyboardAvoidingView>

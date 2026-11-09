@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useState, type ComponentRef, type ReactNode, type Ref } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 
 import { useT } from '@/i18n';
@@ -16,7 +16,7 @@ export function Field({
   style,
   trailing,
   ...input
-}: TextInputProps & { label?: string; hint?: string; error?: string; trailing?: ReactNode }) {
+}: TextInputProps & { label?: string; hint?: string; error?: string; trailing?: ReactNode; ref?: Ref<ComponentRef<typeof TextInput>> }) {
   const c = useTheme();
   const [focused, setFocused] = useState(false);
   const ring = error ? 'border-down' : focused ? 'border-accent' : 'border-edge';
@@ -31,6 +31,9 @@ export function Field({
         <TextInput
           placeholderTextColor={c.textFaint}
           selectionColor={c.accent}
+          // TalkBack reads the visible label (a sibling Text) and the hint, not just the placeholder.
+          accessibilityLabel={label}
+          accessibilityHint={error ?? hint}
           {...input}
           onFocus={(e) => {
             setFocused(true);
@@ -55,7 +58,7 @@ export function Field({
 }
 
 /** A secret (password, API key): masked by default, with a show/hide eye. */
-export function SecretField(props: Omit<TextInputProps, 'secureTextEntry'> & { label?: string; hint?: string; error?: string }) {
+export function SecretField(props: Omit<TextInputProps, 'secureTextEntry'> & { label?: string; hint?: string; error?: string; ref?: Ref<ComponentRef<typeof TextInput>> }) {
   const t = useT();
   const [shown, setShown] = useState(false);
   return (

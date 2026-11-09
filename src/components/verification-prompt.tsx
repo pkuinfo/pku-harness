@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { BackHandler, View } from 'react-native';
 import { useReanimatedKeyboardAnimation } from 'react-native-keyboard-controller';
 import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -53,6 +53,14 @@ function Card({ req }: { req: VerificationRequest }) {
       cancelSmsWait();
     };
   }, [req.id, req.mode]);
+  // Android Back cancels the prompt, rather than moving the screen underneath it.
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      verification.answer(req.id, null);
+      return true;
+    });
+    return () => sub.remove();
+  }, [req.id]);
   // Ride the keyboard so the code field stays visible.
   const keyboard = useReanimatedKeyboardAnimation();
   const lift = useAnimatedStyle(() => ({ transform: [{ translateY: Math.min(0, keyboard.height.get()) }] }));
