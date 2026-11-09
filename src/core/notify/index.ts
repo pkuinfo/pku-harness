@@ -1,6 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { AndroidImportance } from 'expo-notifications';
-import { Platform } from 'react-native';
+import * as Application from 'expo-application';
+import { Linking, Platform } from 'react-native';
 
 import { t, type MessageKey } from '@/i18n';
 
@@ -87,11 +88,30 @@ export async function getBatteryOptimized(): Promise<boolean> {
   return notifee.isBatteryOptimizationEnabled();
 }
 
-/** Opens the system battery settings for this app (no special permission needed). */
+/**
+ * Lift battery optimisation for this app: the system's one-tap "Allow" dialog for our package
+ * (REQUEST_IGNORE_BATTERY_OPTIMIZATIONS), falling back to the system battery list.
+ */
 export async function openBatteryOptimizationSettings(): Promise<void> {
   if (Platform.OS !== 'android') return;
-  const { default: notifee } = await import('react-native-notify-kit');
-  await notifee.openBatteryOptimizationSettings();
+  const { startActivityAsync, ActivityAction } = await import('expo-intent-launcher');
+  try {
+    await startActivityAsync(ActivityAction.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, { data: `package:${Application.applicationId}` });
+  } catch {
+    const { default: notifee } = await import('react-native-notify-kit');
+    await notifee.openBatteryOptimizationSettings();
+  }
+}
+
+/** This app's own notification settings page (not App info), falling back to App info. */
+export async function openNotificationSettings(): Promise<void> {
+  if (Platform.OS !== 'android') return void (await Linking.openSettings());
+  const { startActivityAsync, ActivityAction } = await import('expo-intent-launcher');
+  try {
+    await startActivityAsync(ActivityAction.APP_NOTIFICATION_SETTINGS, { extra: { 'android.provider.extra.APP_PACKAGE': Application.applicationId } });
+  } catch {
+    await Linking.openSettings();
+  }
 }
 
 /** What on-time delivery depends on, for the welcome step, Settings and the Schedule tab. */

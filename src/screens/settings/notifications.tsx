@@ -1,7 +1,7 @@
 import * as BackgroundTask from 'expo-background-task';
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { AppState, Linking, Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
@@ -12,13 +12,16 @@ import { Text } from '@/components/text';
 import { useT } from '@/i18n';
 import { formatClock } from '@/utils/date';
 import {
+  getBatteryOptimized,
   getExactAlarmPermission,
+  openBatteryOptimizationSettings,
   getNotificationPermission,
   dismissPresented,
   listScheduledNotifications,
   notifyAt,
   requestExactAlarmPermission,
   requestNotificationPermission,
+  openNotificationSettings,
   type PermissionState,
 } from '@/core/notify';
 import { haptics } from '@/utils/haptics';
@@ -27,17 +30,20 @@ type Status = {
   permission: PermissionState;
   exact: boolean;
   background: boolean;
+  /** Android battery optimisation still applies to the app (background work may be deferred). */
+  batteryOptimized: boolean;
   scheduled: number;
 };
 
 async function readStatus(): Promise<Status> {
-  const [permission, exact, bg, scheduled] = await Promise.all([
+  const [permission, exact, bg, scheduled, batteryOptimized] = await Promise.all([
     getNotificationPermission(),
     getExactAlarmPermission(),
     BackgroundTask.getStatusAsync(),
     listScheduledNotifications(),
+    getBatteryOptimized().catch(() => false),
   ]);
-  return { permission, exact, background: bg === BackgroundTask.BackgroundTaskStatus.Available, scheduled: scheduled.length };
+  return { permission, exact, background: bg === BackgroundTask.BackgroundTaskStatus.Available, batteryOptimized, scheduled: scheduled.length };
 }
 
 /** Settings → 提醒与通知: what the scheduler needs from the OS, and a test button. */
@@ -73,7 +79,7 @@ export function NotificationSettings() {
   }, [refresh]);
 
   const allow = async () => {
-    const p = status?.permission === 'denied' ? (await Linking.openSettings(), 'denied') : await requestNotificationPermission();
+    const p = status?.permission === 'denied' ? (await openNotificationSettings(), 'denied') : await requestNotificationPermission();
     if (p === 'granted') haptics.success();
     refresh();
   };
@@ -129,6 +135,27 @@ export function NotificationSettings() {
                     size="sm"
                     onPress={async () => {
                       await requestExactAlarmPermission();
+                      refresh();
+                    }}
+                  />
+                )
+              }
+            />
+          ) : null}
+          {Platform.OS === 'android' ? (
+            <ListRow
+              icon="bolt"
+              title={t('welcome.permissions.battery')}
+              subtitle={status?.batteryOptimized === false ? t('welcome.permissions.batteryOn') : t('welcome.permissions.batteryWhy')}
+              accessory={
+                status == null ? null : !status.batteryOptimized ? (
+                  <Chip label={t('app.ui.enabled')} tone="up" icon="check" />
+                ) : (
+                  <Button
+                    title={t('app.notifications.turnOn')}
+                    size="sm"
+                    onPress={async () => {
+                      await openBatteryOptimizationSettings();
                       refresh();
                     }}
                   />

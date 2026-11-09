@@ -1,5 +1,7 @@
+import { File, Paths } from 'expo-file-system';
 import { router } from 'expo-router';
-import { Alert, Share, View } from 'react-native';
+import * as Sharing from 'expo-sharing';
+import { Alert, View } from 'react-native';
 
 import { FadeIn } from '@/components/fade-in';
 import { ListGroup, ListRow } from '@/components/list-group';
@@ -108,8 +110,15 @@ export function Settings() {
             title={t('app.settings.export')}
             subtitle={t('app.settings.exportSubtitle')}
             onPress={async () => {
-              const data = await exportData();
-              await Share.share({ title: t('app.settings.exportTitle'), message: JSON.stringify(data, null, 2) });
+              try {
+                // A file, not message text: a large export would exceed Android's share size limit.
+                const file = new File(Paths.cache, `pku-harness-export-${new Date().toISOString().slice(0, 10)}.json`);
+                file.write(JSON.stringify(await exportData(), null, 2));
+                await Sharing.shareAsync(file.uri, { mimeType: 'application/json', dialogTitle: t('app.settings.exportTitle') });
+              } catch (e) {
+                haptics.warning();
+                Alert.alert(t('app.settings.exportTitle'), e instanceof Error ? e.message : String(e));
+              }
             }}
           />
           <ListRow
@@ -124,8 +133,15 @@ export function Settings() {
                   text: t('app.settings.resetConfirm'),
                   style: 'destructive',
                   onPress: async () => {
-                    await resetData();
-                    haptics.success();
+                    try {
+                      await resetData();
+                      haptics.success();
+                      // A fresh app starts at the welcome, not inside an emptied one.
+                      router.replace('/welcome');
+                    } catch (e) {
+                      haptics.warning();
+                      Alert.alert(t('app.settings.resetTitle'), e instanceof Error ? e.message : String(e));
+                    }
                   },
                 },
               ])

@@ -4,7 +4,6 @@ import * as Crypto from 'expo-crypto';
 import * as DocumentPicker from 'expo-document-picker';
 import * as WebBrowser from 'expo-web-browser';
 import { router } from 'expo-router';
-import { Linking } from 'react-native';
 import { z } from 'zod';
 
 import '@/core/campus/adapters';
@@ -13,7 +12,7 @@ import { ongoingService } from '@/core/cloud/ongoing';
 import { bindFinish, bindStart, currentCodeAsync, otpStatus, unbindLocal } from '@/core/campus/otp';
 import { resolveWidgetState } from '@/core/dashboard/resolve';
 import { widgetStore } from '@/core/dashboard/store';
-import { deliveryReadiness, getNotificationPermission, openBatteryOptimizationSettings, requestExactAlarmPermission, requestNotificationPermission } from '@/core/notify';
+import { deliveryReadiness, getNotificationPermission, openBatteryOptimizationSettings, openNotificationSettings, requestExactAlarmPermission, requestNotificationPermission } from '@/core/notify';
 import { docPlugins } from '@/core/runtime/doc-plugins';
 import { services } from '@/core/runtime/invoke';
 import { pluginName, toolTitle, widgetText } from '@/core/runtime/localize';
@@ -108,7 +107,7 @@ const host: HostServices = {
     fix: async (kind) => {
       if (kind === 'notifications') {
         // Once denied for good the system no longer prompts: only its settings screen can help.
-        if ((await getNotificationPermission()) === 'denied') await Linking.openSettings();
+        if ((await getNotificationPermission()) === 'denied') await openNotificationSettings();
         else await requestNotificationPermission();
       } else if (kind === 'exactAlarms') await requestExactAlarmPermission();
       else await openBatteryOptimizationSettings();

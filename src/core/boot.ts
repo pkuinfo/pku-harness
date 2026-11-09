@@ -31,6 +31,10 @@ export const isOnboarded = () => onboarded;
 export const markOnboarded = () => {
   onboarded = true;
 };
+/** After a data reset: the next screen is the welcome again. */
+export const markNotOnboarded = () => {
+  onboarded = false;
+};
 
 /**
  * First-run setup progress (src/screens/welcome/flow.ts owns its shape): saved after every step

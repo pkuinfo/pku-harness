@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { sessionStore } from '@/core/agent/session/chat-store';
 import { signOut } from '@/core/campus/account';
 import { aiConfig } from '@/core/agent/provider';
+import { markNotOnboarded } from '@/core/boot';
 import { cloudProvider } from '@/core/cloud/provider';
 import { wipeCloud } from '@/core/cloud/runtime';
 import { seedStarterWidgets } from '@/core/dashboard/starter';
@@ -40,7 +41,8 @@ export async function resetData() {
   await Notifications.cancelAllScheduledNotificationsAsync();
   await signOut().catch(() => {});
   await BackgroundTask.unregisterTaskAsync(BACKGROUND_TASK).catch(() => {});
-  for (const m of remotePlugins.list()) await remotePlugins.uninstall(m.id);
+  // One plugin failing to uninstall must not stop the rest of the reset.
+  for (const m of remotePlugins.list()) await remotePlugins.uninstall(m.id).catch(() => {});
   // Cloud first: delete this device's data at the provider while its keys still exist.
   await wipeCloud().catch(() => {});
   const db = await getDb();
@@ -52,4 +54,5 @@ export async function resetData() {
   sessionStore.reset();
   await Promise.all([pluginSettings.load(), aiConfig.load(), jobStore.load(), widgetStore.load(), todoStore.load(), timetable.load(), cloudProvider.load()]);
   await seedStarterWidgets();
+  markNotOnboarded();
 }

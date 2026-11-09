@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 import Animated, { FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
@@ -103,6 +103,7 @@ export function PluginDetail({ id }: { id: string }) {
   const plugin = usePlugin(id);
   const settings = usePluginSettings(id);
   const status = usePluginStatus(plugin, settings.enabled);
+  const [remoteError, setRemoteError] = useState<string | null>(null);
   if (!plugin) {
     return (
       <Screen title={t('app.plugins.title')} back>
@@ -287,9 +288,16 @@ export function PluginDetail({ id }: { id: string }) {
               <ListRow
                 icon="refresh"
                 title={t('app.plugins.detail.refresh')}
+                subtitle={remoteError ?? undefined}
                 onPress={async () => {
-                  await remotePlugins.refresh(plugin.id).catch(() => haptics.warning());
-                  haptics.success();
+                  setRemoteError(null);
+                  try {
+                    await remotePlugins.refresh(plugin.id);
+                    haptics.success();
+                  } catch (e) {
+                    haptics.warning();
+                    setRemoteError(e instanceof Error ? e.message : String(e));
+                  }
                 }}
               />
             </ListGroup>
@@ -297,10 +305,21 @@ export function PluginDetail({ id }: { id: string }) {
               title={t('app.plugins.detail.remove')}
               variant="danger"
               icon="trash"
-              onPress={async () => {
+              onPress={() => {
                 haptics.warning();
-                await remotePlugins.uninstall(plugin.id);
-                router.back();
+                const name = pluginName(plugin, locale);
+                Alert.alert(`${t('app.plugins.detail.remove')}?`, `${name}\n${t('core.common.cannotUndo')}`, [
+                  { text: t('core.common.cancel'), style: 'cancel' },
+                  {
+                    text: t('app.plugins.detail.remove'),
+                    style: 'destructive',
+                    onPress: () =>
+                      void remotePlugins
+                        .uninstall(plugin.id)
+                        .then(() => router.back())
+                        .catch((e) => setRemoteError(e instanceof Error ? e.message : String(e))),
+                  },
+                ]);
               }}
             />
           </View>

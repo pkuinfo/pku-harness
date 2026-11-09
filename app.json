@@ -44,7 +44,8 @@
       "permissions": [
         "android.permission.SCHEDULE_EXACT_ALARM",
         "android.permission.POST_NOTIFICATIONS",
-        "android.permission.RECEIVE_BOOT_COMPLETED"
+        "android.permission.RECEIVE_BOOT_COMPLETED",
+        "android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"
       ]
     },
     "web": {
@@ -112,7 +113,8 @@
             "extraProguardRules": "# Expo builds module views by reflection with (Context, AppContext). expo-modules-core keeps that\n# constructor only for ExpoView subclasses; expo-gl's GLView extends TextureView, so R8 stripped it\n# and every fresh install crashed on the welcome screen. Keep the constructor wherever it exists.\n-keepclassmembers class * {\n  public <init>(android.content.Context, expo.modules.kotlin.AppContext);\n}\n# expo-gl's native code (EXGLJniApi.cpp) looks up GLContext.flush() by name over JNI; R8\n# renamed it and the JS thread aborted. expo-gl is small: keep it whole.\n-keep class expo.modules.gl.** { *; }\n"
           }
         }
-      ]
+      ],
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true,
