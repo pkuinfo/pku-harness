@@ -7,7 +7,7 @@ declare class PhoneControlModule extends NativeModule<{ onControlStopped: (event
   overlayStatus(value: { sessionId: string; phase: 'waiting' | 'thinking' | 'working' | 'attention'; title: string } | null): Promise<void>;
   overlayApproval(value: { id: number; sessionId: string; title: string; detail: string } | null): Promise<void>;
   readiness(): Promise<PhoneReadiness>;
-  setup(kind: 'accessibility' | 'wireless'): Promise<void>;
+  setup(kind: 'accessibility' | 'wireless' | 'appInfo'): Promise<void>;
   pair(code: string, port: number): Promise<PhoneReadiness>;
   connect(port: number | null): Promise<PhoneReadiness>;
   disconnect(): Promise<void>;

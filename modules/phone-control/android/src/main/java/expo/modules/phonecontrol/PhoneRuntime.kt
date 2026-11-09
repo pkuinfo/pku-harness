@@ -1,11 +1,15 @@
 package expo.modules.phonecontrol
 
+import android.app.AppOpsManager
 import android.app.KeyguardManager
 import android.content.Context
 import android.os.Build
+import android.os.Process
 import android.util.Base64
 import org.pkuinfo.harness.phone.core.*
+import org.pkuinfo.harness.phone.connection.protocol.AccessibilityList
 import org.pkuinfo.harness.phone.connection.protocol.BuiltinShellStatus
+import org.pkuinfo.harness.phone.connection.protocol.PermissionCommands
 import org.pkuinfo.harness.phone.platform.AndroidDevicePort
 import org.pkuinfo.harness.phone.platform.PhonePlatform
 import org.pkuinfo.harness.phone.platform.accessibility.ScreenAccessibility
@@ -49,11 +53,56 @@ object PhoneRuntime {
             },
             "helperFailure" to (helper as? BuiltinShellStatus.Failed)?.reason?.name,
             "locked" to context.getSystemService(KeyguardManager::class.java).isKeyguardLocked,
+            "restricted" to restricted(context),
             "sessionId" to session?.id,
             "packages" to (session?.packages?.toList() ?: emptyList<String>()),
             "handedOver" to (session?.handedOver == true),
             "paused" to (session?.paused == true),
         )
+    }
+
+    /**
+     * Android 13+ blocks accessibility for apps installed from a downloaded APK ("restricted setting")
+     * until the user allows it in App info. The install marks the app op as errored; allowing it
+     * sets it back to allowed. Unknown on older systems or if the op can't be read: not restricted.
+     */
+    private fun restricted(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < 33 || ScreenAccessibility.instance.value != null) return false
+        val mode = runCatching {
+            context.getSystemService(AppOpsManager::class.java)
+                .unsafeCheckOpNoThrow("android:access_restricted_settings", Process.myUid(), context.packageName)
+        }.getOrNull()
+        return when (mode) {
+            AppOpsManager.MODE_ERRORED -> true
+            AppOpsManager.MODE_ALLOWED -> false
+            // Unreadable or another mode: judge by how the app was installed.
+            else -> runCatching { installedFromFile(context) }.getOrDefault(false)
+        }
+    }
+
+    /** Installed from a downloaded or local APK file: the installs Android applies restricted settings to. */
+    private fun installedFromFile(context: Context): Boolean {
+        val source = context.packageManager.getInstallSourceInfo(context.packageName).packageSource
+        return source == android.content.pm.PackageInstaller.PACKAGE_SOURCE_DOWNLOADED_FILE ||
+            source == android.content.pm.PackageInstaller.PACKAGE_SOURCE_LOCAL_FILE
+    }
+
+    /**
+     * Turn on Copilot's accessibility service through the connected helper, which runs as the
+     * shell user and may change secure settings. Lifts the restricted-setting block first so the
+     * system keeps the service bound. False when no helper is connected or a command fails;
+     * the caller then sends the user to the system screen instead.
+     */
+    fun enableAccessibility(context: Context): Boolean {
+        val shell = PhonePlatform.of(context).hub.shell.value ?: return false
+        val pkg = context.packageName
+        return runCatching {
+            // Fails harmlessly on systems without the op; the settings write below is what counts.
+            shell.runCommand("appops set $pkg ACCESS_RESTRICTED_SETTINGS allow")
+            val current = shell.runCommand(PermissionCommands.READ_ACCESSIBILITY).getString("output")
+            PermissionCommands.writeAccessibility(AccessibilityList.with(current, PermissionCommands.accessibilityService(pkg)))
+                .all { shell.runCommand(it).getInt("exitCode", -1) == 0 }
+        }.getOrDefault(false)
     }
 
     suspend fun begin(context: Context, packages: List<String>): Map<String, Any?> {

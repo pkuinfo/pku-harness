@@ -6,6 +6,9 @@ import android.graphics.Canvas
 import android.util.Base64
 import java.io.ByteArrayOutputStream
 import android.content.Intent
+import android.net.Uri
+import android.content.ComponentName
+import android.os.Bundle
 import android.provider.Settings
 import org.pkuinfo.harness.phone.platform.PhonePlatform
 import expo.modules.kotlin.modules.Module
@@ -16,6 +19,9 @@ import kotlinx.coroutines.withContext
 
 class PhoneControlModule : Module() {
     private val context get() = requireNotNull(appContext.reactContext).applicationContext
+
+    private fun copilotService() = ComponentName(context.packageName, "org.pkuinfo.harness.phone.platform.accessibility.PhoneAccessibilityService").flattenToString()
+
 
     private suspend fun result(block: suspend () -> Map<String, Any?>): Map<String, Any?> = try { block() }
         catch (error: PhoneException) { mapOf("nativeError" to mapOf("code" to error.code.name, "message" to error.message)) }
@@ -46,13 +52,24 @@ class PhoneControlModule : Module() {
                 PhoneOverlayBridge.Approval(id, (value["id"] as Number).toInt(), (value["title"] as String).take(240), (value["detail"] as String).take(1200)) else null)
         }
         AsyncFunction("readiness") { PhoneRuntime.readiness(context) }
-        AsyncFunction("setup") { kind: String ->
-            val action = when (kind) {
-                "accessibility" -> Settings.ACTION_ACCESSIBILITY_SETTINGS
-                "wireless" -> Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS
+        AsyncFunction("setup") Coroutine { kind: String ->
+            // With the helper connected, accessibility needs no trip to Settings (and no restricted-setting prompt).
+            if (kind == "accessibility" && withContext(Dispatchers.IO) { PhoneRuntime.enableAccessibility(context) }) return@Coroutine
+            val intent = when (kind) {
+                // The list, scrolled to Copilot's row and highlighted (Settings' fragment-args key).
+                "accessibility" -> Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
+                    .putExtra(FRAGMENT_ARGS_KEY, copilotService())
+                    .putExtra(SHOW_FRAGMENT_ARGS, Bundle().apply { putString(FRAGMENT_ARGS_KEY, copilotService()) })
+                // Developer options, scrolled to and highlighting Wireless debugging.
+                "wireless" -> Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
+                    .putExtra(FRAGMENT_ARGS_KEY, "toggle_adb_wireless")
+                    .putExtra(SHOW_FRAGMENT_ARGS, Bundle().apply { putString(FRAGMENT_ARGS_KEY, "toggle_adb_wireless") })
+                // App info, where the ⋮ menu has "Allow restricted settings".
+                "appInfo" -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
                 else -> error("Unknown setup step")
             }
-            context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            // A fresh Settings task: otherwise Android may just bring back whatever Settings page was left open.
+            context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         }
         AsyncFunction("pair") Coroutine { code: String, port: Int ->
             require(code.matches(Regex("[0-9]{6}")) && port in 1..65535) { "Enter a six-digit pairing code and valid port" }
@@ -82,10 +99,14 @@ class PhoneControlModule : Module() {
             // never silently grants access to System UI or its search provider.
             val companions = listOf("com.android.systemui", "com.google.android.settings.intelligence")
                 .mapNotNull { name -> runCatching { manager.getApplicationInfo(name, 0) }.getOrNull() }
+            // Pinyin (and other scripts) in Latin letters, so the A–Z index files 微信 under W, not #.
+            val latin = runCatching { android.icu.text.Transliterator.getInstance("Any-Latin; Latin-ASCII") }.getOrNull()
             (launchers + companions)
                 .filter { it.packageName != context.packageName }
                 .distinctBy { it.packageName }
-                .map { mapOf("packageName" to it.packageName, "label" to it.loadLabel(manager).toString(),
+                .map { val label = it.loadLabel(manager).toString()
+                    mapOf("packageName" to it.packageName, "label" to label,
+                    "sortKey" to (latin?.let { t -> runCatching { t.transliterate(label) }.getOrNull() } ?: label).trim().lowercase(),
                     "launchable" to (manager.getLaunchIntentForPackage(it.packageName) != null),
                     "iconUri" to runCatching {
                         val icon = it.loadIcon(manager)
@@ -97,7 +118,7 @@ class PhoneControlModule : Module() {
                             "data:image/png;base64," + Base64.encodeToString(bytes, Base64.NO_WRAP)
                         } finally { bitmap.recycle() }
                     }.getOrNull()) }
-                .sortedBy { it["label"] as String }
+                .sortedBy { it["sortKey"] as String }
 
         }
         AsyncFunction("begin") Coroutine { packages: List<String> -> PhoneRuntime.begin(context, packages) }
@@ -124,3 +145,6 @@ class PhoneControlModule : Module() {
         AsyncFunction("handback") Coroutine { sessionId: String -> PhoneRuntime.handback(context, sessionId) }
     }
 }
+
+private const val FRAGMENT_ARGS_KEY = ":settings:fragment_args_key"
+private const val SHOW_FRAGMENT_ARGS = ":settings:show_fragment_args"
