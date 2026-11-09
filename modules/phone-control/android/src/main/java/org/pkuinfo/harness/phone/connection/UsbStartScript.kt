@@ -67,7 +67,7 @@ class UsbStartScript(context: Context, private val hub: HelperHub) {
     }
 
     private companion object {
-        const val TAG = "MikaUsbStart"
+        const val TAG = "HarnessUsbStart"
     }
 }
 

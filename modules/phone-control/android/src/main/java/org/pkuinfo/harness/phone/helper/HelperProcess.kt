@@ -36,7 +36,7 @@ import kotlin.system.exitProcess
  * 把它的无障碍服务写回系统列表,再经交接用的 provider 把它的进程拉起来(见 [HelperRestorePolicy])。
  */
 object HelperProcess {
-    private const val TAG = "MikaHelper"
+    private const val TAG = "HarnessHelper"
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -259,7 +259,7 @@ object HelperProcess {
                         "onUidImportance" -> { onUidImportance(a[0] as Int, a[1] as Int); null }
                         "hashCode" -> System.identityHashCode(proxy)
                         "equals" -> proxy === a?.getOrNull(0)
-                        "toString" -> "MikaHelperUidListener"
+                        "toString" -> "HarnessHelperUidListener"
                         else -> null
                     }
                 }

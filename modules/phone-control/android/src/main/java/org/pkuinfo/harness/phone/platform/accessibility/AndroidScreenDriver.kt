@@ -1977,7 +1977,7 @@ class AndroidScreenDriver(
     }
 
     private companion object {
-        const val TAG = "MikaScreen"
+        const val TAG = "HarnessScreen"
         /** 动作开始后多久之内主屏冒出来的任务算这个动作开出来的。 */
         const val SPILL_WINDOW_MS = 6_000L
         /**

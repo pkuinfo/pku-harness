@@ -86,7 +86,7 @@ object HelperHandoff {
         val again = usbCommand(scriptPath)
         return """
             |#!/system/bin/sh
-            |# Written by Mika. Starts Mika's phone helper from a computer: $again
+            |# Written by PKU Harness. Starts the Harness phone helper from a computer: $again
             |if [ "${'$'}(id -u)" != "$SHELL_UID" ]; then
             |  echo "Run this from a computer over USB: $again"
             |  exit 1
@@ -129,7 +129,7 @@ object HelperHandoff {
         val name = quote(processName(packageName))
         return """
             |#!/system/bin/sh
-            |# Written by Mika. The phone helper is connected, so this file holds no start code.
+            |# Written by PKU Harness. The phone helper is connected, so this file holds no start code.
             |if pidof $name >/dev/null 2>&1; then
             |  echo "Harness helper is already running. Nothing to do."
             |else

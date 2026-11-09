@@ -217,7 +217,7 @@ open class ScreenAccessibility : AccessibilityService() {
             onBufferOverflow = BufferOverflow.DROP_OLDEST,
         )
 
-        private const val TAG = "MikaA11y"
+        private const val TAG = "HarnessA11y"
         private val _instance = MutableStateFlow<ScreenAccessibility?>(null)
         /** 已连接的服务实例;服务未开启或已断开时为 null。 */
         val instance: StateFlow<ScreenAccessibility?> = _instance.asStateFlow()

@@ -311,7 +311,7 @@ class BuiltinShellManager(context: Context, private val hub: HelperHub, private 
         const val MIN_SDK = Build.VERSION_CODES.S
         private const val PREFS = "builtin_shell"
         /** 和配对其余几处(PairingCoordinator、PairingCodeReader)用同一个,按它一条命令就能看完配对经过。 */
-        private const val PAIRING_TAG = "MikaPairing"
+        private const val PAIRING_TAG = "HarnessPairing"
         /** 安卓原版 adbd 把无线调试的连接端口写在这个系统属性里;读不到时靠缓存、mDNS、扫本机端口和用户填的端口。 */
         private const val TLS_PORT_PROPERTY = "service.adb.tls.port"
         private const val LOCALHOST = AdbConnectPort.LOCALHOST

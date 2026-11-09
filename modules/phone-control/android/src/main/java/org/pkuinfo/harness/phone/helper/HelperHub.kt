@@ -123,7 +123,7 @@ class HelperHub(context: Context) {
     }
 
     private companion object {
-        const val TAG = "MikaHelperHub"
+        const val TAG = "HarnessHelperHub"
         const val PREFS = "builtin_helper"
     }
 

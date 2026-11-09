@@ -23,7 +23,7 @@ import javax.net.ssl.SSLException
 object AndroidAdb {
     private const val KEYSTORE = "AndroidKeyStore"
     private const val WRAP_ALIAS = "mika_adb_key_wrap"
-    private const val TAG = "MikaAdbKey"
+    private const val TAG = "HarnessAdbKey"
 
     // 设备端导出时不带 context;TLS 1.3 里空 context 与不带 context 的结果相同(RFC 8446 §7.5)
     val exporter = KeyingMaterialExporter { socket, label, length ->
