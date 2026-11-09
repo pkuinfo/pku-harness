@@ -78,9 +78,11 @@ export const MessageView = memo(function MessageView({
         switch (part.type) {
           case 'text':
             return part.text.trim() ? (
-              <FadeIn key={i}>
+              // Opacity only: a rise (translateY) left mid-flight while the text keeps growing drew
+              // the reply below its laid-out box, over the actions and past the scrollable end.
+              <Animated.View key={i} entering={Appear.duration(160)}>
                 <Markdown text={part.text.trim()} streaming={streaming && i === message.parts.length - 1} />
-              </FadeIn>
+              </Animated.View>
             ) : null;
           case 'reasoning':
             return <ThinkingPill key={i} part={part} live={streaming && i === message.parts.length - 1} replyStreaming={streaming} />;

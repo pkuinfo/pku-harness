@@ -5,10 +5,9 @@
  * match over names and aliases; tap completes (commands with an argHint) or runs.
  */
 import { useEffect, useMemo, useRef, type ComponentRef } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet } from 'react-native';
 import Animated, { FadeIn, FadeOut, useReducedMotion, withSpring, withTiming, type EntryAnimationsValues, type LayoutAnimation } from 'react-native-reanimated';
 
-import { Chip } from '@/components/chip';
 import { Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
@@ -28,10 +27,10 @@ export type CommandMenuProps = {
   onComplete: (draft: string) => void;
 };
 
-/** Row: py-2 + name line + description line. Measured size, derived from tokens. */
-const ROW_HEIGHT = spacing.sm * 2 + typography.bodyStrong.lineHeight + typography.caption.lineHeight;
-/** 5.5 rows: the half row says "there is more, scroll". */
-const MAX_HEIGHT = ROW_HEIGHT * 5.5;
+/** One compact line per command (name, then its description), like Claude's slash menu. */
+const ROW_HEIGHT = spacing.sm * 2 + typography.callout.lineHeight + spacing.xs;
+/** 4.5 rows: the half row says "there is more, scroll", and the chat above stays visible. */
+const MAX_HEIGHT = ROW_HEIGHT * 4.5;
 const RISE = spacing.sm;
 
 /** Fade + 8 px rise; opacity on a short ease, the rise on the `smooth` spring. */
@@ -46,7 +45,7 @@ function riseIn(_values: EntryAnimationsValues): LayoutAnimation {
   };
 }
 
-type Item = { kind: 'header'; title: string } | { kind: 'command'; command: Command };
+type Item = { kind: 'command'; command: Command };
 
 export function CommandMenu({ draft, busy, onRun, onComplete }: CommandMenuProps) {
   const commands = useCommands();
@@ -57,15 +56,10 @@ export function CommandMenu({ draft, busy, onRun, onComplete }: CommandMenuProps
 
   const items = useMemo<Item[]>(() => {
     if (query === null) return [];
-    if (query === '') {
-      return COMMAND_GROUPS.flatMap((g) => {
-        const inGroup = commands.filter((c) => c.group === g);
-        return inGroup.length ? [{ kind: 'header' as const, title: t(`chat.commands.groups.${g}`) }, ...inGroup.map((command) => ({ kind: 'command' as const, command }))] : [];
-      });
-    }
-    return rankCommands(commands, query).map((command) => ({ kind: 'command' as const, command }));
-    // `t` changes with the language, like `commands`.
-  }, [commands, query, t]);
+    // Bare `/`: every command in group order, without headers (they cost a row each).
+    const list = query === '' ? COMMAND_GROUPS.flatMap((g) => commands.filter((c) => c.group === g)) : rankCommands(commands, query);
+    return list.map((command) => ({ kind: 'command' as const, command }));
+  }, [commands, query]);
 
   // A new query shows its best match first.
   useEffect(() => {
@@ -88,15 +82,9 @@ export function CommandMenu({ draft, busy, onRun, onComplete }: CommandMenuProps
       accessibilityRole="menu"
       accessibilityLabel={t('chat.commands.menu')}>
       <ScrollView ref={scroll} keyboardShouldPersistTaps="always" showsVerticalScrollIndicator={false} contentContainerClassName="py-1">
-        {items.map((item) =>
-          item.kind === 'header' ? (
-            <Text key={`h:${item.title}`} variant="micro" tone="faint" className="px-3 pb-1 pt-2">
-              {item.title}
-            </Text>
-          ) : (
-            <CommandRow key={item.command.name} command={item.command} disabled={busy && !!item.command.idleOnly} onPress={pick} />
-          ),
-        )}
+        {items.map((item) => (
+          <CommandRow key={item.command.name} command={item.command} disabled={busy && !!item.command.idleOnly} onPress={pick} />
+        ))}
       </ScrollView>
     </Animated.View>
   );
@@ -117,20 +105,15 @@ function CommandRow({ command, disabled, onPress }: { command: Command; disabled
       accessibilityRole="menuitem"
       accessibilityLabel={[`/${command.name}`, alias, description].filter(Boolean).join(t('chat.model.a11ySep'))}
       accessibilityState={{ disabled }}
-      className={cx('mx-1 flex-row items-center gap-3 rounded-md px-2', disabled && 'opacity-50')}
+      className={cx('mx-1 flex-row items-center gap-2.5 rounded-md px-2.5', disabled && 'opacity-50')}
       style={{ height: ROW_HEIGHT, borderCurve: 'continuous' }}>
-      <Icon name={(command.icon ?? 'puzzle') as IconName} size={20} color={c.textMuted} />
-      <View className="flex-1">
-        <View className="flex-row items-center gap-2">
-          <Text variant="bodyStrong" numberOfLines={1} className="shrink">
-            /{command.name}
-          </Text>
-          {alias ? <Chip label={alias} /> : null}
-        </View>
-        <Text variant="caption" tone="muted" numberOfLines={1}>
-          {description}
-        </Text>
-      </View>
+      <Icon name={(command.icon ?? 'puzzle') as IconName} size={16} color={c.textFaint} />
+      <Text variant="callout" numberOfLines={1} className="shrink-0">
+        /{command.name}
+      </Text>
+      <Text variant="callout" tone="faint" numberOfLines={1} className="flex-1">
+        {description}
+      </Text>
     </PressableScale>
   );
 }

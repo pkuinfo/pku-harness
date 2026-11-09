@@ -31,9 +31,10 @@ import { JumpToLatest } from './jump-to-latest';
 import { MessageView } from './message';
 
 /** The last message is an assistant reply with something in it (text, tools, UI). */
-const hasReplyContent = (messages: { role: string; parts: unknown[] }[]) => {
+const hasReplyContent = (messages: { role: string; parts: unknown[]; meta?: { ended?: string } }[]) => {
   const last = messages.filter((m) => m.role !== 'event').at(-1);
-  return last?.role === 'assistant' && last.parts.length > 0;
+  // A reply that ended (stopped, error) already says so with its own 重试 in ReplyActions.
+  return last?.role === 'assistant' && (last.parts.length > 0 || !!last.meta?.ended);
 };
 
 /** Within this many px of the end counts as "at the latest" (and re-pins following). */
@@ -68,9 +69,11 @@ export function Chat() {
   const [unread, setUnread] = useState(false);
 
   // Measured sizes: scroll to the real end (contentHeight − viewport) instead of scrollToEnd.
-  const size = useRef({ content: 0, viewport: 0 });
+  // On Android the keyboard space is synthetic bottom padding that onScroll doesn't report;
+  // keyboard-controller tells us its size, and the real end is that much further down.
+  const size = useRef({ content: 0, viewport: 0, inset: 0 });
   const scrollEnd = useCallback((animated: boolean) => {
-    const y = Math.max(0, size.current.content - size.current.viewport);
+    const y = Math.max(0, size.current.content - size.current.viewport + size.current.inset);
     scroll.current?.scrollTo({ y, animated });
   }, []);
 
@@ -112,8 +115,8 @@ export function Chat() {
 
   const onScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
-    size.current = { content: contentSize.height, viewport: layoutMeasurement.height };
-    distance.current = contentSize.height - layoutMeasurement.height - contentOffset.y;
+    size.current = { ...size.current, content: contentSize.height, viewport: layoutMeasurement.height };
+    distance.current = contentSize.height - layoutMeasurement.height + size.current.inset - contentOffset.y;
     const d = distance.current;
     if (dragging.current) {
       // Any pull away from the end while the finger is down hands control to the reader.
@@ -203,14 +206,19 @@ export function Chat() {
         style={{ flex: 1 }}
         contentContainerStyle={[styles.list, empty && { flexGrow: 1, justifyContent: 'center' }]}
         keyboardShouldPersistTaps="handled"
+        onContentInsetChange={(i) => {
+          const grew = i.bottom > size.current.inset;
+          size.current.inset = i.bottom;
+          if (grew && pinned.current && !dragging.current) scrollEnd(false);
+        }}
         onScroll={onScroll}
         scrollEventThrottle={32}
         onLayout={(e) => {
-          // The composer grows (queue chips, the paused banner, a longer draft): stay at the end.
+          // The viewport changed (the composer grew, the keyboard folded after a send): stay at the end.
           const h = e.nativeEvent.layout.height;
-          const shrank = h < size.current.viewport;
+          const changed = h !== size.current.viewport;
           size.current.viewport = h;
-          if (shrank && pinned.current && !dragging.current) scrollEnd(true);
+          if (changed && pinned.current && !dragging.current) scrollEnd(true);
         }}
         // Only a finger unpins. Android also fires momentum events for programmatic scrolls, so
         // a fling keeps "dragging" until its momentum ends, and nothing else sets it.
@@ -334,7 +342,7 @@ function SessionsButton() {
   const othersUnread = list.some((m) => m.id !== active && m.unread);
   return (
     <View>
-      <IconButton icon="drag" label={t(othersUnread ? 'chat.header.sessionsUnread' : 'chat.header.sessions')} variant="ghost" onPress={() => router.push('/sessions')} />
+      <IconButton icon="menu" label={t(othersUnread ? 'chat.header.sessionsUnread' : 'chat.header.sessions')} variant="ghost" onPress={() => router.push('/sessions')} />
       {othersBusy ? (
         <View pointerEvents="none" className="absolute -top-0.5 -right-0.5 rounded-full bg-elevated p-px">
           <AgentOrbit state="writing" size={14} />
@@ -387,7 +395,7 @@ function ChatTitle({ fallbackName, fallbackModel, connected }: { fallbackName: s
           selectTextOnFocus
           returnKeyType="done"
           onSubmitEditing={save}
-          onBlur={() => setRenaming(false)}
+          onBlur={save}
           placeholder={t('chat.header.titlePlaceholder')}
           placeholderTextColor={c.textFaint}
           selectionColor={c.accent}

@@ -414,7 +414,7 @@ function RenameInput({
       selectTextOnFocus
       returnKeyType="done"
       onSubmitEditing={save}
-      onBlur={onEnd}
+      onBlur={save}
       placeholder={t("chat.header.titlePlaceholder")}
       placeholderTextColor={c.textFaint}
       selectionColor={c.accent}

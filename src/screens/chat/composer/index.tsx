@@ -1,6 +1,6 @@
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
-import { TextInput, View, type TextInputContentSizeChangeEvent } from 'react-native';
+import { Keyboard, TextInput, View, type TextInputContentSizeChangeEvent } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition, useReducedMotion, withSpring, ZoomIn, ZoomOut, type LayoutAnimationFunction } from 'react-native-reanimated';
 
 import { IconButton } from '@/components/button';
@@ -253,6 +253,8 @@ export function Composer() {
       if (await executeCommandLine(message, commandContext())) return;
     }
     composerDraft.clear();
+    // Fold the keyboard so the reply has the screen; the list follows to the end (Chat).
+    Keyboard.dismiss();
     // Streaming → sendMessage queues it (§4.4); editing → it truncates and resends (§2).
     void sendMessage({ text: message, attachments: atts }, { sessionId });
   }, [canSend, commandContext, sessionId]);
