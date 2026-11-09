@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { Linking, Platform, StyleSheet, View } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
@@ -7,7 +7,7 @@ import { Chip } from '@/components/chip';
 import { FadeIn as Enter } from '@/components/fade-in';
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
-import { openBatteryOptimizationSettings, requestExactAlarmPermission, requestNotificationPermission } from '@/core/notify';
+import { openBatteryOptimizationSettings, openNotificationSettings, requestExactAlarmPermission, requestNotificationPermission } from '@/core/notify';
 import { deliveryBlocker } from '@/core/runtime/types';
 import { useDeliveryReadiness } from '@/hooks/use-delivery-readiness';
 import { useT } from '@/i18n';
@@ -85,7 +85,7 @@ export function PermissionsStep({ onDone, onSkip, onBack }: { onDone: () => void
     setBusy(kind);
     try {
       if (kind === 'notifications') {
-        if (r?.notifications === 'denied') await Linking.openSettings();
+        if (r?.notifications === 'denied') await openNotificationSettings();
         else await requestNotificationPermission();
       } else if (kind === 'exactAlarms') await requestExactAlarmPermission();
       else await openBatteryOptimizationSettings();
@@ -145,7 +145,7 @@ export function PermissionsStep({ onDone, onSkip, onBack }: { onDone: () => void
             detail={r && !r.batteryOptimized ? t('welcome.permissions.batteryOn') : t('welcome.permissions.batteryWhy')}
             badge={{ label: t('welcome.permissions.recommended'), required: false }}
             on={r ? !r.batteryOptimized : null}
-            action={t('welcome.permissions.openSettings')}
+            action={t('welcome.permissions.allow')}
             loading={busy === 'battery'}
             onPress={() => void fix('battery')}
           />

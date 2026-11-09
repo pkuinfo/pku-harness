@@ -40,8 +40,9 @@ still an explicit option. `ListGroup` defaults to flat light rows and rounded da
 no longer run an idle animation. Native controls still use the host theme.
 
 The P/orbit logo is retained as the product mark. It is not repeated as decorative page art.
-Onboarding keeps its consent/setup flow but uses a compact mark and relevant icons. Existing
-illustration assets can remain in source without being mounted in the normal flow.
+Onboarding is the one place with hero art: the intro's first page shows the 3D brand hero (2D
+fallback when GL is unavailable or errors), the other intro pages their illustrations, and the
+finish screen the celebrating hero. Setup steps use a compact icon.
 
 ## 2. Tokens
 

@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 
 import { FadeIn } from '@/components/fade-in';
 import { PressableScale } from '@/components/pressable-scale';
@@ -15,9 +15,10 @@ import { useDeliveryReadiness } from '@/hooks/use-delivery-readiness';
 import { summarize } from '@/screens/plugins/status';
 import { usePluginEntries } from '@/screens/plugins/use-plugin-status';
 import { useT } from '@/i18n';
-import { useTheme } from '@/theme';
+import { spacing, useTheme } from '@/theme';
 
 import { remindersSummary, suggestionsFor } from '../flow';
+import { BrandHero } from '../scene/brand-hero';
 import { StepShell } from './step-shell';
 
 function SummaryRow({ icon, label, value, ok, index }: { icon: IconName; label: string; value: string; ok: boolean; index: number }) {
@@ -38,8 +39,9 @@ function SummaryRow({ icon, label, value, ok, index }: { icon: IconName; label: 
 }
 
 /** Step 5 · Done (完成): what was set up, and two or three first questions that fit it. */
-export function DoneStep({ onFinish, onBack }: { onFinish: (question?: string) => void; onBack: () => void; live: boolean; forceFallback: boolean }) {
+export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: (question?: string) => void; onBack: () => void; live: boolean; forceFallback: boolean }) {
   const t = useT();
+  const { width } = useWindowDimensions();
   const { config, hasKey } = useAIConfig();
   const account = useCampusAccount();
   const plugins = usePlugins();
@@ -63,7 +65,11 @@ export function DoneStep({ onFinish, onBack }: { onFinish: (question?: string) =
       step="done"
       title={t('welcome.done.title')}
       why={hasKey ? t('welcome.done.why') : t('welcome.done.whyNoAI')}
-      icon="check"
+      hero={
+        <View className="items-center">
+          <BrandHero size={Math.round(Math.min(width - spacing.xxxl * 2, 200))} active={live} mode="celebrate" forceFallback={forceFallback} />
+        </View>
+      }
       primary={t('welcome.done.start')}
       onPrimary={() => onFinish()}
       onBack={onBack}>

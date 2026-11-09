@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { useEffect, useRef, useState, type ComponentRef } from 'react';
+import { TextInput, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 
 import { Chip } from '@/components/chip';
@@ -33,6 +33,7 @@ export function CampusStep({ onDone, onSkip, onBack }: { onDone: () => void; onS
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const passwordRef = useRef<ComponentRef<typeof TextInput>>(null);
   const [error, setError] = useState<{ text: string; network: boolean } | null>(null);
   const supported = HOST_CAPABILITIES.has('campus-session');
   // The name comes from the campus card a moment after sign-in; stop waiting for it after a while.
@@ -107,8 +108,8 @@ export function CampusStep({ onDone, onSkip, onBack }: { onDone: () => void; onS
       onSkip={onSkip}
       onBack={onBack}>
       <View className="gap-4">
-        <Field label={t('welcome.campus.username')} value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} keyboardType="number-pad" textContentType="username" autoComplete="username" />
-        <SecretField label={t('welcome.campus.password')} value={password} onChangeText={setPassword} textContentType="password" autoComplete="password" onSubmitEditing={canLogin ? login : undefined} returnKeyType="go" />
+        <Field label={t('welcome.campus.username')} value={username} onChangeText={setUsername} autoCapitalize="none" autoCorrect={false} keyboardType="number-pad" textContentType="username" autoComplete="username" returnKeyType="next" submitBehavior="submit" onSubmitEditing={() => passwordRef.current?.focus()} />
+        <SecretField ref={passwordRef} label={t('welcome.campus.password')} value={password} onChangeText={setPassword} textContentType="password" autoComplete="password" onSubmitEditing={canLogin ? login : undefined} returnKeyType="go" />
         <View className="flex-row gap-2">
           <Icon name="shield" size={16} color={c.textMuted} />
           <Text variant="caption" tone="muted" className="flex-1">

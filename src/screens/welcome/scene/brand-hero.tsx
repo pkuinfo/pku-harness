@@ -99,6 +99,10 @@ export function BrandHero({ size, active, mode = 'intro', forceFallback = false 
         const pixelRatio = gl.drawingBufferWidth / Math.max(1, size);
         const s = new Scene(gl, { spec: heroVariants[variant], mode, still: reduced, light: themeRef.current === 'light', pixelRatio, onError: fail });
         s.start();
+        // Draw calls don't throw: a context that compiles but can't draw would otherwise sit
+        // "ready" as an empty box. Any GL error after the first frame falls back to 2D.
+        const err = gl.getError();
+        if (gl.isContextLost?.() || err !== gl.NO_ERROR) throw new Error(`GL error 0x${err.toString(16)} after the first frame`);
         s.setActive(liveRef.current);
         scene.current = s;
         setStatus('ready');

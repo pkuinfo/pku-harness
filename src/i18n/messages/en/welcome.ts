@@ -27,7 +27,8 @@ export const welcome: Messages['welcome'] = {
       title: 'On time,\nto the minute',
       body: 'Even “every 3 days, 16 times” works. Your phone’s own alarm clock delivers each one right on time.',
     },
-    plugins: {
+  
+  plugins: {
       kicker: 'Everything is a plugin',
       title: 'Our framework,\nyour community',
       body: 'Every capability is a plugin, and community plugins are on equal footing with built-in ones. Your credentials stay on your phone.',
@@ -98,7 +99,25 @@ export const welcome: Messages['welcome'] = {
     explain: 'The same IAAA login you use for the portal. Your password stays in this phone’s secure storage and is only sent to PKU’s sign-in service. If PKU asks for an SMS code, we’ll prompt you for it.',
     networkHint: 'Some services only work on the campus network. If you’re off campus, connect to it and try again.',
   },
-  plugins: {
+  authenticator: {
+    title: 'Use this app as your authenticator',
+    why: 'PKU sometimes asks for an authenticator code when you sign in. Bind this app as your authenticator and it fills those codes in for you; the current code also goes on your dashboard.',
+    replaces: 'Binding replaces any authenticator you set up in another app (FreeOTP, Google Authenticator…): that one stops working.',
+    stays: 'The key stays in this phone’s secure storage. It is never uploaded or shown to the AI.',
+    sms: 'We’ll check your account with PKU and send an SMS code to the phone number on it.',
+    agree: 'I understand my old authenticator will stop working',
+    send: 'Send SMS code',
+    sentTo: 'Code sent to {to}',
+    sentToPhone: 'Code sent to your account’s phone',
+    code: 'SMS code',
+    bind: 'Bind',
+    resend: 'Send again',
+    bound: 'This app is your authenticator',
+    boundWhy: 'Two-step codes are filled in for you, and your dashboard shows the current code.',
+    needsSignIn: 'Sign in to your PKU account first to set this up. You can do it later in Settings → Authenticator.',
+    later: 'Not now',
+    widgetTitle: 'Authenticator',
+  },  plugins: {
     title: 'Choose your plugins',
     why: 'Every campus service is a plugin. Whatever you turn on, both you and the AI can use.',
     note: 'You can change this anytime in Settings → Plugins',
@@ -134,7 +153,7 @@ export const welcome: Messages['welcome'] = {
     exact: 'Alarms & reminders',
     exactWhy: 'Allow it in Android’s “Alarms & reminders” so reminders fire on the minute',
     battery: 'Unrestricted battery',
-    batteryWhy: 'Scheduled checks, like a morning balance check, need to run on time in the background. Choose “Unrestricted” in battery settings.',
+    batteryWhy: 'Scheduled checks, like a morning balance check, need to run on time in the background. Tap Allow in the dialog that opens.',
     batteryOn: 'Background work isn’t restricted',
     missingNotifications: 'Without notifications, reminders and alerts won’t show up.',
     missingExact: 'Without alarms & reminders, Android may deliver reminders minutes late or more.',

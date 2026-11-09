@@ -76,3 +76,14 @@ export async function seedStarterWidgets() {
   }
   await prefs.set('dashboard.seeded', true);
 }
+
+/**
+ * Put a plugin's widget at the top of the dashboard, once: nothing happens when that widget is
+ * already there (the user or the agent may have placed it).
+ */
+export async function addPluginWidget(source: { plugin: string; widget: string }, title: string, size: Widget['size'] = 'md') {
+  if (widgetStore.list().some((w) => w.source?.plugin === source.plugin && w.source.widget === source.widget)) return;
+  const now = Date.now();
+  await widgetStore.put({ id: widgetStore.newId(), title, size, spec: {}, bindings: {}, source, position: -1, createdAt: now, updatedAt: now });
+  await widgetStore.reorder(widgetStore.list().map((w) => w.id));
+}

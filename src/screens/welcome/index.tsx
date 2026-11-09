@@ -13,6 +13,7 @@ import { prefillChat } from './prefill';
 import { HeroVariantProvider } from './scene/hero-variant';
 import { parseHeroVariant } from './scene/variants';
 import { AIStep } from './steps/ai-step';
+import { AuthenticatorStep } from './steps/authenticator-step';
 import { CampusStep } from './steps/campus-step';
 import { DoneStep } from './steps/done-step';
 import { PermissionsStep } from './steps/permissions-step';
@@ -52,7 +53,7 @@ function Layer({ leaving, dir, children }: { leaving: boolean; dir: 1 | -1; chil
 
 /**
  * First run (src/app/welcome.tsx): the intro and terms, then setup (AI service → campus account
- * → plugins → reminder permissions → done). Progress is saved after every step, so a kill mid-setup resumes on the same
+ * → authenticator → plugins → reminder permissions → done). Progress is saved after every step, so a kill mid-setup resumes on the same
  * step; onboarding completes only on the finish screen.
  *
  * Dev only: `pkuharness://welcome?reset=1` replays it from the start without touching any data
@@ -161,6 +162,8 @@ export function Welcome() {
         return <AIStep onDone={done} onSkip={skip} onBack={onBack} />;
       case 'campus':
         return <CampusStep onDone={done} onSkip={skip} onBack={onBack} />;
+      case 'authenticator':
+        return <AuthenticatorStep onDone={done} onSkip={skip} onBack={onBack} />;
       case 'plugins':
         return <PluginsStep onDone={done} onSkip={skip} onBack={onBack} />;
       case 'permissions':

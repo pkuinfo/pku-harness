@@ -66,6 +66,7 @@ export function StepShell({
   primaryLoading,
   primaryDisabled,
   onSkip,
+  skipLabel,
   onBack,
   note,
   hero,
@@ -82,6 +83,8 @@ export function StepShell({
   primaryLoading?: boolean;
   primaryDisabled?: boolean;
   onSkip?: () => void;
+  /** The skip button's label (default 稍后设置). */
+  skipLabel?: string;
   onBack?: () => void;
   note?: string;
 }) {
@@ -122,7 +125,7 @@ export function StepShell({
           </Text>
         ) : null}
         <Button title={primary} size="lg" onPress={onPrimary} loading={primaryLoading} disabled={primaryDisabled} />
-        {onSkip ? <Button title={t('welcome.step.later')} variant="ghost" size="md" onPress={onSkip} /> : null}
+        {onSkip ? <Button title={skipLabel ?? t('welcome.step.later')} variant="ghost" size="md" onPress={onSkip} /> : null}
       </View>
     </KeyboardAvoidingView>
   );

@@ -4,9 +4,11 @@ import { describe, expect, test } from 'bun:test';
 import { advance, nextStep, parseProgress, permissionsOutcome, prevStep, remindersSummary, resumePhase, retreat, startSetup, stepPosition, suggestionsFor, type OnboardingProgress } from './flow';
 
 describe('step order', () => {
-  test('next / prev walk ai → campus → plugins → permissions → done', () => {
+  test('next / prev walk ai → campus → authenticator → plugins → permissions → done', () => {
     expect(nextStep('ai')).toBe('campus');
-    expect(nextStep('campus')).toBe('plugins');
+    expect(nextStep('campus')).toBe('authenticator');
+    expect(nextStep('authenticator')).toBe('plugins');
+    expect(prevStep('plugins')).toBe('authenticator');
     expect(nextStep('plugins')).toBe('permissions');
     expect(nextStep('permissions')).toBe('done');
     expect(nextStep('done')).toBe('done');
@@ -15,10 +17,10 @@ describe('step order', () => {
     expect(prevStep('done')).toBe('permissions');
   });
 
-  test('progress position covers the four task steps only', () => {
-    expect(stepPosition('ai')).toEqual({ index: 1, total: 4 });
-    expect(stepPosition('plugins')).toEqual({ index: 3, total: 4 });
-    expect(stepPosition('permissions')).toEqual({ index: 4, total: 4 });
+  test('progress position covers the five task steps only', () => {
+    expect(stepPosition('ai')).toEqual({ index: 1, total: 5 });
+    expect(stepPosition('plugins')).toEqual({ index: 4, total: 5 });
+    expect(stepPosition('permissions')).toEqual({ index: 5, total: 5 });
     expect(stepPosition('done')).toBeNull();
   });
 });
@@ -36,13 +38,13 @@ describe('progress and resume', () => {
     p = advance(p, 'campus', 'skipped');
     // Round-trip through storage (JSON), as the kv store does.
     const stored = JSON.parse(JSON.stringify(p));
-    expect(resumePhase(stored)).toEqual({ kind: 'setup', step: 'plugins' });
+    expect(resumePhase(stored)).toEqual({ kind: 'setup', step: 'authenticator' });
     expect(parseProgress(stored)?.outcomes).toEqual({ ai: 'done', campus: 'skipped' });
   });
 
   test('skipping every step still reaches the finish screen', () => {
     let p: OnboardingProgress = startSetup(0);
-    for (const s of ['ai', 'campus', 'plugins', 'permissions'] as const) p = advance(p, s, 'skipped');
+    for (const s of ['ai', 'campus', 'authenticator', 'plugins', 'permissions'] as const) p = advance(p, s, 'skipped');
     expect(p.step).toBe('done');
     expect(p.outcomes.permissions).toBe('skipped');
   });

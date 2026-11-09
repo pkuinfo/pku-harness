@@ -172,7 +172,7 @@ export function AIStep({ onDone, onSkip, onBack }: { onDone: () => void; onSkip:
               returnKeyType="done"
               trailing={
                 <View className="flex-row">
-                  <IconButton icon="copy" label={t('welcome.ai.paste')} variant="ghost" size={40} onPress={paste} />
+                  <IconButton icon="paste" label={t('welcome.ai.paste')} variant="ghost" size={40} onPress={paste} />
                   <IconButton icon={shown ? 'eyeOff' : 'eye'} label={shown ? t('welcome.ai.hide') : t('welcome.ai.show')} variant="ghost" size={40} onPress={() => setShown((s) => !s)} />
                 </View>
               }

@@ -48,8 +48,9 @@ function PluginRow({ plugin }: { plugin: PluginDef }) {
         </Text>
       </View>
       {plugin.core ? (
-        <View accessible accessibilityLabel={t('welcome.plugins.alwaysOnA11y', { name })} className="h-10 w-10 items-center justify-center">
-          <Icon name="lock" size={16} color={c.textFaint} />
+        // Built in: a plain "on" switch (a disabled one reads as off) that simply stays on.
+        <View pointerEvents="none" accessible accessibilityLabel={t('welcome.plugins.alwaysOnA11y', { name })} accessibilityRole="switch" accessibilityState={{ checked: true, disabled: true }}>
+          <NativeSwitch value onValueChange={() => {}} />
         </View>
       ) : (
         <NativeSwitch
