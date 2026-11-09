@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { File, Paths } from 'expo-file-system';
 import { router } from 'expo-router';
 import * as Sharing from 'expo-sharing';
@@ -14,6 +15,8 @@ import { useCampusAccount } from '@/core/campus/account';
 import { displayHost } from '@/core/cloud/config';
 import { useCloudProvider } from '@/core/cloud/provider';
 import { exportData, resetData } from '@/core/data';
+import { fetchAppUpdate, installedVersion, useAppUpdate } from '@/core/update/app-update';
+import { promptAppUpdate } from '@/components/update-prompt';
 import { haptics } from '@/utils/haptics';
 import { systemZoneId, useTimezonePreference } from '@/core/clock/preference';
 import { formatUtcOffset, offsetNow, zoneName } from '@/core/clock/zones';
@@ -52,8 +55,27 @@ export function Settings() {
   const campus = useCampusAccount();
   const cloud = useCloudProvider();
   const cloudHost = displayHost(cloud.baseURL);
+  const update = useAppUpdate();
+  const [checking, setChecking] = useState<string | null>(null);
+  const checkNow = async () => {
+    setChecking(t('app.settings.checking'));
+    try {
+      const u = await fetchAppUpdate();
+      if (u) promptAppUpdate(u);
+      setChecking(u ? null : t('app.settings.upToDate'));
+    } catch (e) {
+      setChecking(t('app.settings.checkFailed', { reason: e instanceof Error ? e.message : String(e) }));
+    }
+  };
   return (
     <Screen title={t('app.settings.title')}>
+      {update ? (
+        <FadeIn index={0}>
+          <ListGroup>
+            <ListRow icon="download" iconTint={c.accent} title={t('app.settings.updateRow', { version: update.version })} subtitle={t('app.settings.updateRowSubtitle')} onPress={() => promptAppUpdate(update)} />
+          </ListGroup>
+        </FadeIn>
+      ) : null}
       <FadeIn index={0}>
         <ListGroup title={t('app.settings.account')}>
           <ListRow
@@ -147,6 +169,11 @@ export function Settings() {
               ])
             }
           />
+        </ListGroup>
+      </FadeIn>
+      <FadeIn index={6}>
+        <ListGroup title={t('app.settings.about')}>
+          <ListRow icon="refresh" title={t('app.settings.checkUpdates')} subtitle={checking ?? t('app.settings.version', { version: installedVersion() })} onPress={() => void checkNow()} />
         </ListGroup>
       </FadeIn>
     </Screen>

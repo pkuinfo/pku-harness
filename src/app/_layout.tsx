@@ -18,6 +18,7 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { ApprovalPrompt } from '@/components/approval-prompt';
 import { CloudConsentPrompt } from '@/components/cloud-consent-prompt';
 import { wakeAurora } from '@/components/aurora';
+import { UpdatePrompt } from '@/components/update-prompt';
 import { VerificationPrompt } from '@/components/verification-prompt';
 import { boot } from '@/core/boot';
 import { useNotificationRouting } from '@/core/notify/use-routing';
@@ -105,6 +106,7 @@ export default function RootLayout() {
         <ApprovalPrompt />
         <CloudConsentPrompt />
         <VerificationPrompt />
+        <UpdatePrompt />
       </ThemeProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>

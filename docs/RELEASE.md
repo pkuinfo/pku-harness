@@ -63,6 +63,18 @@ To try the pipeline without publishing anything, run the workflow manually (Acti
 APK → Run workflow): it builds the same APK signed with a throwaway key and uploads it as a
 workflow artifact for three days.
 
+## How installed apps learn about it
+
+- **JS-only changes ship by OTA** (docs/OTA.md): installed apps with the same native runtime
+  download the signed update in the background and apply it on the next launch. Prefer this for
+  small fixes; no new APK, no reinstall.
+- **A release with native changes needs the APK.** The app checks
+  `api.github.com/repos/pkuinfo/pku-harness/releases/latest` at most every 12 hours after launch
+  (`src/core/update/app-update.ts`). When the tag is newer than the installed version it asks
+  once ("Download" opens the APK built for the phone's CPU; "Later" quiets that version for 3
+  days) and keeps an "update available" row at the top of Settings. Settings → About →
+  Check for updates runs the check on demand. Builds before 1.0.6 don't have the check.
+
 ## Notes
 
 - The release config plugin (`config-plugins/with-release-signing.js`) reads the key from the
