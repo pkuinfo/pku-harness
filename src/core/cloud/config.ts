@@ -47,6 +47,17 @@ export function checkBaseURL(input: string, opts: { dev: boolean }): URLCheck {
   return { ok: true, url: `${scheme}://${hostname}${host[2] ? `:${host[2]}` : ''}${path}` };
 }
 
+/**
+ * A custom URL that is the official instance's counts as "official", so the user follows the
+ * official server when it moves (OFFICIAL_URL changes) instead of staying on the old address.
+ * `customURL` is kept so switching back to Self-hosted shows what they typed.
+ */
+export function normalizeConfig(config: ProviderConfig, opts: { dev: boolean }): ProviderConfig {
+  if (config.mode !== 'custom') return config;
+  const r = checkBaseURL(config.customURL ?? '', opts);
+  return r.ok && r.url === OFFICIAL_URL ? { ...config, mode: 'official' } : config;
+}
+
 /** The base URL in effect for a config, or undefined when off / invalid. */
 export function resolveBaseURL(config: ProviderConfig, opts: { dev: boolean }): string | undefined {
   if (config.mode === 'off') return undefined;

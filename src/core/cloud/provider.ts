@@ -7,7 +7,7 @@ import { setDynamicCapability } from '@/core/runtime/capabilities';
 import { kv } from '@/core/store/kv';
 
 import { toCloudError, type FetchLike } from './client';
-import { DEFAULT_PROVIDER_CONFIG, checkBaseURL, resolveBaseURL, type ProviderConfig } from './config';
+import { DEFAULT_PROVIDER_CONFIG, checkBaseURL, normalizeConfig, resolveBaseURL, type ProviderConfig } from './config';
 
 /**
  * Which cloud provider the user chose (docs/CLOUD.md §2.4): off (default), official, or a
@@ -69,12 +69,13 @@ export async function fetchMeta(baseURL: string, signal?: AbortSignal): Promise<
 export const cloudProvider = {
   get: () => state,
   async load() {
-    const config = (await store.get<ProviderConfig>('provider')) ?? DEFAULT_PROVIDER_CONFIG;
+    const config = normalizeConfig((await store.get<ProviderConfig>('provider')) ?? DEFAULT_PROVIDER_CONFIG, { dev: __DEV__ });
     const baseURL = resolveBaseURL(config, { dev: __DEV__ });
     const meta = baseURL ? await store.get<MetaResponse>(metaKey(baseURL)) : undefined;
     set({ config, baseURL, meta, online: false });
   },
-  async save(config: ProviderConfig) {
+  async save(input: ProviderConfig) {
+    const config = normalizeConfig(input, { dev: __DEV__ });
     const baseURL = resolveBaseURL(config, { dev: __DEV__ });
     if (config.mode === 'custom' && !baseURL) throw new CloudError('not_configured', 'invalid base URL');
     await store.set('provider', config);

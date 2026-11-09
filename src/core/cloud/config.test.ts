@@ -1,7 +1,7 @@
 /// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
 
-import { OFFICIAL_URL, checkBaseURL, displayHost, resolveBaseURL, toWebSocketURL } from './config';
+import { OFFICIAL_URL, checkBaseURL, displayHost, normalizeConfig, resolveBaseURL, toWebSocketURL } from './config';
 
 describe('checkBaseURL', () => {
   const prod = { dev: false };
@@ -52,5 +52,18 @@ describe('resolveBaseURL / helpers', () => {
     expect(displayHost(undefined)).toBe('');
     expect(toWebSocketURL('https://a.org/p', '/v1/x')).toBe('wss://a.org/p/v1/x');
     expect(toWebSocketURL('http://10.0.2.2:8787', '/v1/x')).toBe('ws://10.0.2.2:8787/v1/x');
+  });
+});
+
+describe('normalizeConfig', () => {
+  const opts = { dev: false };
+  test('a custom URL equal to the official instance becomes official, keeping what was typed', () => {
+    expect(normalizeConfig({ mode: 'custom', customURL: `${OFFICIAL_URL}/` }, opts)).toEqual({ mode: 'official', customURL: `${OFFICIAL_URL}/` });
+    expect(normalizeConfig({ mode: 'custom', customURL: OFFICIAL_URL.replace('harness.', 'HARNESS.') }, opts).mode).toBe('official');
+    expect(normalizeConfig({ mode: 'custom', customURL: `${OFFICIAL_URL}-staging` }, opts).mode).toBe('custom');
+  });
+  test('other configs are unchanged', () => {
+    for (const c of [{ mode: 'off' as const }, { mode: 'official' as const }, { mode: 'custom' as const, customURL: 'https://cloud.example.org' }, { mode: 'custom' as const, customURL: 'not a url' }])
+      expect(normalizeConfig(c, opts)).toEqual(c);
   });
 });
