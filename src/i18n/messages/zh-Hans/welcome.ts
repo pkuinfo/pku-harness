@@ -165,6 +165,9 @@ export const welcome = {
     reminders: '提醒',
     remindersOnTime: '准时送达',
     remindersMayBeLate: '可能延迟',
+    copilot: 'Copilot',
+    copilotReady: '已就绪',
+    copilotLater: '尚未设置（对话中输入 /copilot）',
     remindersOff: '通知未开启',
     suggestTitle: '可以这样开始',
     /** First questions: put into the chat composer and sent to the model as the user's words. */

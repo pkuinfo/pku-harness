@@ -186,6 +186,9 @@ export const welcome: Messages['welcome'] = {
     reminders: 'Reminders',
     remindersOnTime: 'On time',
     remindersMayBeLate: 'May be late',
+    copilot: 'Copilot',
+    copilotReady: 'Ready',
+    copilotLater: 'Not set up yet (/copilot in chat)',
     remindersOff: 'Notifications off',
     suggestTitle: 'Try asking',
     suggest: {

@@ -1,5 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import { View, useWindowDimensions } from 'react-native';
+import { Platform, View, useWindowDimensions } from 'react-native';
 
 import { FadeIn } from '@/components/fade-in';
 import { PressableScale } from '@/components/pressable-scale';
@@ -18,6 +18,7 @@ import { useT } from '@/i18n';
 import { spacing, useTheme } from '@/theme';
 
 import { remindersSummary, suggestionsFor } from '../flow';
+import { useCopilotReady } from './use-copilot-ready';
 import { BrandHero } from '../scene/brand-hero';
 import { StepShell } from './step-shell';
 
@@ -59,6 +60,7 @@ export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: 
   // Live, not the step's outcome: the user may have fixed a permission since (or saved progress predates the step).
   const { readiness } = useDeliveryReadiness();
   const reminders = readiness ? remindersSummary(readiness) : null;
+  const copilot = useCopilotReady();
 
   return (
     <StepShell
@@ -84,10 +86,13 @@ export function DoneStep({ onFinish, onBack, live, forceFallback }: { onFinish: 
           ok={reminders === 'onTime'}
           value={reminders === 'onTime' ? t('welcome.done.remindersOnTime') : reminders === 'mayBeLate' ? t('welcome.done.remindersMayBeLate') : reminders === 'off' ? t('welcome.done.remindersOff') : '—'}
         />
+        {Platform.OS === 'android' ? (
+          <SummaryRow index={7} icon="phone" label={t('welcome.done.copilot')} ok={!!copilot} value={copilot == null ? '—' : copilot ? t('welcome.done.copilotReady') : t('welcome.done.copilotLater')} />
+        ) : null}
       </View>
       {suggestions.length ? (
         <View className="gap-2">
-          <FadeIn index={7}>
+          <FadeIn index={8}>
             <Text variant="micro" tone="faint">
               {t('welcome.done.suggestTitle')}
             </Text>
