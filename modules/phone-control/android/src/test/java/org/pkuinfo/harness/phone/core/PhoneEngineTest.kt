@@ -285,6 +285,34 @@ class PhoneEngineTest {
         assertEquals(0, device.calls)
     }
 
+    @Test fun tickingTextElsewhereDoesNotBlockATapOnAnUnchangedTarget() = runBlocking {
+        val device = FakeDevice()
+        val timer = DeviceElement("node-2", "text", "04:56", listOf(0, 60, 100, 90))
+        device.frame = device.frame.copy(elements = device.frame.elements + timer, unstable = true)
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val snapshot = engine.observe(id)
+        val approval = engine.assess(id, snapshot.snapshotId, "e1")
+        device.frame = device.frame.copy(elements = listOf(device.frame.elements[0], timer.copy(text = "04:55")))
+        engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval)
+        assertEquals(1, device.calls)
+    }
+
+    @Test fun movedOrNewElementsStillMakeTheScreenStale() = runBlocking {
+        val device = FakeDevice()
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        var snapshot = engine.observe(id)
+        var approval = engine.assess(id, snapshot.snapshotId, "e1")
+        device.frame = device.frame.copy(elements = device.frame.elements + DeviceElement("node-2", "button", "Delete", listOf(0, 60, 50, 110), clickable = true))
+        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval) }
+        snapshot = engine.observe(id)
+        approval = engine.assess(id, snapshot.snapshotId, "e1")
+        device.frame = device.frame.copy(elements = listOf(device.frame.elements[0], device.frame.elements[1].copy(bounds = listOf(0, 0, 50, 50))))
+        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval) }
+        assertEquals(0, device.calls)
+    }
+
     @Test fun changedPolicyCannotReuseAnEarlierApproval() = runBlocking {
         val device = FakeDevice()
         val engine = device.engine()

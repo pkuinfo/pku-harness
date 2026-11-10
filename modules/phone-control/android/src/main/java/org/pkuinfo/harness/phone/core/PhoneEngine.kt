@@ -74,7 +74,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
 
     suspend fun assess(id: String, snapshotId: String, ref: String, submit: Boolean = false): PhoneAssessment = mutex.withLock {
         val session = active(id)
-        val (frame, observation) = fresh(session, snapshotId)
+        val (frame, observation) = fresh(session, snapshotId, ref)
         val target = target(observation, ref)
         validateTarget(target)
         if (submit && !target.editable) fail(PhoneFailure.INVALID, "Choose an editable field")
@@ -99,7 +99,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                     if (session.handedOver) fail(PhoneFailure.HANDOFF, "The user has control")
                     if (session.device.isLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to continue")
                 } else {
-                    val (frame, observation) = fresh(session, snapshotId)
+                    val (frame, observation) = fresh(session, snapshotId, ref)
                     if (ref != null) element = target(observation, ref).also(::validateTarget)
                     when (action) {
                         PhoneAction.Tap, PhoneAction.Submit -> {
@@ -250,17 +250,35 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         return observation
     }
 
-    private suspend fun fresh(session: Session, snapshotId: String?): Pair<DeviceFrame, PhoneObservation> {
+    private suspend fun fresh(session: Session, snapshotId: String?, ref: String? = null): Pair<DeviceFrame, PhoneObservation> {
         val saved = session.observed ?: fail(PhoneFailure.STALE, "Observe before acting")
         if (saved.second.snapshotId != snapshotId) fail(PhoneFailure.STALE, "Observe again; the screen reference expired")
         val actual = checkedFrame(session)
         if (actual.protected) fail(PhoneFailure.HANDOFF, "This protected screen requires the user")
         if (actual.needsUser) fail(PhoneFailure.HANDOFF, "The app needs attention on the user's screen")
-        if (actual.unstable || actual != saved.first) {
+        val targetIndex = ref?.let { r -> saved.second.targets.indexOfFirst { it.ref == r }.takeIf { it >= 0 } }
+        if (actual != saved.first && !sameForTarget(saved.first, actual, targetIndex) || actual.unstable && targetIndex == null) {
             session.observed = null
             fail(PhoneFailure.STALE, "The screen changed; observe again")
         }
-        return saved
+        // The current frame, so the action's risk is judged on what the screen says now.
+        return actual to saved.second
+    }
+
+    /**
+     * Acting on one target of a screen whose other text keeps changing (a running timer, a clock, a
+     * progress counter): still the same screen when the windows and every element's identity,
+     * position and state match, the target is exactly as observed, and only the other elements' text
+     * or slider values moved. Anything that appeared, vanished or moved is a different screen.
+     */
+    private fun sameForTarget(saved: DeviceFrame, actual: DeviceFrame, targetIndex: Int?): Boolean {
+        if (targetIndex == null || actual.elements.size != saved.elements.size) return false
+        if (actual.copy(elements = emptyList(), unstable = false) != saved.copy(elements = emptyList(), unstable = false)) return false
+        return actual.elements.indices.all { i ->
+            val now = actual.elements[i]
+            val then = saved.elements[i]
+            if (i == targetIndex) now == then else now.copy(text = "", rangeCurrent = null) == then.copy(text = "", rangeCurrent = null)
+        }
     }
 
     private fun active(id: String): Session = current?.takeIf { it.id == id }?.also(::live)
