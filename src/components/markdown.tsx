@@ -1,5 +1,5 @@
 import type { Token, Tokens } from 'marked';
-import { memo, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, memo, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Linking, ScrollView, View } from 'react-native';
 
 import { useT } from '@/i18n';
@@ -81,10 +81,11 @@ function Inline({ tokens }: { tokens: Token[] | undefined }): ReactNode {
       case 'text':
       case 'escape': {
         const tx = t as Tokens.Text;
-        return tx.tokens ? <Inline key={i} tokens={tx.tokens} /> : <Text key={i}>{decode(tx.text)}</Text>;
+        // A bare string inherits the enclosing Text's style (a nested Text would reset headings to body).
+        return tx.tokens ? <Inline key={i} tokens={tx.tokens} /> : <Fragment key={i}>{decode(tx.text)}</Fragment>;
       }
       default:
-        return 'text' in t && typeof t.text === 'string' ? <Text key={i}>{decode(t.text)}</Text> : null;
+        return 'text' in t && typeof t.text === 'string' ? <Fragment key={i}>{decode(t.text)}</Fragment> : null;
     }
   });
 }
