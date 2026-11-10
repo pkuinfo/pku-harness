@@ -45,7 +45,7 @@ export function PluginsScreen() {
   const shown = entries.filter(({ plugin }) => matches(query, [pluginName(plugin, locale), plugin.name, pluginDescription(plugin, locale), plugin.id]));
   // Keep the remote section available for its add / marketplace actions.
   const groups = groupPlugins(
-    shown.map((e) => ({ id: e.plugin.id, core: e.plugin.core, remote: e.plugin.remote, providers: e.plugin.providers, entry: e })),
+    shown.map((e) => ({ id: e.plugin.id, core: e.plugin.core, requires: e.plugin.requires, remote: e.plugin.remote, providers: e.plugin.providers, entry: e })),
     searching ? [] : ['remote'],
   );
   const { on, total } = summarize(entries.map((e) => e.status));
