@@ -17,6 +17,7 @@ import { AIStep } from './steps/ai-step';
 import { AuthenticatorStep } from './steps/authenticator-step';
 import { CampusStep } from './steps/campus-step';
 import { DoneStep } from './steps/done-step';
+import { CopilotStep } from './steps/copilot-step';
 import { PermissionsStep } from './steps/permissions-step';
 import { PluginsStep } from './steps/plugins-step';
 
@@ -54,7 +55,7 @@ function Layer({ leaving, dir, children }: { leaving: boolean; dir: 1 | -1; chil
 
 /**
  * First run (src/app/welcome.tsx): the intro and terms, then setup (AI service → campus account
- * → authenticator → plugins → reminder permissions → done). Progress is saved after every step, so a kill mid-setup resumes on the same
+ * → authenticator → plugins → reminder permissions → Copilot → done). Progress is saved after every step, so a kill mid-setup resumes on the same
  * step; onboarding completes only on the finish screen.
  *
  * Dev only: `pkuharness://welcome?reset=1` replays it from the start without touching any data
@@ -170,6 +171,8 @@ export function Welcome() {
         return <PluginsStep onDone={done} onSkip={skip} onBack={onBack} />;
       case 'permissions':
         return <PermissionsStep onDone={done} onSkip={skip} onBack={onBack} />;
+      case 'copilot':
+        return <CopilotStep onDone={done} onSkip={skip} onBack={onBack} />;
       case 'done':
         return <DoneStep onFinish={finish} onBack={onBack} live={!isLeaving && !finishing} forceFallback={forceFallback} />;
     }

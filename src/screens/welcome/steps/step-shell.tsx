@@ -1,6 +1,6 @@
-import { useEffect, type ReactNode } from 'react';
-import { ScrollView, View } from 'react-native';
-import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
+import { useEffect, useState, type ReactNode } from 'react';
+import { View } from 'react-native';
+import { KeyboardAvoidingView, KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -15,6 +15,12 @@ import { curves, duration, spacing, useTheme } from '@/theme';
 import { TASK_STEPS, stepPosition, type SetupStep } from '../flow';
 
 const EASE_OUT = Easing.bezier(...curves.out);
+/** KeyboardAwareScrollView isn't a Uniwind-mapped component, so it takes a plain style. */
+const FILL = { flex: 1 } as const;
+const CONTENT = {
+  width: '100%', maxWidth: MAX_CONTENT_WIDTH, alignSelf: 'center', gap: spacing.lg + spacing.xs,
+  paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.xl,
+} as const;
 
 /** One segment per task step: done ones full, the current one fills as it arrives. */
 function Progress({ step }: { step: SetupStep }) {
@@ -91,6 +97,8 @@ export function StepShell({
   const t = useT();
   const c = useTheme();
   const insets = useSafeAreaInsets();
+  // The focused field scrolls above the keyboard and the pinned actions under it.
+  const [footer, setFooter] = useState(0);
   return (
     <KeyboardAvoidingView className="flex-1" behavior="padding">
       <View className="flex-row items-center gap-3 px-4 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
@@ -98,7 +106,12 @@ export function StepShell({
         <Progress step={step} />
         <View className="h-10 w-10" />
       </View>
-      <ScrollView className="flex-1" contentContainerClassName="w-full self-center gap-5 px-4 pt-4 pb-6" contentContainerStyle={{ maxWidth: MAX_CONTENT_WIDTH }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <KeyboardAwareScrollView
+        style={FILL}
+        bottomOffset={footer + spacing.lg}
+        contentContainerStyle={CONTENT}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}>
         <View className="gap-3">
           {hero ?? (
             <View className="h-10 w-10 items-center justify-center">
@@ -117,8 +130,11 @@ export function StepShell({
           </FadeIn>
         </View>
         {children}
-      </ScrollView>
-      <View className="w-full gap-1 self-center border-t border-edge bg-bg px-4 pt-3" style={{ maxWidth: MAX_CONTENT_WIDTH, paddingBottom: Math.max(insets.bottom, spacing.md) }}>
+      </KeyboardAwareScrollView>
+      <View
+        className="w-full gap-1 self-center border-t border-edge bg-bg px-4 pt-3"
+        style={{ maxWidth: MAX_CONTENT_WIDTH, paddingBottom: Math.max(insets.bottom, spacing.md) }}
+        onLayout={(e) => setFooter(e.nativeEvent.layout.height)}>
         {note ? (
           <Text variant="caption" tone="faint" align="center" className="mb-1">
             {note}

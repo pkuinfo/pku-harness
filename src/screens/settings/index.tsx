@@ -6,6 +6,7 @@ import { Alert, View } from 'react-native';
 
 import { FadeIn } from '@/components/fade-in';
 import { ListGroup, ListRow } from '@/components/list-group';
+import { NativeSwitch } from '@/components/native-switch';
 import { Screen } from '@/components/screen';
 import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
@@ -17,7 +18,7 @@ import { useCloudProvider } from '@/core/cloud/provider';
 import { exportData, resetData } from '@/core/data';
 import { fetchAppUpdate, installedVersion, useAppUpdate } from '@/core/update/app-update';
 import { promptAppUpdate } from '@/components/update-prompt';
-import { haptics } from '@/utils/haptics';
+import { haptics, setHapticsEnabled, useHapticsEnabled } from '@/utils/haptics';
 import { systemZoneId, useTimezonePreference } from '@/core/clock/preference';
 import { formatUtcOffset, offsetNow, zoneName } from '@/core/clock/zones';
 import { setLocalePreference, useLocale, useLocalePreference, useT, type LocalePreference } from '@/i18n';
@@ -35,6 +36,7 @@ export function Settings() {
   const t = useT();
   const pref = useThemePreference();
   const localePref = useLocalePreference();
+  const hapticsOn = useHapticsEnabled();
   const timezonePref = useTimezonePreference();
   const themeOptions: { label: string; value: ThemePreference }[] = [
     { label: t('core.settings.themeSystem'), value: 'system' },
@@ -123,6 +125,12 @@ export function Settings() {
       <FadeIn index={4}>
         <ListGroup>
           <ListRow icon="globe" title={t('app.settings.timezone')} subtitle={timezoneSubtitle} onPress={() => router.push('/timezone')} />
+          <ListRow
+            icon="bolt"
+            title={t('app.settings.haptics')}
+            subtitle={t('app.settings.hapticsSubtitle')}
+            accessory={<NativeSwitch value={hapticsOn} onValueChange={setHapticsEnabled} label={t('app.settings.haptics')} />}
+          />
         </ListGroup>
       </FadeIn>
       <FadeIn index={5}>

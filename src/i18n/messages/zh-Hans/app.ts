@@ -71,6 +71,8 @@ export const app = {
     about: '关于',
     version: '版本 {version}',
     checkUpdates: '检查更新',
+    haptics: '触感反馈',
+    hapticsSubtitle: '点按、开关和确认时轻微振动',
     aboutRow: '关于 PKU Harness',
     aboutRowSubtitle: '版本、官网、作者、用户协议与隐私政策',
     aboutTitle: '关于',

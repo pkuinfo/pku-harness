@@ -118,6 +118,16 @@ export const welcome = {
       background: '后台',
     },
   },
+  copilot: {
+    title: '让助手替你操作其他 App',
+    why: 'Copilot 在一块独立的屏幕上打开并操作你允许的 App，你可以照常使用手机。例如：「用 Copilot 设一个 7:30 的闹钟」。',
+    pointSeparate: '它在独立屏幕上工作，小悬浮窗显示每一步，你可以随时暂停或停止。',
+    pointAllowed: '它只使用你允许的 App；需要其他 App 时，会先询问你。',
+    pointConfirm: '修改、付款和发布要等你确认；密码始终由你自己输入。',
+    setUp: '设置 Copilot',
+    note: '设置大约需要一分钟：开启无线调试并输入配对码。也可以稍后在对话中输入 /copilot 设置。',
+    ready: 'Copilot 已就绪',
+  },
   permissions: {
     title: '让提醒准时送达',
     why: '提醒和定时检查在你的手机上运行，到点由系统闹钟唤起，不经过任何服务器。开启下面两项，才能准到分钟。',

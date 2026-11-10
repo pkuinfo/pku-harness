@@ -70,6 +70,8 @@ export const app: Messages['app'] = {
     about: 'About',
     version: 'Version {version}',
     checkUpdates: 'Check for updates',
+    haptics: 'Haptic feedback',
+    hapticsSubtitle: 'Light vibrations on taps, switches and confirmations',
     aboutRow: 'About PKU Harness',
     aboutRowSubtitle: 'Version, website, author, terms and privacy',
     aboutTitle: 'About',

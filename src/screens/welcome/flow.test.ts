@@ -4,23 +4,26 @@ import { describe, expect, test } from 'bun:test';
 import { advance, nextStep, parseProgress, permissionsOutcome, prevStep, remindersSummary, resumePhase, retreat, startSetup, stepPosition, suggestionsFor, type OnboardingProgress } from './flow';
 
 describe('step order', () => {
-  test('next / prev walk ai → campus → authenticator → plugins → permissions → done', () => {
+  test('next / prev walk ai → campus → authenticator → plugins → permissions → copilot → done', () => {
     expect(nextStep('ai')).toBe('campus');
     expect(nextStep('campus')).toBe('authenticator');
     expect(nextStep('authenticator')).toBe('plugins');
     expect(prevStep('plugins')).toBe('authenticator');
     expect(nextStep('plugins')).toBe('permissions');
-    expect(nextStep('permissions')).toBe('done');
+    expect(nextStep('permissions')).toBe('copilot');
+    expect(nextStep('copilot')).toBe('done');
     expect(nextStep('done')).toBe('done');
     expect(prevStep('ai')).toBeNull();
     expect(prevStep('permissions')).toBe('plugins');
-    expect(prevStep('done')).toBe('permissions');
+    expect(prevStep('copilot')).toBe('permissions');
+    expect(prevStep('done')).toBe('copilot');
   });
 
-  test('progress position covers the five task steps only', () => {
-    expect(stepPosition('ai')).toEqual({ index: 1, total: 5 });
-    expect(stepPosition('plugins')).toEqual({ index: 4, total: 5 });
-    expect(stepPosition('permissions')).toEqual({ index: 5, total: 5 });
+  test('progress position covers the six task steps only', () => {
+    expect(stepPosition('ai')).toEqual({ index: 1, total: 6 });
+    expect(stepPosition('plugins')).toEqual({ index: 4, total: 6 });
+    expect(stepPosition('permissions')).toEqual({ index: 5, total: 6 });
+    expect(stepPosition('copilot')).toEqual({ index: 6, total: 6 });
     expect(stepPosition('done')).toBeNull();
   });
 });
@@ -44,7 +47,7 @@ describe('progress and resume', () => {
 
   test('skipping every step still reaches the finish screen', () => {
     let p: OnboardingProgress = startSetup(0);
-    for (const s of ['ai', 'campus', 'authenticator', 'plugins', 'permissions'] as const) p = advance(p, s, 'skipped');
+    for (const s of ['ai', 'campus', 'authenticator', 'plugins', 'permissions', 'copilot'] as const) p = advance(p, s, 'skipped');
     expect(p.step).toBe('done');
     expect(p.outcomes.permissions).toBe('skipped');
   });

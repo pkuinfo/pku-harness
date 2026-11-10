@@ -10,11 +10,11 @@ import type { MessageKey } from '@/i18n';
  * Setup order. New steps may be inserted (saved progress stores step names, so an older save
  * still resumes on its step); never rename one.
  */
-export const SETUP_STEPS = ['ai', 'campus', 'authenticator', 'plugins', 'permissions', 'done'] as const;
+export const SETUP_STEPS = ['ai', 'campus', 'authenticator', 'plugins', 'permissions', 'copilot', 'done'] as const;
 export type SetupStep = (typeof SETUP_STEPS)[number];
 
 /** Steps with a progress segment (the finish screen is not a task). */
-export const TASK_STEPS = ['ai', 'campus', 'authenticator', 'plugins', 'permissions'] as const satisfies readonly SetupStep[];
+export const TASK_STEPS = ['ai', 'campus', 'authenticator', 'plugins', 'permissions', 'copilot'] as const satisfies readonly SetupStep[];
 
 export type StepOutcome = 'done' | 'skipped';
 

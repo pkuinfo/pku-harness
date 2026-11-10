@@ -22,6 +22,8 @@ import { loadTimezonePreference, persistTimezonePreference } from '@/core/clock/
 import { builtinPlugins } from '@pku-harness/plugins';
 import { getLocalePreference, setLocalePreference, subscribeLocale, type LocalePreference } from '@/i18n';
 import { getThemePreference, setThemePreference, subscribeThemePreference, type ThemePreference } from '@/theme';
+import { hapticsEnabled, setHapticsEnabled, subscribeHaptics } from '@/utils/haptics';
+import { startPerfMonitor } from '@/core/perf/monitor';
 
 let core: Promise<void> | null = null;
 let onboarded = true;
@@ -109,6 +111,7 @@ export function bootCore(): Promise<void> {
 export function boot(): Promise<void> {
   if (!app) {
     app = (async () => {
+      startPerfMonitor();
       await bootCore();
       installApprovalHandler();
       const prefs = kv('prefs');
@@ -121,6 +124,8 @@ export function boot(): Promise<void> {
       if (locale) setLocalePreference(locale);
       subscribeLocale(() => prefs.set('locale', getLocalePreference()));
       persistTimezonePreference();
+      if ((await prefs.get<boolean>('haptics')) === false) setHapticsEnabled(false);
+      subscribeHaptics(() => prefs.set('haptics', hapticsEnabled()));
       await Promise.all([chatStore.load(), seedStarterWidgets()]);
       // Linked plugin documents update as data (at most daily; wider access waits for the user).
       docPlugins.checkUpdates().catch((e) => console.warn('plugin document update check failed', e));

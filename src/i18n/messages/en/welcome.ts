@@ -139,6 +139,16 @@ export const welcome: Messages['welcome'] = {
       background: 'Background',
     },
   },
+  copilot: {
+    title: 'Let the assistant use your other apps',
+    why: 'Copilot opens and operates the apps you allow on a separate screen, while you keep using your phone. For example: "Use Copilot to set a 7:30 alarm".',
+    pointSeparate: 'It works on its own screen; a small floating window shows each step, and you can pause or stop at any time.',
+    pointAllowed: 'It only uses apps you allow. If it needs another app, it asks you first.',
+    pointConfirm: 'Changes, payments and posts wait for your confirmation; passwords are always yours to type.',
+    setUp: 'Set up Copilot',
+    note: 'Setup takes about a minute: turn on Wireless debugging and type a pairing code. You can also do it later in chat with /copilot.',
+    ready: 'Copilot is ready',
+  },
   permissions: {
     title: 'Get reminders on time',
     why: 'Reminders and scheduled checks run on your phone and are woken by the system alarm, with no server involved. Turn on the two below so they land on the minute.',
