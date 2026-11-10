@@ -1,5 +1,6 @@
 package expo.modules.phonecontrol
 
+import org.pkuinfo.harness.phone.connection.DeveloperSettings
 import org.pkuinfo.harness.phone.core.PhoneException
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -60,10 +61,15 @@ class PhoneControlModule : Module() {
                 "accessibility" -> Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
                     .putExtra(FRAGMENT_ARGS_KEY, copilotService())
                     .putExtra(SHOW_FRAGMENT_ARGS, Bundle().apply { putString(FRAGMENT_ARGS_KEY, copilotService()) })
-                // Developer options, scrolled to and highlighting Wireless debugging.
-                "wireless" -> Intent(Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS)
-                    .putExtra(FRAGMENT_ARGS_KEY, "toggle_adb_wireless")
-                    .putExtra(SHOW_FRAGMENT_ARGS, Bundle().apply { putString(FRAGMENT_ARGS_KEY, "toggle_adb_wireless") })
+                // Developer options, scrolled to and highlighting Wireless debugging. While they're off, About
+                // phone instead, highlighting Build number (tapping it seven times turns them on).
+                "wireless" -> {
+                    val on = DeveloperSettings.developerOptions(context.contentResolver)
+                    val key = if (on) "toggle_adb_wireless" else "build_number"
+                    Intent(if (on) Settings.ACTION_APPLICATION_DEVELOPMENT_SETTINGS else Settings.ACTION_DEVICE_INFO_SETTINGS)
+                        .putExtra(FRAGMENT_ARGS_KEY, key)
+                        .putExtra(SHOW_FRAGMENT_ARGS, Bundle().apply { putString(FRAGMENT_ARGS_KEY, key) })
+                }
                 // App info, where the ⋮ menu has "Allow restricted settings".
                 "appInfo" -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
                 else -> error("Unknown setup step")
