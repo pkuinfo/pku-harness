@@ -70,8 +70,8 @@ screen is a numbered checklist derived from live readiness (`plugins/plugins/cop
 3. **Accessibility service**: automatic. When the helper reaches Running it applies, once each
    (`HelperRecovery`, from Mika's `BuiltinShellRecovery`): `appops … ACCESS_RESTRICTED_SETTINGS
    allow` (Android 13+), `pm grant … WRITE_SECURE_SETTINGS`, `cmd deviceidle whitelist +pkg`,
-   adds Copilot to `enabled_accessibility_services`, and `pm grant … POST_NOTIFICATIONS` if it
-   isn't granted. The row shows *Turning on…* meanwhile. A service still enabled but unbound is
+   and adds Copilot to `enabled_accessibility_services`. Notifications are never granted this way:
+   a deliberate "Don't allow" stays. The row shows *Turning on…* meanwhile. A service still enabled but unbound is
    re-bound (`AccessibilityRepair`); one the user removed in Settings is left off and the row
    offers a one-tap *Turn on* through the helper. Without a helper, accessibility settings and
    App info remain as a fallback.

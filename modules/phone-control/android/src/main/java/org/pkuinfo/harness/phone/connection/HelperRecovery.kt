@@ -2,7 +2,6 @@
 package org.pkuinfo.harness.phone.connection
 
 import android.content.Context
-import android.content.pm.PackageManager
 import android.database.ContentObserver
 import android.os.Build
 import android.provider.Settings
@@ -64,7 +63,8 @@ class PrefsRecoveryConsentStore(context: Context) : RecoveryConsentStore {
  * What the connected helper does without a tap, each time it reaches Running (first pairing,
  * reconnect after a restart): lift Android 13's restricted-setting block, grant this app
  * WRITE_SECURE_SETTINGS (so Wireless debugging can be turned back on for reconnects), add it to
- * the battery allowlist, turn on Copilot's accessibility service, and allow notifications.
+ * the battery allowlist and turn on Copilot's accessibility service. Notifications stay the user's
+ * call (the system prompt): a deliberate "Don't allow" is never overridden.
  * Each capability is applied once ([RecoveryConsent.applied]); turning one off by hand in
  * system settings is respected afterwards. A service that is still enabled but not bound
  * (process killed, app updated) is re-bound by [AccessibilityRepair].
@@ -112,9 +112,6 @@ class HelperRecovery(context: Context, private val manager: BuiltinShellManager,
             if (Build.VERSION.SDK_INT >= 33) exec("appops set $pkg ACCESS_RESTRICTED_SETTINGS allow")
             val result = permissions.applyPending()
             if (result != PermissionResult.Done) Log.w(TAG, "automatic grants incomplete: $result")
-            if (Build.VERSION.SDK_INT >= 33 && app.checkSelfPermission(POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                exec("pm grant $pkg $POST_NOTIFICATIONS")
-            }
         } finally {
             _applying.value = false
         }
@@ -162,6 +159,5 @@ class HelperRecovery(context: Context, private val manager: BuiltinShellManager,
 
     private companion object {
         const val TAG = "HarnessRecovery"
-        const val POST_NOTIFICATIONS = "android.permission.POST_NOTIFICATIONS"
     }
 }
