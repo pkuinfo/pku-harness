@@ -52,9 +52,24 @@ package ownership, and integration are Harness-owned.
 
 ## Session behavior
 
-Use `/copilot` or plugin settings for one-time setup. Keep Android's wireless-pairing dialog
-open in split screen while entering its port and code; discovery also has an optional manual
-port fallback. The screen displays translated connection states and recovery hints.
+Use `/copilot` or Settings → Plugins → Copilot for one-time setup. Until Copilot is ready the
+screen is a numbered checklist derived from live readiness (`plugins/plugins/copilot/src/setup.ts`):
+
+1. **Phone helper** (wireless debugging pairing, or reconnect for a paired phone). Opens Developer
+   options at Wireless debugging. Keep Android's pairing dialog open in split screen while
+   entering its port and code; discovery also has an optional manual port fallback.
+2. **Accessibility service**: one tap through the helper; otherwise the accessibility list,
+   plus App info for Android 13+ restricted settings.
+3. **Notifications** (optional): the ongoing task notification with Stop.
+4. **Allowed apps**: scrolls to the app list.
+5. **Turn on Copilot.**
+
+Each row states why it is needed and its live status; the first unfinished required step is
+expanded. Every requirement is re-read when Harness returns to the foreground and once a second
+while the screen is visible. Finishing setup on this screen shows a one-time "Copilot is ready"
+confirmation; afterwards the checklist collapses into a Permissions row. The agent's `status`
+tool returns `setupMissing`, and `start` refuses with the missing steps, so chat points the user
+to `/copilot`.
 
 Select allowed apps using their installed Android icons, names, and native switches. App
 choices save immediately. Enable Copilot once, then describe jobs in chat without manually
