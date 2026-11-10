@@ -12,6 +12,7 @@ import { shadows, spacing, springs, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { Button } from './button';
+import { approvalFields } from './approval-fields';
 import { Chip, type ChipTone } from './chip';
 import { Icon } from './icon';
 import { PressableScale } from './pressable-scale';
@@ -25,15 +26,6 @@ const EFFECT = {
   money: { label: 'chat.approval.money', tone: 'down' },
   public: { label: 'chat.approval.public', tone: 'accent' },
 } as const satisfies Record<string, { label: string; tone: ChipTone }>;
-
-/** Compact, readable preview of tool input (top-level fields only). */
-function preview(input: unknown): [string, string][] {
-  if (!input || typeof input !== 'object') return [];
-  return Object.entries(input as Record<string, unknown>)
-    .slice(0, 6)
-    .map(([k, v]) => [k, typeof v === 'string' ? v : JSON.stringify(v)] as [string, string])
-    .map(([k, v]) => [k, v.length > 80 ? `${v.slice(0, 80)}…` : v]);
-}
 
 /**
  * The "ask first" prompt: slides up over any screen when the agent wants to run a tool whose
@@ -50,7 +42,7 @@ export function ApprovalPrompt() {
   const plugin = registry.get(req.entry.pluginId);
   const effect = EFFECT[req.entry.def.effect as keyof typeof EFFECT];
   const from = { plugin: plugin ? pluginName(plugin) : req.entry.pluginId };
-  const fields = preview(req.input);
+  const fields = approvalFields(req.input);
 
   const answer = (ok: boolean, always = false) => {
     if (ok) haptics.success();
