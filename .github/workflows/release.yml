@@ -160,7 +160,8 @@ jobs:
 
       # Dependency downloads fail at times (Maven Central redirects some Kotlin jars to GitHub
       # releases, which 504s): more retries per request, and the build retried with what it fetched.
-      # The runner has 4 cores; native compilation is most of the time.
+      # The runner has 4 cores and 16 GB: R8 (minify, ~4 min) is the slowest task and is starved on
+      # the template's 2 GB heap. lintVitalRelease repeats what CI's lint already covers.
       - name: Build
         working-directory: android
         env:
@@ -169,7 +170,8 @@ jobs:
           mkdir -p ../dist
           ok=
           for i in 1 2 3 4; do
-            if ./gradlew assembleRelease -PreactNativeArchitectures="$ABI" --max-workers=4 --no-daemon \
+            if ./gradlew assembleRelease -PreactNativeArchitectures="$ABI" --max-workers=4 --no-daemon -x lintVitalRelease \
+              -Dorg.gradle.jvmargs="-Xmx6g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError" \
               -Dorg.gradle.internal.repository.max.retries=8 -Dorg.gradle.internal.repository.initial.backoff=2000; then
               ok=1; break
             fi
@@ -223,7 +225,8 @@ jobs:
             fi
             THIS_CERT=$(grep -m1 "certificate SHA-256 digest" dist/certs.txt | awk '{print $NF}')
             THIS_FP=$(unzip -p "dist/$NAME" assets/fingerprint 2>/dev/null || true)
-            if [ -n "$CERT" ] && { [ "$THIS_CERT" != "$CERT" ] || [ "$THIS_FP" != "$FP" ]; }; then
+            # Dry runs sign each ABI with its own throwaway key, so only releases compare certificates.
+            if [ -n "$CERT" ] && { { [ "$DRY_RUN" = "false" ] && [ "$THIS_CERT" != "$CERT" ]; } || [ "$THIS_FP" != "$FP" ]; }; then
               echo "::error::$NAME differs in signing certificate or runtime fingerprint from the other APKs"; exit 1
             fi
             CERT=$THIS_CERT; FP=$THIS_FP
