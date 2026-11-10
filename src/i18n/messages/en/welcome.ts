@@ -116,7 +116,7 @@ export const welcome: Messages['welcome'] = {
     resend: 'Send again',
     bound: 'This app is your authenticator',
     boundWhy: 'Two-step codes are filled in for you, and your dashboard shows the current code.',
-    needsSignIn: 'Sign in to your PKU account first to set this up. You can do it later in Settings → Authenticator.',
+    needsSignIn: 'Sign in to your PKU account first to set this up. You can do it later in Settings → Plugins → Authenticator.',
     later: 'Not now',
     widgetTitle: 'Authenticator',
   },  plugins: {

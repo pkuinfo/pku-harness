@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState, useSyncExternalStore } from 'react';
-import { View } from 'react-native';
+import { Alert, View } from 'react-native';
 
 import { Button } from '@/components/button';
 import { ListGroup, ListRow } from '@/components/list-group';
@@ -78,10 +78,16 @@ export function DocSection({ id }: { id: string }) {
           title={t('app.plugins.detail.remove')}
           variant="danger"
           icon="trash"
-          onPress={async () => {
+          onPress={() => {
             haptics.warning();
-            await docPlugins.uninstall(id);
-            router.back();
+            Alert.alert(`${t('app.plugins.detail.remove')}?`, t('core.common.cannotUndo'), [
+              { text: t('core.common.cancel'), style: 'cancel' },
+              {
+                text: t('app.plugins.detail.remove'),
+                style: 'destructive',
+                onPress: () => void docPlugins.uninstall(id).then(() => router.back()),
+              },
+            ]);
           }}
         />
       ) : null}

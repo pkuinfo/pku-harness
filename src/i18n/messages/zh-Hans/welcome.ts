@@ -95,7 +95,7 @@ export const welcome = {
     resend: '重新发送',
     bound: '本 App 已是你的手机令牌',
     boundWhy: '二次验证会自动完成，看板上会显示当前验证码。',
-    needsSignIn: '需要先登录北大账号才能设置。之后也可以在「设置 → 手机令牌」中完成。',
+    needsSignIn: '需要先登录北大账号才能设置。之后也可以在「设置 → 插件 → 手机令牌」中完成。',
     later: '暂不设置',
     widgetTitle: '手机令牌',
   },  plugins: {

@@ -29,7 +29,7 @@ When you sign in or use a campus feature, the app connects directly from your ph
 The assistant works by sending a conversation to the AI provider you configured (for example DeepSeek or another OpenAI-compatible service). What is sent can include:
 - your messages and the attachments you add;
 - results from tools the assistant uses, which can contain campus data such as your timetable, grades, balances or Treehole posts;
-- in Copilot mode, the text and screenshots of the screens of apps you allowed Copilot to use.
+- in Copilot mode, the text on the screens of apps you allowed Copilot to use (the words and controls shown). Screen preview images stay on your phone and are not sent to the AI.
 
 Your campus password and authenticator secret are never sent to the AI. The provider processes this data under its own terms and privacy policy, so choose one you trust. We don't receive this data.
 
