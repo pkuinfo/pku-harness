@@ -8,8 +8,9 @@ name: Release APK
 # - Manual run (Actions → Release APK → Run workflow): a dry run that builds the same APKs signed
 #   with a throwaway key and uploads them as a workflow artifact; nothing is published.
 #
-# One APK per ABI (ABIS below), arm64-v8a first: real phones are arm64, and the website offers the
-# first APK as the main download. A universal APK would be ~3x larger.
+# One APK per ABI, arm64-v8a first: real phones are arm64, and the website offers the first APK as
+# the main download. A universal APK would be ~3x larger. The ABIs build in parallel (one runner
+# each, ~12 min instead of ~35 in sequence); `publish` checks them together before releasing.
 #
 # OTA: nothing update-related is set here. app.json (runtimeVersion fingerprint, updates.url,
 # code signing, channel) is used as committed, so the APK's runtime matches what the OTA publish
@@ -24,16 +25,16 @@ permissions:
   contents: write
 
 jobs:
-  apk:
+  # Checks that run once, without secrets: the normal verify gate and the version/tag rules.
+  check:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
-    # Release secrets (the signing key) live only in the `release` environment, which only `v*`
-    # tags may use; dry runs never see them.
-    environment: ${{ github.event_name == 'push' && 'release' || 'apk-dry-run' }}
+    timeout-minutes: 30
     env:
       DRY_RUN: ${{ github.event_name != 'push' }}
       TAG: ${{ github.ref_name }}
-      ABIS: arm64-v8a armeabi-v7a x86_64
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      code: ${{ steps.version.outputs.code }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -74,6 +75,33 @@ jobs:
               echo "::error::versionCode $CODE must be greater than the latest release's $PREV"; exit 1
             fi
           fi
+
+  # One runner per ABI, in parallel. Release secrets (the signing key) live only in the `release`
+  # environment, which only `v*` tags may use; dry runs never see them. One approval of the run
+  # covers all three jobs.
+  build:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    environment: ${{ github.event_name == 'push' && 'release' || 'apk-dry-run' }}
+    strategy:
+      fail-fast: true
+      matrix:
+        abi: [arm64-v8a, armeabi-v7a, x86_64]
+    env:
+      DRY_RUN: ${{ github.event_name != 'push' }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - uses: oven-sh/setup-bun@v2
+        id: bun
+        continue-on-error: true
+        with:
+          bun-version-file: .bun-version
+      - if: steps.bun.outcome == 'failure'
+        run: npm install -g "bun@$(cat .bun-version)" && bun --version
+      - run: bun install --frozen-lockfile
 
       - uses: actions/setup-java@v6
         with:
@@ -119,27 +147,50 @@ jobs:
           fi
           echo "PKU_HARNESS_KEYSTORE=$KS" >> "$GITHUB_ENV"
 
-      # One build per ABI from the same prebuild: Gradle reuses the JS bundle and JVM outputs, so
-      # each extra ABI only recompiles native code. Dependency downloads fail at times (Maven
-      # Central redirects some Kotlin jars to GitHub releases, which 504s): more retries per
-      # request, and each build retried with what it fetched.
+      # Dependency downloads fail at times (Maven Central redirects some Kotlin jars to GitHub
+      # releases, which 504s): more retries per request, and the build retried with what it fetched.
+      # The runner has 4 cores; native compilation is most of the time.
       - name: Build
         working-directory: android
+        env:
+          ABI: ${{ matrix.abi }}
         run: |
           mkdir -p ../dist
-          for ABI in $ABIS; do
-            ok=
-            for i in 1 2 3 4; do
-              if ./gradlew assembleRelease -PreactNativeArchitectures="$ABI" --max-workers=2 --no-daemon \
-                -Dorg.gradle.internal.repository.max.retries=8 -Dorg.gradle.internal.repository.initial.backoff=2000; then
-                ok=1; break
-              fi
-              echo "::warning::$ABI build failed (attempt $i), retrying in $((i * 60))s"
-              sleep $((i * 60))
-            done
-            [ -n "$ok" ] || exit 1
-            cp app/build/outputs/apk/release/app-release.apk "../dist/pku-harness-${{ steps.version.outputs.version }}-$ABI.apk"
+          ok=
+          for i in 1 2 3 4; do
+            if ./gradlew assembleRelease -PreactNativeArchitectures="$ABI" --max-workers=4 --no-daemon \
+              -Dorg.gradle.internal.repository.max.retries=8 -Dorg.gradle.internal.repository.initial.backoff=2000; then
+              ok=1; break
+            fi
+            echo "::warning::$ABI build failed (attempt $i), retrying in $((i * 60))s"
+            sleep $((i * 60))
           done
+          [ -n "$ok" ] || exit 1
+          cp app/build/outputs/apk/release/app-release.apk "../dist/pku-harness-${{ needs.check.outputs.version }}-$ABI.apk"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: apk-${{ matrix.abi }}
+          path: dist/*.apk
+          retention-days: 1
+
+  # Checks the three APKs together (release key, one ABI each, same certificate and runtime
+  # fingerprint) and publishes them. No secrets here.
+  publish:
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DRY_RUN: ${{ github.event_name != 'push' }}
+      TAG: ${{ github.ref_name }}
+      ABIS: arm64-v8a armeabi-v7a x86_64
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
+        with:
+          pattern: apk-*
+          path: dist
+          merge-multiple: true
 
       - name: Inspect
         id: apk
@@ -148,7 +199,7 @@ jobs:
           CERT=; FP=
           : > dist/rows.md
           for ABI in $ABIS; do
-            NAME="pku-harness-${{ steps.version.outputs.version }}-$ABI.apk"
+            NAME="pku-harness-${{ needs.check.outputs.version }}-$ABI.apk"
             "$APKSIGNER" verify --print-certs "dist/$NAME" > dist/certs.txt
             cat dist/certs.txt
             if grep -q "CN=Android Debug" dist/certs.txt; then
@@ -175,7 +226,7 @@ jobs:
         if: env.DRY_RUN == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: pku-harness-${{ steps.version.outputs.version }}-apks
+          name: pku-harness-${{ needs.check.outputs.version }}-apks
           path: dist/*.apk
           retention-days: 3
 
@@ -184,17 +235,17 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          FIRST="pku-harness-${{ steps.version.outputs.version }}-${ABIS%% *}.apk"
+          FIRST="pku-harness-${{ needs.check.outputs.version }}-${ABIS%% *}.apk"
           # docs/releases/<version>.md holds the "## 更新内容" / "## What's new" bullets the in-app update sheet shows.
           cat > notes.md <<EOF
           PKU Harness ${TAG} for Android 7.0+. Most phones need \`arm64-v8a\`; \`armeabi-v7a\` is for
           older 32-bit phones and \`x86_64\` for emulators and x86 devices.
 
-          $(cat "docs/releases/${{ steps.version.outputs.version }}.md" 2>/dev/null)
+          $(cat "docs/releases/${{ needs.check.outputs.version }}.md" 2>/dev/null)
 
           | | |
           |---|---|
-          | versionCode | \`${{ steps.version.outputs.code }}\` |
+          | versionCode | \`${{ needs.check.outputs.code }}\` |
           | Signing certificate SHA-256 | \`${{ steps.apk.outputs.cert }}\` |
           | Runtime fingerprint (OTA) | \`${{ steps.apk.outputs.fingerprint }}\` |
           | Commit | ${GITHUB_SHA} |

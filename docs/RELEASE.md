@@ -53,9 +53,11 @@ gh secret set PKU_HARNESS_KEY_PASSWORD --env release -R pkuinfo/pku-harness
    git tag v1.1.0 && git push origin v1.1.0
    ```
 3. Approve the `release` environment when GitHub asks. The workflow runs `bun run verify`,
-   generates `android/` (`expo prebuild`), builds `assembleRelease` once per ABI
-   (`arm64-v8a`, `armeabi-v7a`, `x86_64`; one APK each), refuses a debug-signed APK or one whose
-   native libraries are for another ABI, and creates the release with the APKs (arm64 first: the
+   generates `android/` (`expo prebuild`) and builds `assembleRelease` for each ABI
+   (`arm64-v8a`, `armeabi-v7a`, `x86_64`; one APK each) on its own runner in parallel (about 12
+   minutes; one approval covers all three). A final job refuses a debug-signed APK, one whose
+   native libraries are for another ABI or whose certificate or runtime fingerprint differs from
+   the others, and creates the release with the APKs (arm64 first: the
    website offers the first as the main download) and notes: versionCode, each APK's SHA-256, the
    signing certificate's SHA-256, the runtime fingerprint (to match OTA updates) and the commit.
    The `release` environment accepts only `v*` tags, so the signing key is never reachable from
