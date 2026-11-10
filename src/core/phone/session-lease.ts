@@ -3,6 +3,8 @@ import { cancelResourceRun, registerRunResource } from '../runtime/run-resources
 /** A user-opened phone session can be claimed by only one agent run. */
 export class PhoneSessionLease {
   private usedSessions = new WeakMap<AbortSignal, string>();
+  /** The session a run has seen alive (opened it, or the phone reported it as current). */
+  private liveSessions = new WeakMap<AbortSignal, string>();
   private owners = new Map<string, { signal: AbortSignal; unregister: () => void }>();
 
   constructor(
@@ -17,6 +19,7 @@ export class PhoneSessionLease {
     const opened = await open();
     try {
       this.claim(opened.sessionId, signal);
+      if (signal) this.liveSessions.set(signal, opened.sessionId);
       signal?.throwIfAborted();
       return opened;
     } catch (error) {
@@ -40,6 +43,22 @@ export class PhoneSessionLease {
       this.releaseOwner(id, signal);
     });
     this.owners.set(id, { signal, unregister });
+  }
+
+  /** The phone confirmed [id] is this run's live session. */
+  confirm(id: string, signal?: AbortSignal) {
+    if (signal && this.usedSessions.get(signal) === id) this.liveSessions.set(signal, id);
+  }
+
+  /**
+   * [id] had already ended before this run ever saw it alive: an id the agent remembered from an
+   * earlier, stopped turn. It doesn't count as this run's session, so the run may start a new one.
+   * A session this run did use and that then ended (native Stop) still blocks a restart.
+   */
+  forgetStale(id: string, signal?: AbortSignal) {
+    if (!signal || this.usedSessions.get(signal) !== id || this.liveSessions.get(signal) === id) return;
+    this.usedSessions.delete(signal);
+    this.releaseOwner(id, signal);
   }
 
   private assertOwner(id: string, signal?: AbortSignal) {

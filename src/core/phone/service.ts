@@ -15,6 +15,9 @@ function unwrap<T>(value: T | { nativeError: { code: string; message: string } }
   return value;
 }
 
+const isEnded = (value: unknown) => !!value && typeof value === 'object' && 'nativeError' in value
+  && (value as { nativeError: { code: string } }).nativeError.code === 'ENDED';
+
 const leases = new PhoneSessionLease((id) => native().end(id), async (id, signal) => {
   const module = native();
   // A deliberate handoff survives a completed reply so the user can log in, then resume.
@@ -34,7 +37,10 @@ export const phoneService: PhoneService = {
     signal?.throwIfAborted();
     const state = await (PhoneControl?.readiness() ?? Promise.resolve({ supported: false, accessibility: false, helper: false, helperStatus: 'unavailable', locked: false, sessionId: null, packages: [], handedOver: false }));
     signal?.throwIfAborted();
-    if (state.sessionId) leases.claim(state.sessionId, signal);
+    if (state.sessionId) {
+      leases.claim(state.sessionId, signal);
+      leases.confirm(state.sessionId, signal);
+    }
     return state;
   },
   setup: (kind) => native().setup(kind),
@@ -68,6 +74,8 @@ export const phoneService: PhoneService = {
     leases.claim(sessionId, signal);
     const result = await module.execute(sessionId, operation, args);
     signal?.throwIfAborted();
+    if (isEnded(result)) leases.forgetStale(sessionId, signal);
+    else leases.confirm(sessionId, signal);
     return unwrap(result);
   },
   end: (id, signal) => leases.end(id, signal),

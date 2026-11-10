@@ -131,3 +131,28 @@ test('in-app user Stop cancels the model but normal tool end does not', async ()
   await releaseRunResources(a.signal);
   await releaseRunResources(b.signal);
 });
+
+test('a stale session id from an earlier turn does not block starting a new one', async () => {
+  const run = new AbortController();
+  const lease = new PhoneSessionLease(async () => {});
+  // The agent reuses an id from the previous, stopped turn; the phone answers ENDED.
+  lease.claim('stopped-earlier', run.signal);
+  lease.forgetStale('stopped-earlier', run.signal);
+  await expect(lease.begin(async () => ({ sessionId: 'fresh' }), run.signal)).resolves.toEqual({ sessionId: 'fresh' });
+  await releaseRunResources(run.signal);
+});
+
+test('a session this run saw alive still blocks a restart after it ends', async () => {
+  const run = new AbortController();
+  const lease = new PhoneSessionLease(async () => {});
+  lease.claim('phone', run.signal);
+  lease.confirm('phone', run.signal);
+  lease.forgetStale('phone', run.signal);
+  await expect(lease.begin(async () => ({ sessionId: 'replacement' }), run.signal)).rejects.toThrow('new user message');
+  const opened = new AbortController();
+  await lease.begin(async () => ({ sessionId: 'mine' }), opened.signal);
+  lease.forgetStale('mine', opened.signal);
+  await expect(lease.begin(async () => ({ sessionId: 'again' }), opened.signal)).rejects.toThrow('new user message');
+  await releaseRunResources(run.signal);
+  await releaseRunResources(opened.signal);
+});
