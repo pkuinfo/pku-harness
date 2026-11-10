@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useState, useRef, useImperativeHandle, type ReactNode, type Ref, type ComponentRef } from 'react';
 import { StyleSheet, View, type ScrollViewProps } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-controller';
 import Animated, { Extrapolation, interpolate, useAnimatedReaction, useAnimatedScrollHandler, useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -19,6 +20,10 @@ import { Text } from './text';
 
 /** Scroll distance over which the large title hands over to the compact bar. */
 const COLLAPSE = 56;
+/** Space kept between a focused field and the keyboard. */
+const KEYBOARD_GAP = spacing.xxl;
+/** KeyboardAwareScrollView isn't a Uniwind-mapped component, so it takes a plain style. */
+const FILL = { flex: 1 } as const;
 const CONTENT = { maxWidth: MAX_CONTENT_WIDTH } as const;
 const HEADER = { maxWidth: MAX_CONTENT_WIDTH, transformOrigin: 'left bottom' } as const;
 
@@ -52,7 +57,7 @@ export function Screen({
   /** Pushed screens: show a back button that pops the stack. */
   back?: boolean;
 }) {
-  const nativeScroll = useRef<ComponentRef<typeof Animated.ScrollView>>(null);
+  const nativeScroll = useRef<ComponentRef<typeof KeyboardAwareScrollView>>(null);
   useImperativeHandle(scrollRef, () => ({ scrollTo: (options) => nativeScroll.current?.scrollTo(options) }), []);
   const t = useT();
   const m = glassMaterial[useThemeName()];
@@ -119,15 +124,17 @@ export function Screen({
           <View className="flex-1 gap-0.5"><Text variant="bodyStrong" accessibilityRole="header">{title}</Text>{subtitle ? <Text variant="caption" tone="muted">{subtitle}</Text> : null}</View>
           {trailing}
         </View>
-        {scroll ? <Animated.ScrollView
+        {scroll ? <Animated.View className="flex-1" style={enter}><KeyboardAwareScrollView
           ref={nativeScroll}
-          style={enter}
+          // A focused field scrolls above the keyboard (with room for the button under it).
+          bottomOffset={KEYBOARD_GAP}
+          style={FILL}
           // A tap on a button while typing should press it, not just close the keyboard.
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={[{ paddingBottom: spacing.xxxl }, contentContainerStyle]}
           {...scrollProps}>
           <View className="w-full gap-6 self-center px-4 pt-4" style={CONTENT}>{children}</View>
-        </Animated.ScrollView> : children}
+        </KeyboardAwareScrollView></Animated.View> : children}
         {overlay ? <View pointerEvents="box-none" className="absolute inset-0" style={{ top: insets.top + spacing.xxxl }}>{overlay}</View> : null}
       </View>
     );
@@ -147,11 +154,11 @@ export function Screen({
   return (
     <View className={cx('flex-1', provided ? 'bg-transparent' : 'bg-bg')}>
       {backdrop}
-      <Animated.ScrollView
+      <Animated.View className="flex-1" style={enter}><KeyboardAwareScrollView
         ref={nativeScroll}
+        bottomOffset={KEYBOARD_GAP}
         keyboardShouldPersistTaps="handled"
-        className="flex-1"
-        style={enter}
+        style={FILL}
         contentContainerStyle={[{ paddingTop: insets.top, paddingBottom: spacing.xxxl + bar }, contentContainerStyle]}
         scrollIndicatorInsets={{ bottom: bar }}
         scrollEventThrottle={16}
@@ -161,7 +168,7 @@ export function Screen({
         <View className="w-full gap-6 self-center px-4" style={CONTENT}>
           {children}
         </View>
-      </Animated.ScrollView>
+      </KeyboardAwareScrollView></Animated.View>
       <Animated.View pointerEvents="none" className="absolute left-0 right-0 top-0" style={[{ height: insets.top, backgroundColor: c.bg }, scrimStyle]} />
       {/* Compact bar: appears once the large title has scrolled away. */}
       <Animated.View
