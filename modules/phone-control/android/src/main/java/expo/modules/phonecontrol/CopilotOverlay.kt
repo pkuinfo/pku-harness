@@ -30,6 +30,9 @@ import android.widget.TextView
 import kotlinx.coroutines.*
 import org.pkuinfo.harness.phone.platform.accessibility.ScreenAccessibility
 
+/** How much of the screen height the live preview may take (it keeps the frame's shape). */
+private const val PREVIEW_SCREEN_SHARE = 0.48f
+
 /** Harness-owned controls on the main display; the controlled apps remain on a separate display.
  * Non-focusable, content-sized windows leave the user's keyboard and outside touches alone.
  * Uses Android accessibility overlays, inspired by Mika's OverlayHost (see module NOTICE).
@@ -166,6 +169,19 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         val insets = area.windowInsets.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout())
         val availableWidth = area.bounds.width() - insets.left - insets.right - gap * 2
         params.width = minOf(size(if (expanded) R.dimen.copilot_overlay_width else R.dimen.copilot_overlay_compact_width), availableWidth)
+        // The preview takes the frame's own shape (a phone screen is tall), up to about half the screen
+        // height, and the panel is sized around it: no letterbox bars, and the app stays readable.
+        val showsPreview = expanded && approval == null && !handed && !paused
+        val frame = bitmap
+        val aspect = if (frame != null && frame.height > 0) frame.width.toFloat() / frame.height else area.bounds.width().toFloat() / area.bounds.height()
+        val screenHeight = area.bounds.height() - insets.top - insets.bottom - gap * 4
+        var previewHeight = (screenHeight * PREVIEW_SCREEN_SHARE).toInt()
+        var previewWidth = (previewHeight * aspect).toInt()
+        if (previewWidth > availableWidth - gap * 2) {
+            previewWidth = availableWidth - gap * 2
+            previewHeight = (previewWidth / aspect).toInt()
+        }
+        if (showsPreview) params.width = maxOf(size(R.dimen.copilot_overlay_compact_width), minOf(previewWidth + gap * 2, availableWidth))
         val activity = operationStatus()
         val compactTitle = when {
             approval != null -> R.string.copilot_compact_review
@@ -244,7 +260,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                     if (bitmap != null) setBackgroundColor(service.getColor(R.color.copilot_overlay_preview_surface))
                 }
                 preview.addView(picture, FrameLayout.LayoutParams(-1, -1))
-                content.addView(preview, LinearLayout.LayoutParams(-1, size(R.dimen.copilot_overlay_preview_height)))
+                content.addView(preview, LinearLayout.LayoutParams(minOf(previewWidth, params.width - gap * 2), previewHeight).apply { gravity = Gravity.CENTER_HORIZONTAL })
             }
             // Keep actions reachable on short screens and at enlarged system font sizes.
             val scroll = ScrollView(ui).apply { addView(content); isFillViewport = false }
