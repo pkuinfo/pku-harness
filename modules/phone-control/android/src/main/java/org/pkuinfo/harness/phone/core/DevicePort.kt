@@ -17,6 +17,8 @@ interface DeviceSession {
     suspend fun perform(action: PhoneAction, target: DeviceElement?): DeviceOutcome
     suspend fun awaitChange(timeoutMs: Long)
     suspend fun preview(): DevicePreview?
+    /** The screenshot a vision model reads for point actions; its pixel size is the coordinate space. */
+    suspend fun lookImage(): DevicePreview? = preview()
     suspend fun handoff()
     suspend fun resume()
     /** Return owned app tasks appropriately and release display/input resources. Idempotent. */

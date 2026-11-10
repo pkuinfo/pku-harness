@@ -42,9 +42,10 @@ export function promptAppUpdate(update: AppUpdate) {
   setOffered(update);
 }
 
-function promptLegalNotice() {
+function promptLegalNotice(kind: 'new' | 'updated') {
   void markLegalAccepted();
-  Alert.alert(t('app.settings.legalNoticeTitle'), t('app.settings.legalNoticeBody'), [
+  const updated = kind === 'updated';
+  Alert.alert(t(updated ? 'app.settings.legalUpdatedTitle' : 'app.settings.legalNoticeTitle'), t(updated ? 'app.settings.legalUpdatedBody' : 'app.settings.legalNoticeBody'), [
     { text: t('app.settings.legalNoticeRead'), onPress: () => router.push('/legal/privacy') },
     { text: t('app.settings.legalNoticeOk') },
   ]);
@@ -62,7 +63,8 @@ export function UpdatePrompt() {
     const id = setTimeout(() => {
       void (async () => {
         // People who set up before the terms existed (or before a material change) hear about them once.
-        if (await legalNoticeDue()) return promptLegalNotice();
+        const legal = await legalNoticeDue();
+        if (legal) return promptLegalNotice(legal);
         const u = await checkOnLaunch();
         if (u) promptAppUpdate(u);
       })();

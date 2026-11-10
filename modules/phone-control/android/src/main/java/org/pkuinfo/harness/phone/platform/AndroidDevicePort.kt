@@ -22,6 +22,9 @@ import org.pkuinfo.harness.phone.platform.screen.ActionResult
 import org.pkuinfo.harness.phone.platform.screen.ScreenSnapshot
 import org.pkuinfo.harness.phone.platform.screen.UiStates
 
+/** Long side of the screenshot shown to a vision model (the preview stays at 720). */
+private const val LOOK_MAX_PX = 1000.0
+
 /** Adapts internal Android mechanisms to the Harness session engine's small platform contract. */
 class AndroidDevicePort(private val context: Context, private val onClosed: () -> Unit = {}) : DevicePort {
     override suspend fun open(allowedPackages: Set<String>): DeviceSession {
@@ -130,6 +133,21 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
                         val bytes = ByteArrayOutputStream().use { out -> small.compress(Bitmap.CompressFormat.JPEG, 75, out); out.toByteArray() }
                         return DevicePreview(bytes, "image/jpeg", small.width, small.height)
                     } finally { if (small !== frame) small.recycle() }
+                } finally { frame.recycle() }
+            }
+
+            override suspend fun lookImage(): DevicePreview? {
+                val frame = display.current?.latestFrameBitmap() ?: return null
+                try {
+                    // Larger than the preview, with labelled rulers: models place points by reading the grid.
+                    val scale = minOf(1.0, LOOK_MAX_PX / maxOf(frame.width, frame.height))
+                    val shot = Bitmap.createScaledBitmap(frame, (frame.width * scale).toInt().coerceAtLeast(1), (frame.height * scale).toInt().coerceAtLeast(1), true)
+                        .let { scaled -> scaled.copy(Bitmap.Config.ARGB_8888, true).also { if (it !== scaled && scaled !== frame) scaled.recycle() } }
+                    try {
+                        ScreenshotGrid.draw(shot)
+                        val bytes = ByteArrayOutputStream().use { out -> shot.compress(Bitmap.CompressFormat.JPEG, 80, out); out.toByteArray() }
+                        return DevicePreview(bytes, "image/jpeg", shot.width, shot.height)
+                    } finally { shot.recycle() }
                 } finally { frame.recycle() }
             }
 

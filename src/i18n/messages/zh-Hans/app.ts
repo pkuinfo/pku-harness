@@ -89,6 +89,8 @@ export const app = {
     aboutLicense: 'PKU Harness 以 MIT 许可证发布，与北京大学无隶属关系。',
     terms: '用户协议',
     privacy: '隐私政策',
+    legalUpdatedTitle: '隐私政策已更新',
+    legalUpdatedBody: '变化：Copilot 新增「允许 AI 查看截图」开关（默认关闭）。打开后，Copilot 可以把它正在操作的应用的截图发送给你的 AI 服务商，以便在微信等不显示内容的应用中工作。不打开就没有任何变化。',
     legalNoticeTitle: '用户协议和隐私政策',
     legalNoticeBody: 'PKU Harness 发布了《用户协议》和《隐私政策》，说明应用为你做什么、你的数据去向何处：密码只留在这台手机上，没有广告和追踪。你可以随时在 设置 → 关于 中查看。',
     legalNoticeRead: '查看',

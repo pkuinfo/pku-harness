@@ -591,7 +591,7 @@ class PhoneEngineTest {
         val fake = FakeDevice()
         val protecting = object : DevicePort, DeviceSession by fake {
             override suspend fun open(allowedPackages: Set<String>) = this
-            override suspend fun preview(): DevicePreview? { fake.frame = fake.frame.copy(protected = true); return fake.image }
+            override suspend fun lookImage(): DevicePreview? { fake.frame = fake.frame.copy(protected = true); return fake.image }
         }
         val engine = PhoneEngine(protecting, ActionPolicy { _, _ -> PhoneEffect.WRITE }, "org.pkuinfo.harness")
         val id = engine.begin(setOf("org.example.notes")).id

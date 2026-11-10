@@ -88,6 +88,8 @@ export const app: Messages['app'] = {
     aboutLicense: 'PKU Harness is released under the MIT License. It is not affiliated with Peking University.',
     terms: 'Terms of Service',
     privacy: 'Privacy Policy',
+    legalUpdatedTitle: 'Privacy Policy updated',
+    legalUpdatedBody: 'What changed: Copilot has a new switch, “Let the AI see screenshots” (off by default). If you turn it on, Copilot can send screenshots of the app it is operating to your AI provider, so it can work in apps such as WeChat that hide their contents. Nothing changes unless you turn it on.',
     legalNoticeTitle: 'Terms of Service and Privacy Policy',
     legalNoticeBody: 'PKU Harness now has a Terms of Service and a Privacy Policy. They describe what the app does for you and where your data goes: your password stays on this phone, and there are no ads or tracking. You can read them any time in Settings → About.',
     legalNoticeRead: 'Read',

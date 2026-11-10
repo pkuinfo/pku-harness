@@ -108,7 +108,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
             val frame = checkNotNull(session.observed).first
             if (frame.protected) fail(PhoneFailure.HANDOFF, "This protected screen requires the user; it is never captured")
             if (frame.needsUser) fail(PhoneFailure.HANDOFF, "The app needs attention on the user's screen")
-            val image = session.device.preview() ?: fail(PhoneFailure.INVALID, "No screen image is available yet; wait, then look again")
+            val image = session.device.lookImage() ?: fail(PhoneFailure.INVALID, "No screen image is available yet; wait, then look again")
             val after = checkedFrame(session)
             if (after.protected || after.needsUser || after.packageName != frame.packageName || after.windowPackages != frame.windowPackages) {
                 session.observed = null

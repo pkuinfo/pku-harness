@@ -61,6 +61,15 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
     private var attached = false
     // The full window by default; Minimize turns it into the ball, and tapping the ball brings it back.
     private var expanded = true
+    /** Harness itself is in front on the main display: chat already shows the task, so the window stays a ball. */
+    private var inFront = false
+    /** The user tapped the ball while Harness was in front: open anyway until they leave Harness. */
+    private var openInFront = false
+    private fun open() = expanded && (!inFront || openInFront)
+    private fun harnessInFront(): Boolean = runCatching {
+        service.windows.firstOrNull { it.type == android.view.accessibility.AccessibilityWindowInfo.TYPE_APPLICATION && it.isActive }
+            ?.root?.packageName == service.packageName
+    }.getOrDefault(false)
     private var closed = false
     private var busy = false
     private var rendered = ""
@@ -94,10 +103,12 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                     val approval = PhoneOverlayBridge.approval?.takeIf { it.sessionId == sessionId }
                     // A new approval opens the panel, so a minimized ball never leaves a task waiting unseen.
                     if (approval != null && approval.id != lastApproval) { lastApproval = approval.id; expanded = true }
+                    val front = harnessInFront()
+                    if (front != inFront) { inFront = front; if (!front) openInFront = false }
                     val activity = operationStatus()
-                    val key = "${service.resources.configuration.uiMode}:$activity:$expanded:$paused:$handed:${approval?.id}:$busy:$error"
+                    val key = "${service.resources.configuration.uiMode}:$activity:${open()}:$paused:$handed:${approval?.id}:$busy:$error"
                     if (key != rendered && menu == null && !resizing) { rendered = key; render(paused, handed, approval) }
-                    if (expanded && !handed && !paused && !busy && approval == null && previewJob?.isActive != true) {
+                    if (open() && !handed && !paused && !busy && approval == null && previewJob?.isActive != true) {
                         val revision = previewRevision
                         previewJob = scope.launch {
                             val read = withTimeoutOrNull(2500) {
@@ -106,7 +117,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                             }
                             // A canceled/old capture must not repaint after pause, handoff, approval, or lock.
                             if (revision != previewRevision) return@launch
-                            if (!expanded) return@launch // Minimized meanwhile: keep the last frame for reopening.
+                            if (!open()) return@launch // Minimized meanwhile: keep the last frame for reopening.
                             if (!canShowPreview()) { clearPreview(); return@launch }
                             if (read != null) {
                                 val frame = read.frame
@@ -132,7 +143,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
     }
 
     private fun canShowPreview(): Boolean {
-        if (closed || !expanded || PhoneRuntime.activeId() != sessionId) return false
+        if (closed || !open() || PhoneRuntime.activeId() != sessionId) return false
         if (service.getSystemService(KeyguardManager::class.java).isKeyguardLocked) return false
         val state = PhoneRuntime.readiness(service)
         return state["paused"] != true && state["handedOver"] != true &&
@@ -174,6 +185,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
     }
 
     private fun render(paused: Boolean, handed: Boolean, approval: PhoneOverlayBridge.Approval?) {
+        val expanded = open()
         ui.setTheme(overlayTheme())
         // Minimizing keeps the last frame, so reopening the window shows it at once.
         if (paused || handed || approval != null) clearPreview()
@@ -227,7 +239,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
             gravity = Gravity.CENTER_VERTICAL
             setPadding(0, 0, 0, 0)
             contentDescription = listOfNotNull(service.getString(compactTitle), activity?.title?.takeIf { it.isNotBlank() }).joinToString(". ")
-            setOnClickListener { expanded = !expanded; rendered = "" }
+            setOnClickListener { toggle() }
             background = ripple(null)
         }
         drag(title)
@@ -248,7 +260,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         })
         header.addView(iconButton(if (expanded) R.string.copilot_collapse else R.string.copilot_expand,
             if (expanded) R.drawable.copilot_collapse else R.drawable.copilot_expand) {
-            expanded = !expanded; rendered = ""
+            toggle()
         })
         root.addView(header)
         if (expanded) {
@@ -313,6 +325,11 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
             })
         }
         root.post { if (attached && !closed) { clamp(); runCatching { manager.updateViewLayout(root, params) } } }
+    }
+
+    private fun toggle() {
+        if (open()) { expanded = false; openInFront = false } else { expanded = true; if (inFront) openInFront = true }
+        rendered = ""
     }
 
     private fun action(block: suspend () -> Unit) {
@@ -406,7 +423,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         params.width = diameter
         val face = FrameLayout(ui).apply {
             contentDescription = listOf(service.getString(description), service.getString(R.string.copilot_open_panel)).joinToString(". ")
-            setOnClickListener { expanded = true; rendered = "" }
+            setOnClickListener { expanded = true; if (inFront) openInFront = true; rendered = "" }
         }
         face.addView(ImageView(ui).apply {
             setImageDrawable(service.packageManager.getApplicationIcon(service.packageName))

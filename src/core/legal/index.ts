@@ -25,7 +25,12 @@ const KEY = 'legal.accepted';
 
 export const markLegalAccepted = () => kv('prefs').set(KEY, LEGAL_VERSION);
 
-/** True when the person agreed to (or was told about) an older version, or to none at all. */
-export async function legalNoticeDue() {
-  return (await kv('prefs').get<string>(KEY)) !== LEGAL_VERSION;
+/**
+ * Whether to tell the person about the documents: 'new' when they never saw any version (they set
+ * up before the documents existed), 'updated' when they saw an older one, null when current.
+ */
+export async function legalNoticeDue(): Promise<'new' | 'updated' | null> {
+  const seen = await kv('prefs').get<string>(KEY);
+  if (seen === LEGAL_VERSION) return null;
+  return seen ? 'updated' : 'new';
 }
