@@ -29,6 +29,7 @@ import { Composer } from '@/screens/chat/composer';
 import { composerDraft } from './composer/draft';
 import { JumpToLatest } from './jump-to-latest';
 import { MessageView } from './message';
+import { messageMenu } from './message-menu';
 
 /** The last message is an assistant reply with something in it (text, tools, UI). */
 const hasReplyContent = (messages: { role: string; parts: unknown[]; meta?: { ended?: string } }[]) => {
@@ -134,6 +135,8 @@ export function Chat() {
   // A message the user just sent always brings the view back to the end, even when unpinned.
   const lastUserId = useChatSelector((s) => s.messages.findLast((m) => m.role === 'user')?.id);
   const seenUserId = useRef(lastUserId);
+  // Sending (or opening another session) closes a message's 编辑 / 复制 row.
+  useEffect(() => messageMenu.close(), [lastUserId]);
 
   // Another session opened (sheet, notification): land at its end.
   const sessionId = useActiveSessionId();
@@ -190,7 +193,9 @@ export function Chat() {
   useEffect(() => () => floatingOverlay.set(null), []);
 
   return (
-    <View className="flex-1">
+    // Any touch on the screen (another message, the empty area, the composer) closes an open
+    // 编辑 / 复制 row; touches inside the row mark themselves first (message-menu.ts).
+    <View className="flex-1" onTouchStart={messageMenu.dismiss}>
       <View className="flex-row items-center gap-2 border-b border-edge px-3 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
         <SessionsButton />
         <ChatTitle fallbackName={config.name} fallbackModel={config.model} connected={hasKey} />
@@ -222,7 +227,10 @@ export function Chat() {
         }}
         // Only a finger unpins. Android also fires momentum events for programmatic scrolls, so
         // a fling keeps "dragging" until its momentum ends, and nothing else sets it.
-        onScrollBeginDrag={() => (dragging.current = true)}
+        onScrollBeginDrag={() => {
+          dragging.current = true;
+          messageMenu.close();
+        }}
         onScrollEndDrag={(e) => {
           if (Math.abs(e.nativeEvent.velocity?.y ?? 0) < 0.05) settle();
         }}

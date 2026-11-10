@@ -23,6 +23,7 @@ import { haptics } from '@/utils/haptics';
 import { isPastedText } from './composer/attachment-tray';
 import { composerDraft } from './composer/draft';
 import { formatCount } from './composer/logic';
+import { messageMenu, useMessageMenuOpen } from './message-menu';
 
 import { ReplyActions } from './reply-actions';
 import { ToolGroup } from './tool-chip';
@@ -177,10 +178,10 @@ function CompactionMarker({ part }: { part: Extract<ChatPart, { type: 'compactio
   );
 }
 
-/** The user's message: attachments above the text; long-press for 编辑 / 复制. */
+/** The user's message: attachments above the text; long-press for 编辑 / 复制 (a touch elsewhere closes it). */
 function UserBubble({ message }: { message: ChatMessage }) {
   const t = useT();
-  const [menu, setMenu] = useState(false);
+  const menu = useMessageMenuOpen(message.id);
   const text = textOf(message);
   const attachments = message.parts.filter((p): p is AttachmentPart => p.type === 'attachment');
   const images = attachments.filter((a) => a.kind === 'image' && a.uri);
@@ -200,7 +201,7 @@ function UserBubble({ message }: { message: ChatMessage }) {
           <Pressable
             onLongPress={() => {
               haptics.select();
-              setMenu((m) => !m);
+              messageMenu.open(message.id);
             }}
             delayLongPress={350}
             accessibilityHint={t('chat.message.longPressHint')}
@@ -209,7 +210,7 @@ function UserBubble({ message }: { message: ChatMessage }) {
             <Text variant="body">{text}</Text>
           </Pressable>
         ) : (
-          <Pressable onLongPress={() => setMenu((m) => !m)} accessibilityLabel={t('chat.message.attachmentOnlyA11y')} className="px-1">
+          <Pressable onLongPress={() => messageMenu.open(message.id)} accessibilityLabel={t('chat.message.attachmentOnlyA11y')} className="px-1">
             <Text variant="caption" tone="faint">
               {t('chat.message.longPressEdit')}
             </Text>
@@ -217,14 +218,14 @@ function UserBubble({ message }: { message: ChatMessage }) {
         )}
       </Animated.View>
       {menu ? (
-        <Animated.View entering={Appear.duration(140)} exiting={FadeOut.duration(100)} className="flex-row gap-2">
+        <Animated.View entering={Appear.duration(140)} exiting={FadeOut.duration(100)} onTouchStart={messageMenu.keep} className="flex-row gap-2">
           <Button
             title={t('core.common.edit')}
             icon="edit"
             size="sm"
             variant="secondary"
             onPress={() => {
-              setMenu(false);
+              messageMenu.close();
               sessions.startEdit(message.id);
               composerDraft.put({ text, attachments });
             }}
@@ -236,7 +237,7 @@ function UserBubble({ message }: { message: ChatMessage }) {
               size="sm"
               variant="secondary"
               onPress={() => {
-                setMenu(false);
+                messageMenu.close();
                 void Clipboard.setStringAsync(text);
                 haptics.success();
               }}
