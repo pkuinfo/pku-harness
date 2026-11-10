@@ -5,7 +5,7 @@ package org.pkuinfo.harness.phone.platform.accessibility
  * Agent 屏画面的新鲜度(帧时刻见 [AgentDisplay.lastFrameAt]):启动一个 App 之后交给模型的画面必须来自该次启动之后的渲染帧,
  * 不把上一屏留在缓冲里的残影当新画面。虚拟屏内容静止时不来新帧,所以「晚于启动开始时刻的帧」精确等价于「这次启动产生过画面」,
  * 比比较帧内容可靠(启动页可能和上一屏近似、动画中途帧也可能已经变了)。
- * 时钟、等待、最新帧时刻都由调用方注入,便于在 JVM 上测(同 [StillFrameRead])。
+ * 时钟、等待、最新帧时刻都由调用方注入,便于在 JVM 上测。
  */
 internal object FrameFreshness {
     /** 启动收尾时等这次启动之后第一帧的上限:冷启动首帧、启动页动画绝大多数在这之内。 */

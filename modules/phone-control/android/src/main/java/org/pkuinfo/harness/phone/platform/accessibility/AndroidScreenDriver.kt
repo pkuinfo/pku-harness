@@ -263,15 +263,10 @@ class AndroidScreenDriver(
     }
 
     /**
-     * 认屏上文字。自绘界面几乎没有无障碍事件,事件安静了画面可能还在过渡:先等画面停稳再认;认的过程中换了整页就按新的一页再认
-     * (规则见 [StillFrameRead])。局部在动(动图头像、光标)不影响字的位置,照用,不再整个丢掉。
+     * Text read from the screen image. Harness ships no on-device recognition model (no ML Kit), so
+     * this is always unavailable; callers fall back to the accessibility tree and frame changes.
      */
-    override suspend fun readVisibleText(): List<VisibleTextLine>? = withContext(Dispatchers.IO) {
-        if (!hasDisplay || !frameServable() || frameBlack() == true) return@withContext null
-        StillFrameRead.read(SystemClock::uptimeMillis, { delay(it) }, ::frameSignature) {
-            display.current?.latestFrameBitmap()?.let { PhoneOcr.read(it) }
-        }
-    }
+    override suspend fun readVisibleText(): List<VisibleTextLine>? = null
 
     override suspend fun frameGrid(): FrameGrid? = withContext(Dispatchers.IO) {
         if (!frameServable()) return@withContext null
