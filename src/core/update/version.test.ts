@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 
-import { isNewer, parseVersion, pickApk } from './version';
+import { isNewer, parseVersion, pickApk, releaseNotes } from './version';
 
 describe('versions', () => {
   test('parses tags and plain versions', () => {
@@ -32,5 +32,38 @@ describe('pickApk', () => {
     expect(pickApk(assets, null)?.url).toBe('u/arm64-v8a');
     expect(pickApk([asset('x86_64')], ['mips'])?.url).toBe('u/x86_64');
     expect(pickApk([], ['arm64-v8a'])).toBeNull();
+  });
+});
+
+describe('releaseNotes', () => {
+  const body = [
+    '## 更新内容',
+    '',
+    '- 更新提示改为底部面板',
+    '- **Copilot** 权限引导',
+    '',
+    "## What's new",
+    '- The update prompt is a bottom sheet',
+    '* `Copilot` setup guide',
+    '',
+    '## Checksums',
+    '- not a note',
+  ].join('\n');
+
+  test('reads both languages and stops at the next heading', () => {
+    expect(releaseNotes(body)).toEqual({
+      'zh-Hans': ['更新提示改为底部面板', 'Copilot 权限引导'],
+      en: ['The update prompt is a bottom sheet', 'Copilot setup guide'],
+    });
+  });
+
+  test('is empty without a section', () => {
+    expect(releaseNotes('PKU Harness v1.0.7 for Android 7.0+.')).toEqual({ en: [], 'zh-Hans': [] });
+    expect(releaseNotes(undefined)).toEqual({ en: [], 'zh-Hans': [] });
+  });
+
+  test('keeps at most six', () => {
+    const many = ["## What's new", ...Array.from({ length: 9 }, (_, i) => `- n${i}`)].join('\n');
+    expect(releaseNotes(many).en).toHaveLength(6);
   });
 });

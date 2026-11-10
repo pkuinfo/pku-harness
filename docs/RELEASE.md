@@ -43,7 +43,9 @@ gh secret set PKU_HARNESS_KEY_PASSWORD --env release -R pkuinfo/pku-harness
 
 1. In **one commit** on `main`, bump `expo.version` (e.g. `1.0.0` → `1.1.0`) **and**
    `expo.android.versionCode` (an integer, +1 per release: Android only upgrades to a larger
-   versionCode) in `app.json`; let CI pass. Versions come only from committed files, so the OTA
+   versionCode) in `app.json`, and add `docs/releases/<version>.md` with a few short bullets under
+   `## 更新内容` and `## What's new` (the in-app update sheet shows them; see `releaseNotes` in
+   `src/core/update/version.ts`); let CI pass. Versions come only from committed files, so the OTA
    runtime fingerprint can be resolved from the same commit. The workflow refuses a tag that
    doesn't match `expo.version` or a versionCode not greater than the latest release's.
 2. Tag that commit and push the tag:

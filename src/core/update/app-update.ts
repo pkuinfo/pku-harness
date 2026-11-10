@@ -5,7 +5,7 @@ import { Platform } from 'react-native';
 
 import { kv } from '@/core/store/kv';
 
-import { isNewer, pickApk, type ReleaseAsset } from './version';
+import { isNewer, pickApk, releaseNotes, type ReleaseAsset, type ReleaseNotes } from './version';
 
 /**
  * New-APK check (docs/RELEASE.md): the app asks GitHub for the latest release and, when it is
@@ -20,7 +20,7 @@ const CHECK_EVERY_MS = 12 * 60 * 60_000;
 /** "Later" quiets the prompt for that version this long; Settings still shows it. */
 const SNOOZE_MS = 3 * 24 * 60 * 60_000;
 
-export type AppUpdate = { version: string; url: string; size: number; page: string };
+export type AppUpdate = { version: string; url: string; size: number; page: string; notes?: ReleaseNotes };
 
 let available: AppUpdate | null = null;
 const listeners = new Set<() => void>();
@@ -36,7 +36,7 @@ export async function fetchAppUpdate(): Promise<AppUpdate | null> {
   if (Platform.OS !== 'android') return null;
   const res = await fetch(LATEST, { headers: { accept: 'application/vnd.github+json' } });
   if (!res.ok) throw new Error(`GitHub ${res.status}`);
-  const r = (await res.json()) as { tag_name?: string; html_url?: string; assets?: { name: string; browser_download_url: string; size: number }[] };
+  const r = (await res.json()) as { tag_name?: string; html_url?: string; body?: string; assets?: { name: string; browser_download_url: string; size: number }[] };
   const version = (r.tag_name ?? '').replace(/^v/, '');
   if (!isNewer(version, installedVersion())) {
     set(null);
@@ -45,7 +45,7 @@ export async function fetchAppUpdate(): Promise<AppUpdate | null> {
   }
   const assets: ReleaseAsset[] = (r.assets ?? []).map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size }));
   const apk = pickApk(assets, Device.supportedCpuArchitectures);
-  const update = { version, url: apk?.url ?? r.html_url ?? '', size: apk?.size ?? 0, page: r.html_url ?? '' };
+  const update: AppUpdate = { version, url: apk?.url ?? r.html_url ?? '', size: apk?.size ?? 0, page: r.html_url ?? '', notes: releaseNotes(r.body) };
   set(update);
   await kv('prefs').set('update.latest', update);
   return update;

@@ -185,9 +185,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           FIRST="pku-harness-${{ steps.version.outputs.version }}-${ABIS%% *}.apk"
+          # docs/releases/<version>.md holds the "## 更新内容" / "## What's new" bullets the in-app update sheet shows.
           cat > notes.md <<EOF
           PKU Harness ${TAG} for Android 7.0+. Most phones need \`arm64-v8a\`; \`armeabi-v7a\` is for
           older 32-bit phones and \`x86_64\` for emulators and x86 devices.
+
+          $(cat "docs/releases/${{ steps.version.outputs.version }}.md" 2>/dev/null)
 
           | | |
           |---|---|

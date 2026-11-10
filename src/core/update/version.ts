@@ -38,3 +38,30 @@ export function pickApk(assets: ReleaseAsset[], deviceAbis: readonly string[] | 
   }
   return forAbi('arm64-v8a') ?? apks[0] ?? null;
 }
+
+export type ReleaseNotes = { en: string[]; 'zh-Hans': string[] };
+
+const NOTES_HEADING = { en: /^#{2,3}\s+What['’]s new\s*$/i, 'zh-Hans': /^#{2,3}\s+更新内容\s*$/ } as const;
+const MAX_NOTES = 6;
+
+/**
+ * The short "what's new" list from a release body: the `- ` bullets under `## What's new` and
+ * `## 更新内容` (docs/releases/<version>.md, copied into the notes by the release workflow).
+ * Markdown emphasis and code marks are dropped; empty when the release has no such section.
+ */
+export function releaseNotes(body: string | null | undefined): ReleaseNotes {
+  const lines = (body ?? '').split(/\r?\n/);
+  const section = (heading: RegExp) => {
+    const start = lines.findIndex((l) => heading.test(l.trim()));
+    if (start < 0) return [];
+    const out: string[] = [];
+    for (const raw of lines.slice(start + 1)) {
+      const l = raw.trim();
+      if (/^#{1,6}\s/.test(l)) break;
+      const m = /^[-*]\s+(.+)$/.exec(l);
+      if (m) out.push(m[1]!.replace(/\*\*|__|`/g, '').trim());
+    }
+    return out.slice(0, MAX_NOTES);
+  };
+  return { en: section(NOTES_HEADING.en), 'zh-Hans': section(NOTES_HEADING['zh-Hans']) };
+}
