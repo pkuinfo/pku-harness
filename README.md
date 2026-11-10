@@ -156,3 +156,9 @@ separate Mika installation or service. Adapted source retains its
 Thanks also to [DSH Go](https://github.com/ccch1mneyyy/dsh-go) for design references on phone-task
 lifecycle and recovery. Copilot's corresponding state handling is independently implemented;
 DSH Go is not a dependency.
+
+Copilot uses a Harness-owned accessibility entry point with the TalkBack service class name
+for WeChat compatibility ([reported workaround](https://www.cnblogs.com/venblog/p/18794934)).
+It does not contain Google's TalkBack implementation or change Harness's application identity.
+Compatibility varies by WeChat/device version. Existing installs may need the connected phone
+helper to re-enable Copilot after upgrading to the new service component.

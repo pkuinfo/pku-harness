@@ -5,6 +5,19 @@
 
 ## 1. Product
 
+Copilot registers its Harness-owned accessibility implementation under
+`com.google.android.marvin.talkback.TalkBackService` for WeChat service-class compatibility.
+This is not Google's TalkBack implementation; the application ID, signature, Copilot label,
+permission scope and action policy stay unchanged. No speech or touch exploration is enabled.
+`PermissionCommands.ACCESSIBILITY_CLASS` is shared by helper recovery and settings routing;
+the manifest and R8 keep rule must match it. After an upgrade, the connected helper must enable
+the new component (or the user can enable Copilot in Android settings). Recovery replaces an
+enabled legacy entry even if its stored grant is already marked applied, preserving other
+services. It does not infer permission to enable the replacement when the legacy entry is
+absent or the capability is declined. Explicit enable/disable removes stale own entries.
+This workaround is
+version/device dependent and does not establish that all WeChat screens are accessible.
+
 A PKU student installs one app (Android first, iOS later), signs in once with their campus
 account, and an AI agent runs their campus life with them: card balance, network fee,
 timetable, courses, reminders, and anything a plugin adds.
