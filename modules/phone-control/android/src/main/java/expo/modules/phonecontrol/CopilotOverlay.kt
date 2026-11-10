@@ -106,6 +106,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                             }
                             // A canceled/old capture must not repaint after pause, handoff, approval, or lock.
                             if (revision != previewRevision) return@launch
+                            if (!expanded) return@launch // Minimized meanwhile: keep the last frame for reopening.
                             if (!canShowPreview()) { clearPreview(); return@launch }
                             if (read != null) {
                                 val frame = read.frame
