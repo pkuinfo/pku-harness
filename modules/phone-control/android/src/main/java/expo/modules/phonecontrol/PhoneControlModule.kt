@@ -22,7 +22,8 @@ import kotlinx.coroutines.withContext
 class PhoneControlModule : Module() {
     private val context get() = requireNotNull(appContext.reactContext).applicationContext
 
-    private fun copilotService() = ComponentName(context.packageName, "org.pkuinfo.harness.phone.platform.accessibility.PhoneAccessibilityService").flattenToString()
+    private fun copilotService() = ComponentName(context.packageName,
+        org.pkuinfo.harness.phone.connection.protocol.PermissionCommands.ACCESSIBILITY_CLASS).flattenToString()
 
 
     private suspend fun result(block: suspend () -> Map<String, Any?>): Map<String, Any?> = try { block() }

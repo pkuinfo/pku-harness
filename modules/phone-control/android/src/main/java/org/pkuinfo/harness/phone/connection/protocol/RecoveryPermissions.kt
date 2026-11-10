@@ -67,14 +67,24 @@ sealed interface PermissionResult {
 
 /** 这几项能力对应的 shell 命令(原版 pm / cmd deviceidle / settings 的写法)。 */
 object PermissionCommands {
+    const val ACCESSIBILITY_CLASS = "com.google.android.marvin.talkback.TalkBackService"
+    private const val LEGACY_ACCESSIBILITY_CLASS = "org.pkuinfo.harness.phone.platform.accessibility.PhoneAccessibilityService"
     const val WRITE_SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"
     const val READ_ACCESSIBILITY = "settings get secure enabled_accessibility_services"
     const val EXIT_MARK = "__mika_exit="
 
     fun accessibilityService(pkg: String): String {
-        // 包名(applicationId)可能带后缀(并存安装的版本),服务类却仍在 App 的命名空间里:包名是类名前缀时用简写,否则写完整类名
-        val service = "org.pkuinfo.harness.phone.platform.accessibility.PhoneAccessibilityService"
+        // Installation IDs may have suffixes; the compatibility class name remains fixed.
+        val service = ACCESSIBILITY_CLASS
         return "$pkg/${if (service.startsWith("$pkg.")) service.removePrefix(pkg) else service}"
+    }
+    fun legacyAccessibilityService(pkg: String) = "$pkg/$LEGACY_ACCESSIBILITY_CLASS"
+
+    /** Replace only this installation's legacy component; preserve every other service. */
+    fun accessibilityList(raw: String?, pkg: String, on: Boolean): String {
+        val cleaned = AccessibilityList.without(raw, legacyAccessibilityService(pkg))
+        val current = accessibilityService(pkg)
+        return if (on) AccessibilityList.with(cleaned, current) else AccessibilityList.without(cleaned, current)
     }
     fun grantWriteSecureSettings(pkg: String) = "pm grant $pkg $WRITE_SECURE_SETTINGS"
     fun revokeWriteSecureSettings(pkg: String) = "pm revoke $pkg $WRITE_SECURE_SETTINGS"
@@ -167,6 +177,23 @@ class RecoveryPermissions(
     suspend fun applyPending(): PermissionResult = lock.withLock {
         val shell = runner() ?: return@withLock PermissionResult.NoRunner
         var failure: PermissionResult? = null
+        val consent = store.consent.value
+        if (consent.wants(RecoveryCapability.Accessibility) && consent.isApplied(RecoveryCapability.Accessibility)) {
+            val migrated = try {
+                val enabled = shell.exec(PermissionCommands.READ_ACCESSIBILITY)
+                if (AccessibilityList.contains(enabled, PermissionCommands.legacyAccessibilityService(packageName))) {
+                    runAll(shell, PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(enabled, packageName, true)))
+                } else PermissionResult.Done
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                PermissionResult.Failed(e.message ?: e.javaClass.simpleName)
+            }
+            // Absence of the old component is not permission to enable the new one: the user
+            // may have disabled accessibility, or Android may have removed it during upgrade.
+            if (migrated != PermissionResult.Done) failure = migrated
+            _autoFailed.update { if (migrated == PermissionResult.Done) it - RecoveryCapability.Accessibility else it + RecoveryCapability.Accessibility }
+        }
         for (c in store.consent.value.pending) {
             val r = run(shell, listOf(c), on = true)
             if (r == PermissionResult.Done) store.save(store.consent.value.withApplied(c, true))
@@ -207,13 +234,13 @@ class RecoveryPermissions(
         try {
             val current = shell.exec(PermissionCommands.READ_ACCESSIBILITY)
             // 不在列表里(被强行停止时系统会拿掉):直接加上;在列表里却没绑定:去掉再加回,系统才会重新绑定
-            if (!AccessibilityList.contains(current, me)) return@withLock runAll(shell, PermissionCommands.writeAccessibility(AccessibilityList.with(current, me)))
+            if (!AccessibilityList.contains(current, me)) return@withLock runAll(shell, PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(current, packageName, true)))
             val removed = runAll(shell, PermissionCommands.writeAccessibility(AccessibilityList.without(current, me)))
             if (removed != PermissionResult.Done) return@withLock removed
             withContext(NonCancellable) {
                 delay(gapMs)
                 val now = shell.exec(PermissionCommands.READ_ACCESSIBILITY)
-                val back = runAll(shell, PermissionCommands.writeAccessibility(AccessibilityList.with(now, me)))
+                val back = runAll(shell, PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(now, packageName, true)))
                 // 加回失败时把原来的列表(连同总开关)写回:宁可回到「有却没绑定」,也不让 Mika 从列表里消失;
                 // 写回只是兜底,这次仍按加回失败报
                 // (读到的原样带着换行;它本来就有 Mika,with 只把它整理成干净的列表,内容不变)
@@ -254,8 +281,7 @@ class RecoveryPermissions(
             listOf(if (on) PermissionCommands.whitelistAdd(packageName) else PermissionCommands.whitelistRemove(packageName))
         RecoveryCapability.Accessibility -> {
             val current = shell.exec(PermissionCommands.READ_ACCESSIBILITY)
-            val me = PermissionCommands.accessibilityService(packageName)
-            PermissionCommands.writeAccessibility(if (on) AccessibilityList.with(current, me) else AccessibilityList.without(current, me))
+            PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(current, packageName, on))
         }
     }
 

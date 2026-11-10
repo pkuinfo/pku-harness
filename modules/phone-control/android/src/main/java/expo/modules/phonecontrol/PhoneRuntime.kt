@@ -7,7 +7,6 @@ import android.os.Build
 import android.os.Process
 import android.util.Base64
 import org.pkuinfo.harness.phone.core.*
-import org.pkuinfo.harness.phone.connection.protocol.AccessibilityList
 import org.pkuinfo.harness.phone.connection.DeveloperSettings
 import org.pkuinfo.harness.phone.connection.protocol.BuiltinShellStatus
 import org.pkuinfo.harness.phone.connection.protocol.PairingDiscovery
@@ -116,7 +115,7 @@ object PhoneRuntime {
             // Fails harmlessly on systems without the op; the settings write below is what counts.
             shell.runCommand("appops set $pkg ACCESS_RESTRICTED_SETTINGS allow")
             val current = shell.runCommand(PermissionCommands.READ_ACCESSIBILITY).getString("output")
-            PermissionCommands.writeAccessibility(AccessibilityList.with(current, PermissionCommands.accessibilityService(pkg)))
+            PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(current, pkg, true))
                 .all { shell.runCommand(it).getInt("exitCode", -1) == 0 }
         }.getOrDefault(false)
     }
