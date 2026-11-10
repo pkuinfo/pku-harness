@@ -1,4 +1,4 @@
-import { tool, type ToolSet } from 'ai';
+import { tool, zodSchema, type Schema, type ToolSet } from 'ai';
 
 import { invokeTool, services } from '@/core/runtime/invoke';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
@@ -7,6 +7,21 @@ import { resolveDynamic, type TurnInfo } from '@/core/runtime/types';
 
 import { byStability } from './context/assembly';
 import { dropModelImage, type ToolImages } from './tool-images';
+
+/**
+ * One AI SDK schema per tool input, kept for the app's life. Handed a raw zod schema, the SDK wraps
+ * it anew on every request and recomputes its JSON Schema each time; for ~100 tools that held the
+ * JS thread for most of a second per message. A cached wrapper computes it once.
+ */
+const schemas = new WeakMap<object, Schema<unknown>>();
+function inputSchema(input: object): Schema<unknown> {
+  let s = schemas.get(input);
+  if (!s) {
+    s = zodSchema(input as Parameters<typeof zodSchema>[0]) as Schema<unknown>;
+    schemas.set(input, s);
+  }
+  return s;
+}
 
 /** Model-facing tool names can't contain dots: `wallet.cardBalance` → `wallet__cardBalance`. */
 export const toModelName = (id: string) => id.replace('.', '__');
@@ -44,7 +59,7 @@ export function buildToolSet(signal?: AbortSignal, turn?: TurnInfo, actor: 'agen
     if (entry.def.userOnly) continue;
     set[toModelName(entry.id)] = tool({
       description: `${entry.def.title}. ${resolveDynamic(entry.def.description, services)}`,
-      inputSchema: entry.def.input,
+      inputSchema: inputSchema(entry.def.input),
       execute: async (input: unknown, { toolCallId }) => {
         try {
           const out = await invokeTool(entry.id, input, { actor, signal, turn });

@@ -7,6 +7,7 @@ import { pluginName, toolTitle } from '../runtime/localize';
 import { t } from '@/i18n';
 import { OverlayWriter } from './overlay-writer';
 import { stopPhoneRun } from './service';
+import { noticeUnmirrored } from '../runtime/approval-notice';
 
 const writer = new OverlayWriter();
 let started = false;
@@ -16,9 +17,8 @@ let started = false;
  * may omit it; it then widens whichever session is running, so it shows on that session's controls.
  */
 let runningSession: string | null = null;
-/** The approval the floating controls show right now (for the background notice). */
-let mirroredId: number | null = null;
-export const isMirrored = (id: number) => mirroredId === id;
+/** Copilot's requests are this mirror's to show; when it can't, it hands them to the background notice. */
+export const mirrorsApproval = (req: { entry: { pluginId: string } }) => !!PhoneControl && req.entry.pluginId === 'copilot';
 function overlaySession(req: ReturnType<typeof approvals.current>): string | null {
   const input = req?.input as Record<string, unknown> | undefined;
   if (typeof input?.sessionId === 'string') return input.sessionId;
@@ -55,7 +55,7 @@ export function startOverlayApprovals() {
     const title = !req ? '' : grant
       ? t('chat.approval.grantOverlayTitle', { plugin: plugin ? pluginName(plugin) : req.entry.pluginId, app: grant.label })
       : toolTitle(plugin, req.entry.name, req.entry.def.title);
-    mirroredId = eligible ? req.id : null;
+    if (req && !eligible && AppState.currentState !== 'active' && mirrorsApproval(req)) noticeUnmirrored(req);
     await native.overlayApproval(eligible ? { id: req.id, sessionId: sessionId!, title, detail } : null);
   };
   const sync = () => { void owner.update(mirror); };
