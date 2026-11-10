@@ -56,7 +56,8 @@ Use `/copilot` or Settings → Plugins → Copilot for one-time setup. Until Cop
 screen is a numbered checklist derived from live readiness (`plugins/plugins/copilot/src/setup.ts`):
 
 1. **Phone helper** (wireless debugging pairing, or reconnect for a paired phone). Opens Developer
-   options at Wireless debugging. Keep Android's pairing dialog open in split screen while
+   options at Wireless debugging (while Developer options are off, About phone at Build number,
+   which turns them on after seven taps). Keep Android's pairing dialog open in split screen while
    entering its port and code; discovery also has an optional manual port fallback.
 2. **Accessibility service**: one tap through the helper; otherwise the accessibility list,
    plus App info for Android 13+ restricted settings.
