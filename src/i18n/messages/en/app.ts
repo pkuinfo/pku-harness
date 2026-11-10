@@ -369,6 +369,8 @@ export const app: Messages['app'] = {
     title: 'Plugins',
     eyebrow: '',
     services: 'Campus services',
+    phone: 'On this phone',
+    phoneFooter: 'Copilot can operate other apps on this phone for you.',
     ai: 'AI providers',
     aiFooter: 'Model providers are plugins too. Switch between them in Settings → AI provider.',
     core: 'System',

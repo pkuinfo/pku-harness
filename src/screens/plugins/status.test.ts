@@ -28,6 +28,7 @@ describe('grouping', () => {
     expect(groupOf({ id: 'x', core: true })).toBe('system');
     expect(groupOf({ id: 'x', providers: {} })).toBe('ai');
     expect(groupOf({ id: 'wallet', requires: ['campus-session'] })).toBe('services');
+    expect(groupOf({ id: 'copilot', requires: ['phone-control'] })).toBe('phone');
   });
   test('drops empty groups unless kept, keeps order', () => {
     const groups = groupPlugins([{ id: 'b' }, { id: 'c', core: true }, { id: 'a' }], ['remote']);

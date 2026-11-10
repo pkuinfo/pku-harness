@@ -46,10 +46,11 @@ export const STATUS_TONE: Record<PluginStatus, ChipTone> = {
 /** The plugin is running (it may still only answer on the campus network). */
 export const isRunning = (s: PluginStatus) => s === 'on' || s === 'campusNetwork';
 
-export type GroupId = 'services' | 'system' | 'ai' | 'remote';
+export type GroupId = 'services' | 'phone' | 'system' | 'ai' | 'remote';
 
 export const GROUPS: { id: GroupId; title: MessageKey; footer?: MessageKey }[] = [
   { id: 'services', title: 'app.plugins.services' },
+  { id: 'phone', title: 'app.plugins.phone', footer: 'app.plugins.phoneFooter' },
   { id: 'system', title: 'app.plugins.core', footer: 'app.plugins.coreFooter' },
   { id: 'ai', title: 'app.plugins.ai', footer: 'app.plugins.aiFooter' },
   { id: 'remote', title: 'app.plugins.remote', footer: 'app.plugins.remoteFooter' },
@@ -59,11 +60,13 @@ export function groupOf(p: PluginLike): GroupId {
   if (p.remote) return 'remote';
   if (p.core) return 'system';
   if (p.providers) return 'ai';
+  // Copilot drives other apps on the phone; it is not a campus service.
+  if (p.requires?.includes('phone-control')) return 'phone';
   return 'services';
 }
 
 /** Tile tint per group, so the grid reads as sections at a glance. */
-export const GROUP_TONE: Record<GroupId, ChipTone> = { services: 'accent', system: 'neutral', ai: 'warn', remote: 'info' };
+export const GROUP_TONE: Record<GroupId, ChipTone> = { services: 'accent', phone: 'accent', system: 'neutral', ai: 'warn', remote: 'info' };
 
 /** Plugins bucketed by group in registry order. `keepEmpty` keeps groups with no plugins (Remote holds the add tiles). */
 export function groupPlugins<T extends PluginLike>(plugins: readonly T[], keepEmpty: GroupId[] = []): { id: GroupId; title: MessageKey; footer?: MessageKey; plugins: T[] }[] {

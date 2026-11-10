@@ -38,11 +38,16 @@ export async function fetchAppUpdate(): Promise<AppUpdate | null> {
   if (!res.ok) throw new Error(`GitHub ${res.status}`);
   const r = (await res.json()) as { tag_name?: string; html_url?: string; assets?: { name: string; browser_download_url: string; size: number }[] };
   const version = (r.tag_name ?? '').replace(/^v/, '');
-  if (!isNewer(version, installedVersion())) return set(null), null;
+  if (!isNewer(version, installedVersion())) {
+    set(null);
+    await kv('prefs').delete('update.latest');
+    return null;
+  }
   const assets: ReleaseAsset[] = (r.assets ?? []).map((a) => ({ name: a.name, url: a.browser_download_url, size: a.size }));
   const apk = pickApk(assets, Device.supportedCpuArchitectures);
   const update = { version, url: apk?.url ?? r.html_url ?? '', size: apk?.size ?? 0, page: r.html_url ?? '' };
   set(update);
+  await kv('prefs').set('update.latest', update);
   return update;
 }
 
@@ -53,7 +58,12 @@ export async function fetchAppUpdate(): Promise<AppUpdate | null> {
 export async function checkOnLaunch(now = Date.now()): Promise<AppUpdate | null> {
   const prefs = kv('prefs');
   const last = (await prefs.get<number>('update.checkedAt')) ?? 0;
-  if (now - last < CHECK_EVERY_MS) return null;
+  if (now - last < CHECK_EVERY_MS) {
+    // Between checks, Settings still shows the release the last check found (unless it is installed now).
+    const known = await prefs.get<AppUpdate>('update.latest');
+    if (known && isNewer(known.version, installedVersion())) set(known);
+    return null;
+  }
   const update = await fetchAppUpdate().catch(() => null);
   await prefs.set('update.checkedAt', now);
   if (!update) return null;

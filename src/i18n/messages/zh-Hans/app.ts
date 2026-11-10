@@ -373,6 +373,8 @@ export const app = {
     title: '插件',
     eyebrow: 'Plugins',
     services: '校园服务',
+    phone: '手机操作',
+    phoneFooter: 'Copilot 可以在这台手机上替你操作其他 App。',
     ai: 'AI 服务',
     aiFooter: '模型服务也是插件，可在 设置 → AI 服务 中切换。',
     core: '系统能力',
