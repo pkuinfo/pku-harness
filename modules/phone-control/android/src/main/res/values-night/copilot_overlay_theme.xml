@@ -6,4 +6,5 @@
     <color name="copilot_overlay_error">#F2B8B5</color>
     <color name="copilot_overlay_preview_surface">#141518</color>
     <color name="copilot_overlay_ripple">#33F5F5F5</color>
+    <color name="copilot_overlay_attention">#FFB74D</color>
 </resources>

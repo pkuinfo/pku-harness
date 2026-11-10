@@ -30,8 +30,12 @@ import android.widget.TextView
 import kotlinx.coroutines.*
 import org.pkuinfo.harness.phone.platform.accessibility.ScreenAccessibility
 
-/** How much of the screen height the live preview may take (it keeps the frame's shape). */
-private const val PREVIEW_SCREEN_SHARE = 0.48f
+/** How much of the screen height the live preview takes (it keeps the frame's shape); the user drags its grip to change it. */
+private const val PREVIEW_SHARE_DEFAULT = 0.36f
+private const val PREVIEW_SHARE_MIN = 0.22f
+private const val PREVIEW_SHARE_MAX = 0.62f
+private const val PREFS = "copilot_overlay"
+private const val PREVIEW_SHARE_KEY = "previewShare"
 
 /** Harness-owned controls on the main display; the controlled apps remain on a separate display.
  * Non-focusable, content-sized windows leave the user's keyboard and outside touches alone.
@@ -55,7 +59,8 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         PixelFormat.TRANSLUCENT,
     ).apply { gravity = Gravity.TOP or Gravity.START; x = gap; y = size(R.dimen.copilot_overlay_touch) * 2; title = "Harness Copilot controls" }
     private var attached = false
-    private var expanded = false
+    // The full window by default; Minimize turns it into the ball, and tapping the ball brings it back.
+    private var expanded = true
     private var closed = false
     private var busy = false
     private var rendered = ""
@@ -65,6 +70,11 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
     private var picture: ImageView? = null
     private var bitmap: Bitmap? = null
     private var error: String? = null
+    private val prefs = service.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+    private var previewShare = prefs.getFloat(PREVIEW_SHARE_KEY, PREVIEW_SHARE_DEFAULT).coerceIn(PREVIEW_SHARE_MIN, PREVIEW_SHARE_MAX)
+    private var lastApproval: Int? = null
+    /** A resize drag in progress: the status loop must not rebuild the panel under the finger. */
+    private var resizing = false
 
     fun show(): Boolean {
         if (attached) return true
@@ -82,9 +92,11 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                     val paused = state["paused"] == true
                     val handed = state["handedOver"] == true
                     val approval = PhoneOverlayBridge.approval?.takeIf { it.sessionId == sessionId }
+                    // A new approval opens the panel, so a minimized ball never leaves a task waiting unseen.
+                    if (approval != null && approval.id != lastApproval) { lastApproval = approval.id; expanded = true }
                     val activity = operationStatus()
                     val key = "${service.resources.configuration.uiMode}:$activity:$expanded:$paused:$handed:${approval?.id}:$busy:$error"
-                    if (key != rendered && menu == null) { rendered = key; render(paused, handed, approval) }
+                    if (key != rendered && menu == null && !resizing) { rendered = key; render(paused, handed, approval) }
                     if (expanded && !handed && !paused && !busy && approval == null && previewJob?.isActive != true) {
                         val revision = previewRevision
                         previewJob = scope.launch {
@@ -159,7 +171,8 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
 
     private fun render(paused: Boolean, handed: Boolean, approval: PhoneOverlayBridge.Approval?) {
         ui.setTheme(overlayTheme())
-        if (paused || handed || approval != null || !expanded) clearPreview()
+        // Minimizing keeps the last frame, so reopening the window shows it at once.
+        if (paused || handed || approval != null) clearPreview()
         picture?.setImageDrawable(null); picture = null
         root.removeAllViews()
         root.setPadding(gap, 0, gap, if (expanded) gap else 0)
@@ -175,7 +188,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         val frame = bitmap
         val aspect = if (frame != null && frame.height > 0) frame.width.toFloat() / frame.height else area.bounds.width().toFloat() / area.bounds.height()
         val screenHeight = area.bounds.height() - insets.top - insets.bottom - gap * 4
-        var previewHeight = (screenHeight * PREVIEW_SCREEN_SHARE).toInt()
+        var previewHeight = (screenHeight * previewShare).toInt()
         var previewWidth = (previewHeight * aspect).toInt()
         if (previewWidth > availableWidth - gap * 2) {
             previewWidth = availableWidth - gap * 2
@@ -191,6 +204,16 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
             activity?.phase == "thinking" -> R.string.copilot_compact_thinking
             activity?.phase == "attention" -> R.string.copilot_compact_attention
             else -> R.string.copilot_compact_ready
+        }
+        if (!expanded) {
+            ball(compactTitle, when {
+                approval != null || activity?.phase == "attention" -> R.color.copilot_overlay_attention
+                paused || handed -> R.color.copilot_overlay_text_muted
+                activity?.phase == "working" || activity?.phase == "thinking" -> R.color.copilot_overlay_brand
+                else -> null
+            })
+            root.post { if (attached && !closed) { clamp(); runCatching { manager.updateViewLayout(root, params) } } }
+            return
         }
         val header = LinearLayout(ui).apply { gravity = Gravity.CENTER_VERTICAL }
         val title = label(service.getString(if (expanded) R.string.copilot_name else compactTitle)).apply {
@@ -260,6 +283,8 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                     if (bitmap != null) setBackgroundColor(service.getColor(R.color.copilot_overlay_preview_surface))
                 }
                 preview.addView(picture, FrameLayout.LayoutParams(-1, -1))
+                preview.addView(grip(preview, aspect, screenHeight, availableWidth),
+                    FrameLayout.LayoutParams(size(R.dimen.copilot_overlay_grip), size(R.dimen.copilot_overlay_grip), Gravity.BOTTOM or Gravity.END))
                 content.addView(preview, LinearLayout.LayoutParams(minOf(previewWidth, params.width - gap * 2), previewHeight).apply { gravity = Gravity.CENTER_HORIZONTAL })
             }
             // Keep actions reachable on short screens and at enlarged system font sizes.
@@ -338,7 +363,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         })
     }
     @android.annotation.SuppressLint("ClickableViewAccessibility")
-    private fun drag(view: View) {
+    private fun drag(view: View, snap: Boolean = false) {
         var x = 0f; var y = 0f; var startX = 0; var startY = 0; var moved = false
         val slop = ViewConfiguration.get(service).scaledTouchSlop
         view.setOnTouchListener { _, event ->
@@ -350,12 +375,97 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                     if (moved) { params.x = startX + dx.toInt(); params.y = startY + dy.toInt(); clamp(); runCatching { manager.updateViewLayout(root, params) } }
                     true
                 }
-                MotionEvent.ACTION_UP -> { if (!moved) view.performClick(); true }
+                MotionEvent.ACTION_UP -> {
+                    if (!moved) view.performClick()
+                    else if (snap) snapToEdge()
+                    true
+                }
                 MotionEvent.ACTION_CANCEL -> true
                 else -> false
             }
         }
     }
+    /** The minimized ball rests against the nearer side edge, like other floating bubbles. */
+    private fun snapToEdge() {
+        val area = manager.currentWindowMetrics
+        val inset = area.windowInsets.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout())
+        val left = params.x + root.width / 2 < area.bounds.width() / 2
+        params.x = if (left) inset.left + gap / 2 else area.bounds.width() - root.width - inset.right - gap / 2
+        clamp(); runCatching { manager.updateViewLayout(root, params) }
+    }
+
+    /** Minimized: a round button with the app icon and a dot for what Copilot is doing; tap to open, drag to move. */
+    private fun ball(description: Int, dot: Int?) {
+        val diameter = size(R.dimen.copilot_overlay_ball)
+        root.setPadding(0, 0, 0, 0)
+        root.background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(service.getColor(R.color.copilot_overlay_surface)) }
+        params.width = diameter
+        val face = FrameLayout(ui).apply {
+            contentDescription = listOf(service.getString(description), service.getString(R.string.copilot_open_panel)).joinToString(". ")
+            setOnClickListener { expanded = true; rendered = "" }
+        }
+        face.addView(ImageView(ui).apply {
+            setImageDrawable(service.packageManager.getApplicationIcon(service.packageName))
+            scaleType = ImageView.ScaleType.CENTER_CROP
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL }
+            clipToOutline = true
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, FrameLayout.LayoutParams(-1, -1).apply { val m = size(R.dimen.copilot_overlay_small_gap) / 2; setMargins(m, m, m, m) })
+        if (dot != null) face.addView(View(ui).apply {
+            background = GradientDrawable().apply {
+                shape = GradientDrawable.OVAL; setColor(service.getColor(dot))
+                setStroke(size(R.dimen.copilot_overlay_small_gap) / 4, service.getColor(R.color.copilot_overlay_surface))
+            }
+            importantForAccessibility = View.IMPORTANT_FOR_ACCESSIBILITY_NO
+        }, FrameLayout.LayoutParams(size(R.dimen.copilot_overlay_ball_dot), size(R.dimen.copilot_overlay_ball_dot), Gravity.TOP or Gravity.END))
+        drag(face, snap = true)
+        root.addView(face, LinearLayout.LayoutParams(diameter, diameter))
+    }
+
+    /**
+     * The corner grip resizes the preview: dragging down or outward makes it larger. The panel follows
+     * live, and the size is kept for later tasks.
+     */
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
+    private fun grip(preview: View, aspect: Float, screenHeight: Int, availableWidth: Int) = ImageView(ui).apply {
+        setImageResource(R.drawable.copilot_resize)
+        imageTintList = ColorStateList.valueOf(service.getColor(R.color.copilot_overlay_text_muted))
+        contentDescription = service.getString(R.string.copilot_resize)
+        val inset = size(R.dimen.copilot_overlay_small_gap)
+        setPadding(inset, inset, inset / 2, inset / 2)
+        var startY = 0f; var startX = 0f; var startShare = previewShare
+        setOnTouchListener { _, event ->
+            when (event.actionMasked) {
+                MotionEvent.ACTION_DOWN -> {
+                    startX = event.rawX; startY = event.rawY; startShare = previewShare; resizing = true
+                    // The scroll box was sized for the old preview; let it follow the drag.
+                    (preview.parent?.parent as? View)?.let { box -> box.layoutParams = box.layoutParams.apply { height = LinearLayout.LayoutParams.WRAP_CONTENT } }
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    // Width changes count through the frame's shape, so a sideways drag resizes too.
+                    val grow = maxOf(event.rawY - startY, (event.rawX - startX) / aspect)
+                    val maxShare = minOf(PREVIEW_SHARE_MAX, (availableWidth - gap * 2) / aspect / screenHeight)
+                    previewShare = (startShare + grow / screenHeight).coerceIn(PREVIEW_SHARE_MIN, maxOf(PREVIEW_SHARE_MIN, maxShare))
+                    val height = (screenHeight * previewShare).toInt()
+                    val width = (height * aspect).toInt()
+                    preview.layoutParams = preview.layoutParams.apply { this.width = width; this.height = height }
+                    params.width = maxOf(size(R.dimen.copilot_overlay_compact_width), width + gap * 2)
+                    root.requestLayout()
+                    runCatching { manager.updateViewLayout(root, params) }
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    prefs.edit().putFloat(PREVIEW_SHARE_KEY, previewShare).apply()
+                    resizing = false
+                    rendered = ""
+                    true
+                }
+                else -> false
+            }
+        }
+    }
+
     private fun clamp() {
         val area = manager.currentWindowMetrics
         val inset = area.windowInsets.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.displayCutout())

@@ -10,6 +10,9 @@
     <color name="copilot_overlay_brand">#8B0012</color>
     <color name="copilot_overlay_on_brand">#FFFFFF</color>
     <dimen name="copilot_overlay_compact_width">200dp</dimen>
+    <dimen name="copilot_overlay_ball">56dp</dimen>
+    <dimen name="copilot_overlay_ball_dot">14dp</dimen>
+    <dimen name="copilot_overlay_grip">36dp</dimen>
     <dimen name="copilot_overlay_small_gap">8dp</dimen>
     <dimen name="copilot_overlay_inner_corner">12dp</dimen>
     <dimen name="copilot_overlay_elevation">8dp</dimen>
@@ -18,4 +21,5 @@
     <color name="copilot_overlay_error">#B3261E</color>
     <color name="copilot_overlay_preview_surface">#EEEAE7</color>
     <color name="copilot_overlay_ripple">#1F161719</color>
+    <color name="copilot_overlay_attention">#C77700</color>
 </resources>

@@ -347,6 +347,28 @@ class PhoneEngineTest {
         assertTrue(engine.observe(id).targets.isEmpty())
     }
 
+    @Test fun liveScreensArePreviewedButAnAppearingProtectedScreenIsNot() = runBlocking {
+        val device = FakeDevice()
+        device.frame = device.frame.copy(unstable = true)
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        assertNotNull(engine.preview(id))
+        device.frame = device.frame.copy(protected = true)
+        assertNull(engine.preview(id))
+    }
+
+    @Test fun previewKeepsWorkingWhileTheAgentWaits() = runBlocking {
+        val device = FakeDevice().apply { entered = CompletableDeferred(); finish = CompletableDeferred() }
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val waiting = async { engine.waitForChange(id, 10_000) }
+        device.entered!!.await()
+        assertNotNull(withTimeout(1_000) { engine.preview(id) })
+        device.finish!!.complete(Unit)
+        waiting.await()
+        Unit
+    }
+
     @Test fun uncertainActionIsNeverAutomaticallyRetried() = runBlocking {
         val device = FakeDevice()
         val engine = device.engine()

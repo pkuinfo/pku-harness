@@ -1,7 +1,7 @@
 <resources>
 <string name="copilot_name">Copilot</string>
 <string name="copilot_expand">Copilot · 展开</string>
-<string name="copilot_collapse">收起</string>
+<string name="copilot_collapse">最小化</string>
 <string name="copilot_pause">暂停</string>
 <string name="copilot_resume">继续</string>
 <string name="copilot_paused">已暂停</string>
@@ -55,4 +55,6 @@
 <string name="copilot_pairing_done_text">回到 Harness，选择允许 Copilot 使用的应用。</string>
 <string name="copilot_pairing_problem_title">手机助手未能连接</string>
 <string name="copilot_pairing_problem_text">打开 Harness 查看处理方法。</string>
+<string name="copilot_resize">调整预览大小</string>
+<string name="copilot_open_panel">打开 Copilot 控制面板</string>
 </resources>

@@ -56,4 +56,6 @@
 <string name="copilot_pairing_done_text">Return to Harness to choose the apps Copilot may use.</string>
 <string name="copilot_pairing_problem_title">The phone helper didn’t connect</string>
 <string name="copilot_pairing_problem_text">Open Harness to see what to do.</string>
+<string name="copilot_resize">Resize preview</string>
+<string name="copilot_open_panel">Open Copilot controls</string>
 </resources>

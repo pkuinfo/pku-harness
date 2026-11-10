@@ -171,25 +171,27 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         }
     }
 
-    suspend fun waitForChange(id: String, timeoutMs: Long): PhoneObservation = mutex.withLock {
-        val session = active(id)
-        checkedFrame(session)
+    suspend fun waitForChange(id: String, timeoutMs: Long): PhoneObservation {
+        val session = mutex.withLock { active(id).also { checkedFrame(it) } }
+        // Not under the lock: the floating preview keeps updating while the agent waits.
         coroutineScope {
             val waiting = async { session.device.awaitChange(timeoutMs.coerceIn(0, 10_000)) }
             try { select<Unit> { waiting.onAwait { }; session.stop.onAwait { } } }
             finally { waiting.cancel() }
         }
-        publish(session)
+        return mutex.withLock { publish(active(id)) }
     }
 
     suspend fun preview(id: String): DevicePreview? = mutex.withLock {
         val session = active(id)
         if (session.handedOver || session.device.isLocked()) return@withLock null
         val before = checkedFrame(session)
-        if (before.protected || before.unstable) return@withLock null
+        if (before.protected) return@withLock null
         val image = session.device.preview()
         val after = checkedFrame(session)
-        image.takeIf { before == after }
+        // Live screens (timers, clocks) change while the frame is captured; that's fine to show. A
+        // protected screen or another app appearing meanwhile is not.
+        image.takeIf { !after.protected && after.packageName == before.packageName && after.windowPackages == before.windowPackages }
     }
 
     suspend fun handoff(id: String) = mutex.withLock {
