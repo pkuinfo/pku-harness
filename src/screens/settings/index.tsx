@@ -174,8 +174,7 @@ export function Settings() {
       <FadeIn index={6}>
         <ListGroup title={t('app.settings.about')}>
           <ListRow icon="refresh" title={t('app.settings.checkUpdates')} subtitle={checking ?? t('app.settings.version', { version: installedVersion() })} onPress={() => void checkNow()} />
-          <ListRow icon="fileText" title={t('app.settings.terms')} onPress={() => router.push('/legal/terms')} />
-          <ListRow icon="shield" title={t('app.settings.privacy')} onPress={() => router.push('/legal/privacy')} />
+          <ListRow icon="help" title={t('app.settings.aboutRow')} subtitle={t('app.settings.aboutRowSubtitle')} onPress={() => router.push('/about')} />
         </ListGroup>
       </FadeIn>
     </Screen>

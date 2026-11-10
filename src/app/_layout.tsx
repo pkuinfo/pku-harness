@@ -102,6 +102,7 @@ export default function RootLayout() {
           <Stack.Screen name="usage" />
           {/* Settings › 时区: a pushed list. */}
           <Stack.Screen name="timezone" />
+          <Stack.Screen name="about" />
           {/* Terms of Service / Privacy Policy (docs/legal). */}
           <Stack.Screen name="legal/[doc]" />
         </Stack>
