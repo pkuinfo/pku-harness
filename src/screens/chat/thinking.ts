@@ -25,6 +25,17 @@ export function thinkingTail(text: string, max = 480): string {
   return nl >= 0 && nl < max / 2 ? cut.slice(nl + 1) : cut;
 }
 
+/**
+ * Height (dp) of the live window showing `lines` lines of `lineHeight` text at the system font
+ * scale. Text lineHeight follows the font scale (RN `allowFontScaling`), so a fixed height would
+ * clip lines at large scales and leave a gap at small ones. Each line is rounded up because
+ * Android lays out whole pixels per line.
+ */
+export function thinkingWindowHeight(lineHeight: number, fontScale: number, lines: number): number {
+  const scale = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
+  return Math.ceil(lineHeight * scale) * lines;
+}
+
 /** Whole seconds thought, at least 1 (a block that streamed at all took some time). */
 export function thinkingSeconds(ms: number): number {
   return Math.max(1, Math.round(ms / 1000));

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 
 import { AgentOrbit } from '@/components/agent-orbit';
@@ -11,13 +11,12 @@ import { useT } from '@/i18n';
 import { typography, useTheme } from '@/theme';
 
 import { Chevron } from './tool-chip';
-import { thinkingBody, thinkingPreview, thinkingSeconds, thinkingTail } from './thinking';
+import { thinkingBody, thinkingPreview, thinkingSeconds, thinkingTail, thinkingWindowHeight } from './thinking';
 
 type ReasoningPart = Extract<ChatPart, { type: 'reasoning' }>;
 
 /** Lines of thinking visible while it streams. */
 const LIVE_LINES = 3;
-const LIVE_HEIGHT = typography.caption.lineHeight * LIVE_LINES;
 
 /**
  * One block of model thinking. While it streams: a fixed three-line window that follows the
@@ -29,6 +28,9 @@ export function ThinkingPill({ part, live, replyStreaming }: { part: ReasoningPa
   const c = useTheme();
   const t = useT();
   const [open, setOpen] = useState(false);
+  // Exactly LIVE_LINES caption lines at the system font scale (re-renders when it changes).
+  const { fontScale } = useWindowDimensions();
+  const liveHeight = thinkingWindowHeight(typography.caption.lineHeight, fontScale, LIVE_LINES);
 
   // A pill opened by hand during the reply folds back once the reply is done.
   const wasStreaming = useRef(replyStreaming);
@@ -48,7 +50,7 @@ export function ThinkingPill({ part, live, replyStreaming }: { part: ReasoningPa
             {t('chat.thinking.live')}
           </Text>
         </View>
-        <View className="justify-end overflow-hidden border-l-[1.5px] border-edge pl-3" style={{ height: LIVE_HEIGHT }} accessibilityLiveRegion="none">
+        <View className="justify-end overflow-hidden border-l-[1.5px] border-edge pl-3" style={{ height: liveHeight }} accessibilityLiveRegion="none">
           <Text variant="caption" tone="faint">
             {thinkingTail(thinkingBody(part.text))}
           </Text>

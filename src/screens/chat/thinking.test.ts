@@ -1,6 +1,20 @@
 import { describe, expect, test } from 'bun:test';
 
-import { thinkingBody, thinkingPreview, thinkingSeconds, thinkingTail } from './thinking';
+import { thinkingBody, thinkingPreview, thinkingSeconds, thinkingTail, thinkingWindowHeight } from './thinking';
+
+describe('thinkingWindowHeight', () => {
+  test('follows the font scale, whole lines rounded up', () => {
+    expect(thinkingWindowHeight(16, 1, 3)).toBe(48);
+    expect(thinkingWindowHeight(16, 1.3, 3)).toBe(63); // 20.8 → 21 per line
+    expect(thinkingWindowHeight(16, 2, 3)).toBe(96);
+    expect(thinkingWindowHeight(16, 0.85, 3)).toBe(42); // 13.6 → 14 per line
+  });
+
+  test('a missing or bogus scale counts as 1', () => {
+    expect(thinkingWindowHeight(16, 0, 3)).toBe(48);
+    expect(thinkingWindowHeight(16, Number.NaN, 3)).toBe(48);
+  });
+});
 
 describe('thinkingPreview', () => {
   test('first non-empty line, emphasis and list markers dropped', () => {
