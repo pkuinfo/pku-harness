@@ -8,7 +8,9 @@ import android.os.Process
 import android.util.Base64
 import org.pkuinfo.harness.phone.core.*
 import org.pkuinfo.harness.phone.connection.protocol.AccessibilityList
+import org.pkuinfo.harness.phone.connection.DeveloperSettings
 import org.pkuinfo.harness.phone.connection.protocol.BuiltinShellStatus
+import org.pkuinfo.harness.phone.connection.protocol.PairingDiscovery
 import org.pkuinfo.harness.phone.connection.protocol.PermissionCommands
 import org.pkuinfo.harness.phone.platform.AndroidDevicePort
 import org.pkuinfo.harness.phone.platform.PhonePlatform
@@ -38,8 +40,10 @@ object PhoneRuntime {
     fun readiness(context: Context): Map<String, Any?> {
         initialize(context)
         val platform = PhonePlatform.of(context)
-        val helper = platform.shellManager.engine.status.value
+        val engine = platform.shellManager.engine
+        val helper = engine.status.value
         val session = control?.state()
+        val resolver = context.contentResolver
         return mapOf(
             "supported" to (Build.VERSION.SDK_INT >= 31),
             "accessibility" to (ScreenAccessibility.instance.value != null),
@@ -52,6 +56,18 @@ object PhoneRuntime {
                 is BuiltinShellStatus.Failed -> "failed"
             },
             "helperFailure" to (helper as? BuiltinShellStatus.Failed)?.reason?.name,
+            "paired" to engine.paired,
+            // Settings' "Pair device with pairing code" dialog, looked for while pairing is followed.
+            "pairing" to when (engine.pairingDiscovery.value) {
+                PairingDiscovery.Idle -> "idle"
+                PairingDiscovery.Searching -> "searching"
+                is PairingDiscovery.Found -> "found"
+            },
+            "pairingActive" to platform.pairing.active,
+            "developerOptions" to runCatching { DeveloperSettings.developerOptions(resolver) }.getOrDefault(false),
+            "wirelessDebugging" to runCatching { DeveloperSettings.wirelessDebugging(resolver) }.getOrDefault(false),
+            // The helper is turning accessibility on by itself (no tap needed).
+            "accessibilityAuto" to platform.recovery.accessibilityPending(),
             "locked" to context.getSystemService(KeyguardManager::class.java).isKeyguardLocked,
             "restricted" to restricted(context),
             "sessionId" to session?.id,

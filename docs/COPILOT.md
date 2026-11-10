@@ -55,15 +55,38 @@ package ownership, and integration are Harness-owned.
 Use `/copilot` or Settings → Plugins → Copilot for one-time setup. Until Copilot is ready the
 screen is a numbered checklist derived from live readiness (`plugins/plugins/copilot/src/setup.ts`):
 
-1. **Phone helper** (wireless debugging pairing, or reconnect for a paired phone). Opens Developer
-   options at Wireless debugging (while Developer options are off, About phone at Build number,
-   which turns them on after seven taps). Keep Android's pairing dialog open in split screen while
-   entering its port and code; discovery also has an optional manual port fallback.
-2. **Accessibility service**: one tap through the helper; otherwise the accessibility list,
-   plus App info for Android 13+ restricted settings.
-3. **Notifications** (optional): the ongoing task notification with Stop.
-4. **Allowed apps**: scrolls to the app list.
-5. **Turn on Copilot.**
+1. **Notifications** (recommended): the pairing code is typed into a notification during setup,
+   and the ongoing task notification carries Stop. The helper button below asks for it inline
+   while it's undecided; denied notifications only move the code entry onto the screen.
+2. **Phone helper.** One button, *Turn on Wireless debugging*: it asks for notifications if
+   needed, starts following the pairing (`startPairing`: mDNS search for Settings' pairing
+   dialog + a high-importance notification with a RemoteInput *Enter code* box), and opens
+   Developer options at Wireless debugging (About phone at Build number while Developer options
+   are off). In Settings the user turns on Wireless debugging, taps *Pair device with pairing
+   code*, then types the six digits into the notification. No port, no split screen: the port
+   comes from discovery. The notification shows progress (pairing, connected, or the reason to
+   re-enter a code). A collapsed *Enter code manually* fallback takes the code plus an optional
+   `IP:port`. A previously paired phone gets the Reconnect form instead.
+3. **Accessibility service**: automatic. When the helper reaches Running it applies, once each
+   (`HelperRecovery`, from Mika's `BuiltinShellRecovery`): `appops … ACCESS_RESTRICTED_SETTINGS
+   allow` (Android 13+), `pm grant … WRITE_SECURE_SETTINGS`, `cmd deviceidle whitelist +pkg`,
+   adds Copilot to `enabled_accessibility_services`, and `pm grant … POST_NOTIFICATIONS` if it
+   isn't granted. The row shows *Turning on…* meanwhile. A service still enabled but unbound is
+   re-bound (`AccessibilityRepair`); one the user removed in Settings is left off and the row
+   offers a one-tap *Turn on* through the helper. Without a helper, accessibility settings and
+   App info remain as a fallback.
+4. **Allowed apps**: scrolls to the app list. Never selected automatically.
+5. **Turn on Copilot.** Never turned on automatically.
+
+With `WRITE_SECURE_SETTINGS` held, the helper watchdog turns Wireless debugging back on by
+itself when it needs to reconnect (`WirelessDebuggingAutoOn`; stops on networks that refuse it).
+*Disconnect* revokes what the helper granted (`RecoveryPermissions.revokeAll`) before unpairing.
+The helper still connects only to this phone (`AdbHosts` rejects non-local targets).
+
+From a fresh install the user's actions are: tap *Turn on Wireless debugging*, tap *Allow*
+(notification prompt), turn on Wireless debugging, tap *Pair device with pairing code*, tap
+*Enter code* in the notification and type the code, then back in Harness choose apps and turn
+Copilot on. Turning on Developer options (seven taps on Build number) is extra when they're off.
 
 Each row states why it is needed and its live status; the first unfinished required step is
 expanded. Every requirement is re-read when Harness returns to the foreground and once a second

@@ -41,4 +41,18 @@
 <string name="copilot_operation_set_brightness">正在调整屏幕亮度</string>
 <string name="copilot_more">更多选项</string>
 <string name="copilot_preview_loading">等待应用预览</string>
+<string name="copilot_pairing_channel">Copilot 配对</string>
+<string name="copilot_pairing_title">输入配对码</string>
+<string name="copilot_pairing_text">在“无线调试”中点“使用配对码配对设备”，然后点这里的“输入配对码”，填入弹窗中的六位数字。</string>
+<string name="copilot_pairing_found">已找到配对窗口</string>
+<string name="copilot_pairing_action">输入配对码</string>
+<string name="copilot_pairing_input">六位配对码</string>
+<string name="copilot_pairing_invalid">请输入配对窗口中的六位数字。</string>
+<string name="copilot_pairing_wrong_code">配对码错误或已过期。请输入配对窗口中当前显示的配对码。</string>
+<string name="copilot_pairing_window_closed">配对窗口已关闭。请再次点“使用配对码配对设备”，然后输入新的配对码。</string>
+<string name="copilot_pairing_working">正在配对并启动手机助手…</string>
+<string name="copilot_pairing_done_title">手机助手已连接</string>
+<string name="copilot_pairing_done_text">回到 Harness，选择允许 Copilot 使用的应用。</string>
+<string name="copilot_pairing_problem_title">手机助手未能连接</string>
+<string name="copilot_pairing_problem_text">打开 Harness 查看处理方法。</string>
 </resources>

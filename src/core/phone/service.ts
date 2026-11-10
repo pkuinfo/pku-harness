@@ -38,7 +38,9 @@ export const phoneService: PhoneService = {
     return state;
   },
   setup: (kind) => native().setup(kind),
-  pair: (code, port) => native().pair(code, port),
+  pair: (code, port) => native().pair(code, port ?? null),
+  startPairing: () => native().startPairing(),
+  stopPairing: () => native().stopPairing(),
   connect: (port) => native().connect(port ?? null),
   disconnect: () => native().disconnect(),
   apps: () => native().apps(),

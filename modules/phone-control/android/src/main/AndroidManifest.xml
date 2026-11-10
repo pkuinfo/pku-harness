@@ -1,10 +1,12 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
   <uses-permission android:name="android.permission.INTERNET" />
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
   <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
   <uses-permission android:name="android.permission.WAKE_LOCK" />
+  <!-- Granted by the connected helper (pm grant, as the shell user), never by the store: lets Harness turn Wireless debugging back on to reconnect. -->
+  <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
   <queries><intent><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent><package android:name="com.android.systemui" /><package android:name="com.google.android.settings.intelligence" /></queries>
   <application>
     <service android:name="expo.modules.phonecontrol.CopilotService" android:exported="false" android:foregroundServiceType="specialUse">
@@ -14,6 +16,8 @@
       <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
       <meta-data android:name="android.accessibilityservice" android:resource="@xml/copilot_accessibility" />
     </service>
+    <!-- The pairing notification's code box; explicit-component PendingIntent only. -->
+    <receiver android:name="org.pkuinfo.harness.phone.connection.PairingCodeInput" android:exported="false" />
     <provider android:name="org.pkuinfo.harness.phone.ipc.PhoneHandoffProvider" android:authorities="${applicationId}.helper" android:exported="true" android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
     <activity android:name="org.pkuinfo.harness.phone.diagnostics.SelfCheckTargetActivity" android:exported="true" android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" android:excludeFromRecents="true" android:launchMode="singleInstance" android:taskAffinity="" />
   </application>

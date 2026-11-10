@@ -1,6 +1,7 @@
 package expo.modules.phonecontrol
 
 import org.pkuinfo.harness.phone.connection.DeveloperSettings
+import org.pkuinfo.harness.phone.connection.protocol.PairingCode
 import org.pkuinfo.harness.phone.core.PhoneException
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -38,7 +39,7 @@ class PhoneControlModule : Module() {
                 sendEvent("onOverlayAnswer", mapOf("id" to request.id, "sessionId" to request.sessionId, "allowed" to allowed))
             }
             PhoneRuntime.initialize(context)
-            PhonePlatform.of(context).shellManager.start()
+            PhonePlatform.of(context).start()
         }
         OnDestroy { PhoneOverlayBridge.onControlStopped = null; PhoneOverlayBridge.status = null; PhoneOverlayBridge.onAnswer = null; PhoneOverlayBridge.update(null) }
         AsyncFunction("overlayStatus") { value: Map<String, Any?>? ->
@@ -77,16 +78,27 @@ class PhoneControlModule : Module() {
             // A fresh Settings task: otherwise Android may just bring back whatever Settings page was left open.
             context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK))
         }
-        AsyncFunction("pair") Coroutine { code: String, port: Int ->
-            require(code.matches(Regex("[0-9]{6}")) && port in 1..65535) { "Enter a six-digit pairing code and valid port" }
-            val manager = PhonePlatform.of(context).shellManager
-            manager.start()
-            manager.engine.startPairing(code, port)
+        // port null: use the pairing dialog found on this phone (mDNS), as the notification does.
+        AsyncFunction("pair") Coroutine { raw: String, port: Int? ->
+            val code = requireNotNull(PairingCode.normalize(raw)) { "Enter the six-digit pairing code" }
+            require(port == null || port in 1..65535) { "Enter a valid port" }
+            val platform = PhonePlatform.of(context)
+            platform.start()
+            platform.pairing.pair(code, port)
             PhoneRuntime.readiness(context)
         }
+        // Look for Settings' pairing dialog and post the notification with the code box.
+        AsyncFunction("startPairing") {
+            val platform = PhonePlatform.of(context)
+            platform.start()
+            platform.pairing.begin()
+            PhoneRuntime.readiness(context)
+        }
+        AsyncFunction("stopPairing") { PhonePlatform.of(context).pairing.end() }
         AsyncFunction("connect") Coroutine { port: Int? ->
-            val manager = PhonePlatform.of(context).shellManager
-            manager.start()
+            val platform = PhonePlatform.of(context)
+            platform.start()
+            val manager = platform.shellManager
             if (port != null) {
                 require(port in 1..65535)
                 manager.connectWithPort(port)
@@ -95,7 +107,11 @@ class PhoneControlModule : Module() {
         }
         AsyncFunction("disconnect") Coroutine { ->
             PhoneRuntime.end(context)
-            PhonePlatform.of(context).shellManager.engine.unpair()
+            val platform = PhonePlatform.of(context)
+            platform.pairing.end()
+            // Take back what the helper granted while it is still connected, then forget the pairing.
+            runCatching { platform.recovery.revokeAll() }
+            platform.shellManager.engine.unpair()
         }
         AsyncFunction("apps") {
             val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)

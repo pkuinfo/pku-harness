@@ -42,4 +42,18 @@
 <string name="copilot_operation_set_brightness">Adjusting screen brightness</string>
 <string name="copilot_more">More options</string>
 <string name="copilot_preview_loading">Waiting for app preview</string>
+<string name="copilot_pairing_channel">Copilot pairing</string>
+<string name="copilot_pairing_title">Enter the pairing code</string>
+<string name="copilot_pairing_text">In Wireless debugging, tap Pair device with pairing code. Then tap Enter code here and type the six digits shown.</string>
+<string name="copilot_pairing_found">Pairing dialog found</string>
+<string name="copilot_pairing_action">Enter code</string>
+<string name="copilot_pairing_input">Six-digit pairing code</string>
+<string name="copilot_pairing_invalid">Enter the six digits shown in the pairing dialog.</string>
+<string name="copilot_pairing_wrong_code">The code was wrong or expired. Enter the code now shown in the pairing dialog.</string>
+<string name="copilot_pairing_window_closed">The pairing dialog closed. Tap Pair device with pairing code again, then enter the new code.</string>
+<string name="copilot_pairing_working">Pairing and starting the phone helper…</string>
+<string name="copilot_pairing_done_title">Phone helper connected</string>
+<string name="copilot_pairing_done_text">Return to Harness to choose the apps Copilot may use.</string>
+<string name="copilot_pairing_problem_title">The phone helper didn’t connect</string>
+<string name="copilot_pairing_problem_text">Open Harness to see what to do.</string>
 </resources>
