@@ -14,7 +14,6 @@ This policy explains what data PKU Harness handles, where it goes, and how you c
 ## 1. Data stored on your phone
 
 The app keeps its data on your phone:
-
 - **Credentials:** your student ID, password, the IAAA authenticator secret and session tokens for campus services. These are kept in Android's encrypted storage (SecureStore, protected by the Android Keystore).
 - **AI settings:** the provider address, model and API key (the key in encrypted storage).
 - **Your content:** chats, attachments you add, dashboard widgets, timetable, to-dos, reminders, scheduled tasks and plugin data.
@@ -28,7 +27,6 @@ When you sign in or use a campus feature, the app connects directly from your ph
 ## 3. Your AI provider
 
 The assistant works by sending a conversation to the AI provider you configured (for example DeepSeek or another OpenAI-compatible service). What is sent can include:
-
 - your messages and the attachments you add;
 - results from tools the assistant uses, which can contain campus data such as your timetable, grades, balances or Treehole posts;
 - in Copilot mode, the text and screenshots of the screens of apps you allowed Copilot to use.
@@ -42,7 +40,6 @@ Plugins run inside the app. Each plugin declares which hosts it may contact and 
 ## 5. PKU Harness Cloud (optional)
 
 The cloud service at harness.novadiffusion.com/cloud is used only when you turn on a cloud feature, such as sharing a campus card payment code. You can switch it off or use your own server in **Settings → Cloud**.
-
 - Your phone creates a key pair. The server sees only the public key, and uses it to recognise your device.
 - Shared content is encrypted on your phone before it is sent. The key needed to read it is in the part of the share link after `#`, which browsers never send to the server. The server can't read payment codes or other shared content.
 - The server stores encrypted data, its size, and expiry times. Share channels expire after at most 24 hours (15 minutes by default) and are deleted soon after. Stored items are deleted when they expire or when you delete them.

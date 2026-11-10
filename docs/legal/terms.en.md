@@ -42,7 +42,6 @@ Copilot lets the assistant operate other apps on your phone using Android's acce
 ## 7. Acceptable use
 
 Don't use PKU Harness to:
-
 - access accounts, data or services that you are not allowed to access;
 - overload, attack, or work around the security of campus services or our cloud service;
 - send requests to campus services at a rate that harms them or other users;
