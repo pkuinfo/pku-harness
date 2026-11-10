@@ -16,6 +16,8 @@ import { autoTitle } from '@/core/agent/session/title';
 import { asksToRemember } from '@/core/agent/context/assembly';
 import { modelFor, requestPrefix } from '@/core/agent/context/request';
 import { agentToolStepLimits, fromModelName } from './tools';
+import { ToolImages } from './tool-images';
+import { acceptsImages } from './attachments/attachments';
 import { DEFAULT_STEP_LIMIT, stepBudget } from './step-budget';
 
 /** What the composer (and everything else) sends: plain text, or text plus attachments. */
@@ -149,7 +151,8 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
   let model: LanguageModel | undefined;
   // Taint gate (§5.7): set once the agent reads third-party content in this turn; memory saved
   // after that waits for the user's approval.
-  const taint = { sessionId: sid, tainted: false, userAsked: asksToRemember(text) };
+  // acceptsImages: a tool may show this model an image (Copilot's opt-in screenshots, tool-images.ts).
+  const taint = { sessionId: sid, tainted: false, userAsked: asksToRemember(text), acceptsImages: acceptsImages(providerId, modelName) };
 
   const streamOnce = async (history: ModelMessage[]) => {
     produced = [];
@@ -159,7 +162,9 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     const toolStart = new Map<string, number>();
     const toolMs = new Map<string, number>();
     // The conversation's prefix (system → tools → history), shared with title and summary requests.
-    const prefix = await requestPrefix(history, { signal, turn: taint });
+    // Images tools hand the model live only in this request, never in `produced` (tool-images.ts).
+    const images = new ToolImages();
+    const prefix = await requestPrefix(history, { signal, turn: taint, images });
     const toolLimits = agentToolStepLimits(Object.keys(prefix.tools ?? {}));
     let stepLimit = DEFAULT_STEP_LIMIT;
     const result = streamText({
@@ -170,6 +175,10 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
         return steps.length >= stepLimit;
       },
       abortSignal: signal,
+      prepareStep: ({ messages }) => {
+        const next = images.prepare(messages);
+        return next ? { messages: next } : undefined;
+      },
       onStepEnd: (step) => {
         finishedSteps++;
         produced.push(...capMessages(step.response.messages));

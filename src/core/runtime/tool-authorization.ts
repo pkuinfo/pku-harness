@@ -31,24 +31,28 @@ export async function authorizeTool(options: {
   signal?: AbortSignal;
   /** The tool grants the agent new access (`ToolDef.grant`): agents always ask. */
   grant?: boolean;
+  /** `ToolDef.alwaysAsk`: agents always ask, but the answer is a plain allow/deny (no grant). */
+  alwaysAsk?: boolean;
   state(): PermissionState;
   classify?(): Promise<unknown>;
   ask(effect: ToolEffect, assessment?: ToolAssessment): Promise<ApprovalAnswer>;
 }) {
   const { base, actor, signal, state, grant = false } = options;
+  // Both kinds ask every time; only a grant's answer ('once' / 'always') reaches the tool.
+  const mustAsk = grant || !!options.alwaysAsk;
   signal?.throwIfAborted();
-  needsApproval(state(), base, base, actor, grant); // Refuse disabled tools before reading external state.
+  needsApproval(state(), base, base, actor, mustAsk); // Refuse disabled tools before reading external state.
   const result = parseToolAssessment(await options.classify?.(), base);
   signal?.throwIfAborted();
   let approved = actor === 'user';
   let answer: ApprovalAnswer = false;
-  if (needsApproval(state(), base, result.effect, actor, grant)) {
+  if (needsApproval(state(), base, result.effect, actor, mustAsk)) {
     answer = await options.ask(result.effect, result.assessment);
     approved = answer !== false;
     signal?.throwIfAborted();
     if (!approved) throw new ToolPermissionDenied('declined');
   }
-  assertToolPermission(state(), base, result.effect, actor, approved, grant);
+  assertToolPermission(state(), base, result.effect, actor, approved, mustAsk);
   // How a grant prompt was answered; direct user calls had no prompt.
   const granted: 'once' | 'always' | undefined = grant && answer !== false ? answer === 'always' ? 'always' : 'once' : undefined;
   return { ...result, approved, grant: granted };

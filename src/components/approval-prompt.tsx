@@ -141,7 +141,7 @@ export function ApprovalPrompt() {
           <Button title={t('chat.approval.deny')} variant="secondary" onPress={() => answer(false)} className="flex-1" />
           <Button title={t('chat.approval.allow')} onPress={() => answer(true)} className="flex-[2]" />
         </View>
-        {!req.assessment?.target ? <PressableScale accessibilityRole="button" accessibilityLabel={t('chat.approval.alwaysA11y')} haptic={false} onPress={() => answer(true, true)} className="self-center py-1">
+        {!req.assessment?.target && !req.entry.def.alwaysAsk ? <PressableScale accessibilityRole="button" accessibilityLabel={t('chat.approval.alwaysA11y')} haptic={false} onPress={() => answer(true, true)} className="self-center py-1">
           <Text variant="caption" tone="muted">
             {t('chat.approval.always')}
           </Text>

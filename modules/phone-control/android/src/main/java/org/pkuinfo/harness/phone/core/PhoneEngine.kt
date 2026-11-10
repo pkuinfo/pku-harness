@@ -24,8 +24,13 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         @Volatile var handedOver = false
         @Volatile var pauseGate: CompletableDeferred<Unit>? = null
         var observed: Pair<DeviceFrame, PhoneObservation>? = null
+        /** The latest screenshot given to the model: point actions must name its snapshot. */
+        var shot: Shot? = null
         var sequence = 0L
     }
+
+    /** A screenshot's snapshot and pixel size (the coordinate space of point actions). */
+    private class Shot(val snapshotId: String, val width: Int, val height: Int)
 
     fun state(): PhoneSessionState? = current?.takeUnless { it.stopped.get() }?.let {
         PhoneSessionState(it.id, it.packages.toSet(), it.handedOver, it.pauseGate != null)
@@ -88,6 +93,40 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         return mutex.withLock { publish(active(id)) }
     }
 
+    /**
+     * Copilot's opt-in vision fallback: observe and capture the controlled display for the model.
+     * Same rules as [preview] (only the session's apps on the display, never while locked or
+     * handed over) but strict: a protected (FLAG_SECURE) or user-attention screen is refused, not
+     * captured, and a capture during which the windows changed is discarded.
+     */
+    suspend fun look(id: String): PhoneLook {
+        awaitRunning(id)
+        return mutex.withLock {
+            val session = active(id)
+            session.shot = null
+            val observation = publish(session)
+            val frame = checkNotNull(session.observed).first
+            if (frame.protected) fail(PhoneFailure.HANDOFF, "This protected screen requires the user; it is never captured")
+            if (frame.needsUser) fail(PhoneFailure.HANDOFF, "The app needs attention on the user's screen")
+            val image = session.device.preview() ?: fail(PhoneFailure.INVALID, "No screen image is available yet; wait, then look again")
+            val after = checkedFrame(session)
+            if (after.protected || after.needsUser || after.packageName != frame.packageName || after.windowPackages != frame.windowPackages) {
+                session.observed = null
+                fail(PhoneFailure.STALE, "The screen changed while it was captured; look again")
+            }
+            if (image.width <= 0 || image.height <= 0) fail(PhoneFailure.INVALID, "The screen image is empty; look again")
+            session.shot = Shot(observation.snapshotId, image.width, image.height)
+            PhoneLook(observation, image)
+        }
+    }
+
+    /** The approval for a point action, judged on the current screen (see [ActionPolicy.assessPoint]). */
+    suspend fun assessPoint(id: String, snapshotId: String, x: Int, y: Int): PhoneAssessment = mutex.withLock {
+        val session = active(id)
+        val (frame, at) = freshPoint(session, snapshotId, x, y)
+        pointAssessment(frame, snapshotId, x, y, at)
+    }
+
     suspend fun assess(id: String, snapshotId: String, ref: String, submit: Boolean = false): PhoneAssessment = mutex.withLock {
         val session = active(id)
         val (frame, observation) = fresh(session, snapshotId, ref)
@@ -110,7 +149,16 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                 val session = active(id)
                 if (session.pauseGate != null) return@withLock null
                 var element: DeviceElement? = null
-                if (action is PhoneAction.Launch) {
+                var dispatch: PhoneAction = action
+                if (action is PhoneAction.Point) {
+                    if (ref != null) fail(PhoneFailure.INVALID, "A point action takes coordinates, not an element")
+                    if (action is PhoneAction.TypeAt && action.text.length > 10_000) fail(PhoneFailure.INVALID, "Text exceeds the input limit")
+                    val (frame, at) = freshPoint(session, snapshotId, action.x, action.y)
+                    val assessment = pointAssessment(frame, snapshotId!!, action.x, action.y, at)
+                    if (assessment.effect == PhoneEffect.MONEY) fail(PhoneFailure.HANDOFF, "Hand payment or purchase confirmation to the user")
+                    if (approved != assessment) fail(PhoneFailure.STALE, "The approved action no longer matches the screenshot")
+                    dispatch = action.at(at.first, at.second)
+                } else if (action is PhoneAction.Launch) {
                     if (action.packageName !in session.packages) fail(PhoneFailure.APP_SCOPE, "This app was not selected")
                     if (session.handedOver) fail(PhoneFailure.HANDOFF, "The user has control")
                     if (session.device.isLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to continue")
@@ -147,7 +195,8 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                 if (session.pauseGate != null) return@withLock null
                 live(session)
                 session.observed = null
-                val outcome = session.device.perform(action, element)
+                session.shot = null
+                val outcome = session.device.perform(dispatch, element)
                 live(session)
                 PhoneExecution(outcome, publish(session))
             }
@@ -268,14 +317,35 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         return observation
     }
 
-    private suspend fun fresh(session: Session, snapshotId: String?, ref: String? = null): Pair<DeviceFrame, PhoneObservation> {
+    /**
+     * A point action's screen check: the point comes from the latest screenshot (same snapshot,
+     * inside its pixels) and the screen is structurally the one captured. Returns the current
+     * frame and the point in display pixels.
+     */
+    private suspend fun freshPoint(session: Session, snapshotId: String?, x: Int, y: Int): Pair<DeviceFrame, Pair<Int, Int>> {
+        val shot = session.shot?.takeIf { it.snapshotId == snapshotId && snapshotId != null }
+            ?: fail(PhoneFailure.STALE, "Look again; coordinates must come from the latest screenshot")
+        if (x !in 0 until shot.width || y !in 0 until shot.height) fail(PhoneFailure.INVALID, "The point is outside the ${shot.width}x${shot.height} screenshot")
+        val (frame, _) = fresh(session, snapshotId, point = true)
+        val px = ((x + 0.5) * frame.width / shot.width).toInt().coerceIn(0, maxOf(0, frame.width - 1))
+        val py = ((y + 0.5) * frame.height / shot.height).toInt().coerceIn(0, maxOf(0, frame.height - 1))
+        if (elementAt(frame, px, py)?.secret == true) fail(PhoneFailure.HANDOFF, "The user must enter passwords")
+        return frame to (px to py)
+    }
+
+    private fun pointAssessment(frame: DeviceFrame, snapshotId: String, x: Int, y: Int, at: Pair<Int, Int>) =
+        PhoneAssessment(policy.assessPoint(frame, at.first, at.second), "($x, $y)", frame.packageName, snapshotId, "point:$x,$y")
+
+    private suspend fun fresh(session: Session, snapshotId: String?, ref: String? = null, point: Boolean = false): Pair<DeviceFrame, PhoneObservation> {
         val saved = session.observed ?: fail(PhoneFailure.STALE, "Observe before acting")
         if (saved.second.snapshotId != snapshotId) fail(PhoneFailure.STALE, "Observe again; the screen reference expired")
         val actual = checkedFrame(session)
         if (actual.protected) fail(PhoneFailure.HANDOFF, "This protected screen requires the user")
         if (actual.needsUser) fail(PhoneFailure.HANDOFF, "The app needs attention on the user's screen")
         val targetIndex = ref?.let { r -> saved.second.targets.indexOfFirst { it.ref == r }.takeIf { it >= 0 } }
-        if (actual != saved.first && !sameForTarget(saved.first, actual, targetIndex) || actual.unstable && targetIndex == null) {
+        // A point has no element to pin, so the whole structure must match; text may still tick.
+        val same = actual == saved.first || if (point) sameStructure(saved.first, actual) else sameForTarget(saved.first, actual, targetIndex)
+        if (!same || actual.unstable && targetIndex == null && !point) {
             session.observed = null
             fail(PhoneFailure.STALE, "The screen changed; observe again")
         }
@@ -290,13 +360,15 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
      * or slider values moved. Anything that appeared, vanished or moved is a different screen.
      */
     private fun sameForTarget(saved: DeviceFrame, actual: DeviceFrame, targetIndex: Int?): Boolean {
-        if (targetIndex == null || actual.elements.size != saved.elements.size) return false
+        if (targetIndex == null) return false
+        return sameStructure(saved, actual) && actual.elements[targetIndex] == saved.elements[targetIndex]
+    }
+
+    /** Same windows and the same elements in the same places and states; only text and slider values may differ. */
+    private fun sameStructure(saved: DeviceFrame, actual: DeviceFrame): Boolean {
+        if (actual.elements.size != saved.elements.size) return false
         if (actual.copy(elements = emptyList(), unstable = false) != saved.copy(elements = emptyList(), unstable = false)) return false
-        return actual.elements.indices.all { i ->
-            val now = actual.elements[i]
-            val then = saved.elements[i]
-            if (i == targetIndex) now == then else now.copy(text = "", rangeCurrent = null) == then.copy(text = "", rangeCurrent = null)
-        }
+        return actual.elements.indices.all { i -> actual.elements[i].copy(text = "", rangeCurrent = null) == saved.elements[i].copy(text = "", rangeCurrent = null) }
     }
 
     private fun active(id: String): Session = current?.takeIf { it.id == id }?.also(::live)

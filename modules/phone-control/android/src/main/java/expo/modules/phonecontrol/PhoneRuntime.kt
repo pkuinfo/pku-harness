@@ -152,6 +152,14 @@ object PhoneRuntime {
             "target" to mapOf("label" to assessment.label.take(240), "context" to (assessment.packageName ?: "")))
     }
 
+    /** Approval target for a point picked on a screenshot (Copilot's vision fallback). */
+    suspend fun assessAt(id: String, snapshotId: String, x: Int, y: Int): Map<String, Any?> = trackOperation(id, "review") {
+        val assessment = checkNotNull(control) { "Start a phone session first" }.assessPoint(id, snapshotId, x, y)
+        check(assessment.effect != PhoneEffect.MONEY) { "Hand payment or purchase confirmation to the user" }
+        mapOf("effect" to assessment.effect.name.lowercase(),
+            "target" to mapOf("label" to assessment.label, "context" to (assessment.packageName ?: "")))
+    }
+
     suspend fun execute(context: Context, id: String, operation: String, args: Map<String, Any?>): Map<String, Any?> =
         trackOperation(id, operation) { executeOperation(context, id, operation, args) }
 
@@ -171,6 +179,13 @@ object PhoneRuntime {
         val engine = engine(context)
         if (operation == "observe") return wire(engine.observe(id))
         if (operation == "wait") return wire(engine.waitForChange(id, (args["timeoutMs"] as? Number)?.toLong() ?: 1_000))
+        if (operation == "look") {
+            // Opt-in (Copilot's "Let the AI see screenshots"); the host checks the preference and model.
+            val look = engine.look(id)
+            return mapOf("screen" to wire(look.observation), "image" to mapOf(
+                "data" to Base64.encodeToString(look.image.bytes, Base64.NO_WRAP), "mediaType" to look.image.mimeType,
+                "width" to look.image.width, "height" to look.image.height))
+        }
         val snapshotId = args["snapshotId"] as? String
         val ref = args["ref"] as? String
         val action = when (operation) {
@@ -184,11 +199,17 @@ object PhoneRuntime {
                 PhoneAction.Scroll(args["direction"] == "down")
             }
             "back" -> PhoneAction.Back
+            "tapAt" -> PhoneAction.TapAt(coordinate(args["x"]), coordinate(args["y"]))
+            "typeAt" -> PhoneAction.TypeAt(coordinate(args["x"]), coordinate(args["y"]), requireNotNull(args["text"] as? String) { "Text is required" })
             else -> error("Unknown phone operation")
         }
-        val approval = if (action == PhoneAction.Tap || action == PhoneAction.Submit) engine.assess(id, requireNotNull(snapshotId), requireNotNull(ref), action == PhoneAction.Submit).also {
+        val approval = when (action) {
+            PhoneAction.Tap, PhoneAction.Submit -> engine.assess(id, requireNotNull(snapshotId), requireNotNull(ref), action == PhoneAction.Submit)
+            is PhoneAction.Point -> engine.assessPoint(id, requireNotNull(snapshotId) { "A screenshot snapshot is required" }, action.x, action.y)
+            else -> null
+        }?.also {
             check(args["authorizedEffect"] == it.effect.name.lowercase()) { "The action no longer matches its approved permission" }
-        } else null
+        }
         val result = engine.execute(id, action, snapshotId, ref, approval)
         return mapOf("ok" to result.outcome.ok, "hint" to result.outcome.message,
             "changed" to result.outcome.changed, "verification" to result.outcome.verification,
@@ -219,6 +240,12 @@ object PhoneRuntime {
 
     suspend fun takeover(context: Context, id: String) = engine(context).handoff(id)
     suspend fun handback(context: Context, id: String) = engine(context).resume(id)
+
+    private fun coordinate(value: Any?): Int {
+        val number = requireNotNull(value as? Number) { "Coordinates are required" }.toDouble()
+        require(number.isFinite() && number >= 0 && number <= 100_000 && number == Math.floor(number)) { "Coordinates must be whole screenshot pixels" }
+        return number.toInt()
+    }
 
     private fun wire(snapshot: PhoneObservation): Map<String, Any?> = mapOf(
         "sessionId" to snapshot.sessionId, "snapshotId" to snapshot.snapshotId,

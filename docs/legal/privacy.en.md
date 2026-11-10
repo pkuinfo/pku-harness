@@ -1,6 +1,6 @@
 # Privacy Policy
 
-Effective date: 9 November 2026
+Effective date: 10 November 2026
 
 This policy explains what data PKU Harness handles, where it goes, and how you control it. It applies to the PKU Harness app, the website harness.novadiffusion.com, and the optional PKU Harness Cloud service run by the pkuinfo contributors ("we"). PKU Harness is not affiliated with Peking University.
 
@@ -29,7 +29,7 @@ When you sign in or use a campus feature, the app connects directly from your ph
 The assistant works by sending a conversation to the AI provider you configured (for example DeepSeek or another OpenAI-compatible service). What is sent can include:
 - your messages and the attachments you add;
 - results from tools the assistant uses, which can contain campus data such as your timetable, grades, balances or Treehole posts;
-- in Copilot mode, the text on the screens of apps you allowed Copilot to use (the words and controls shown). Screen preview images stay on your phone and are not sent to the AI.
+- in Copilot mode, the text on the screens of apps you allowed Copilot to use (the words and controls shown). Screen preview images stay on your phone and are not sent to the AI. The one exception: if you turn on "Let the AI see screenshots" in Copilot settings (off by default), then for apps such as WeChat that hide their contents from Copilot, the assistant may send screenshots of the app Copilot is operating to your AI provider. Screenshots come only from Copilot's separate screen, never from the screen you are using, and never of protected screens (such as passwords or payment pages). They are sent only when the selected model can read images, are used for that reply only, and are not kept in your chat history. You can turn this off at any time.
 
 Your campus password and authenticator secret are never sent to the AI. The provider processes this data under its own terms and privacy policy, so choose one you trust. We don't receive this data.
 

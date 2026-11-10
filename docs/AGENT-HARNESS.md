@@ -281,6 +281,14 @@ When a tool result enters the model history: > 12,000 chars → first 8,000 + la
 `（结果过长已截断；完整结果在界面中。需要更多请缩小查询范围再调用）`. The UI tool part keeps the
 full output.
 
+**Tool images (transient).** A bundled plugin may hand the model one image with a result
+(`withModelImage`, SDK; today only Copilot's opt-in screenshots). Chat Completions take no images
+in `role: "tool"`, so `src/core/agent/tool-images.ts` strips it from the output (UI, history and
+the tool text never hold it) and `prepareStep` appends it as a user-role `[note, image]` message
+after that step's tool results, for that one model call only. It is never in
+`step.response.messages`, so it is never persisted. Only when the reply's model lists `image` in
+`inputModalities`; scheduled runs and remote plugins cannot pass images.
+
 ### 5.6 Steps
 
 `stopWhen` defaults to 10 steps. A plugin can request `maxAgentSteps` (10–60); its allowance

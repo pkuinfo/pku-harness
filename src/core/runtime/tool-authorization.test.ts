@@ -80,3 +80,16 @@ test('a grant cannot be taken by the scheduler, skipped at dispatch, or used whe
   // A person calling the tool from a screen needs no prompt and gets no grant answer.
   expect((await authorizeTool({ base: 'write', actor: 'user', grant: true, state, ask: async () => true })).grant).toBeUndefined();
 });
+
+test('an alwaysAsk tool asks the agent every time but is not a grant', async () => {
+  let prompts = 0;
+  const ask = (answer: boolean | 'always') => async () => { prompts++; return answer; };
+  const allowed = await authorizeTool({ base: 'write', actor: 'agent', alwaysAsk: true, state, ask: ask('always') });
+  expect(allowed).toMatchObject({ approved: true });
+  expect(allowed.grant).toBeUndefined();
+  await authorizeTool({ base: 'write', actor: 'agent', alwaysAsk: true, state, ask: ask(true) });
+  expect(prompts).toBe(2);
+  await expect(authorizeTool({ base: 'write', actor: 'agent', alwaysAsk: true, state, ask: ask(false) })).rejects.toMatchObject({ reason: 'declined' });
+  await expect(authorizeTool({ base: 'write', actor: 'scheduler', alwaysAsk: true, state, ask: ask(true) })).rejects.toMatchObject({ reason: 'scheduledWrite' });
+  expect(() => assertToolPermission(state(), 'write', 'write', 'agent', false, true)).toThrow(ToolPermissionDenied);
+});

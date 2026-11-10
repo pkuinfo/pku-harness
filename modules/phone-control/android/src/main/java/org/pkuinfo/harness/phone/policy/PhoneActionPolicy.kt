@@ -20,6 +20,10 @@ class PhoneActionPolicy : ActionPolicy {
         if (IrreversibleDetector.paymentPage(screen(frame)) != null || assess(frame, target) == PhoneEffect.MONEY)
             PhoneEffect.MONEY else PhoneEffect.PUBLIC
 
+    /** A payment sheet anywhere on screen puts every point on it behind the money gate. */
+    override fun assessPoint(frame: DeviceFrame, x: Int, y: Int): PhoneEffect =
+        if (IrreversibleDetector.paymentPage(screen(frame)) != null) PhoneEffect.MONEY else super.assessPoint(frame, x, y)
+
     override fun assess(frame: DeviceFrame, target: DeviceElement): PhoneEffect {
         val screen = screen(frame)
         val risk = IrreversibleDetector.classify(GateTarget.Tap, buildJsonObject {

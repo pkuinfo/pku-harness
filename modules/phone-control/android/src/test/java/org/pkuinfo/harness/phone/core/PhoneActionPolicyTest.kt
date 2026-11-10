@@ -34,4 +34,17 @@ class PhoneActionPolicyTest {
         val target = button("Next")
         assertEquals(PhoneEffect.WRITE, policy.assess(frame(target), target))
     }
+
+    @Test fun aPointOnAPaymentScreenNeedsTheMoneyGateEvenWithoutAnElementUnderIt() {
+        val amount = DeviceElement("@e2", "text", "合计 ¥50.00", listOf(100, 100, 900, 200))
+        val payment = DeviceElement("@e3", "text", "付款方式", listOf(100, 300, 900, 400))
+        assertEquals(PhoneEffect.MONEY, policy.assessPoint(frame(button("确认"), amount, payment), 540, 2300))
+    }
+
+    @Test fun aPointIsJudgedLikeATapOnTheElementUnderItAndIsAtLeastWrite() {
+        // button() spans 0–999 bounds [100, 700, 900, 900] of 1080x2400: (540, 1900) is inside.
+        assertEquals(PhoneEffect.PUBLIC, policy.assessPoint(frame(button("发送")), 540, 1900))
+        assertEquals(PhoneEffect.WRITE, policy.assessPoint(frame(button("发送")), 540, 100))
+        assertEquals(PhoneEffect.WRITE, policy.assessPoint(frame(), 540, 1200))
+    }
 }

@@ -150,6 +150,8 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 
 - [ ] Copilot asks for an app inline: `copilot.requestApp` (SDK `ToolDef.grant`, `PhoneService.allow`, native `PhoneEngine.allow`) shows "Copilot wants to use <app>" with Allow once / Always allow / Don't allow (floating controls: Allow = once) and adds the app to the running session instead of sending the user to /copilot. Unit-tested (TS + PhoneEngine); needs an on-device check (2026-11-10).
 
+- [ ] Copilot vision fallback for apps that hide their accessibility tree (WeChat): opt-in “Let the AI see screenshots” switch in /copilot (off by default), `copilot.look` (screenshot of the controlled display to a model that reads images, as a transient user-role image never stored in history; protected screens refused), `tapAt`/`typeAt` at screenshot pixels with `ToolDef.alwaysAsk` approval, money/password/scope/freshness checks in `PhoneEngine`. Privacy policy exception added (effective 2026-11-10). Unit-tested (TS + JVM); needs a new APK and an on-device check. See `docs/COPILOT.md` (2026-11-10).
+
 ## Full-app UI refinement (2026-11-08)
 
 - [x] Apply the restrained Codex-inspired direction across Chat, Dashboard, Schedule,

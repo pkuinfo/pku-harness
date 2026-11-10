@@ -38,15 +38,19 @@ class PhoneEngineTest {
         override suspend fun allow(packageName: String) { granted += packageName }
         override suspend fun isLocked() = locked
         override suspend fun read(): DeviceFrame { readEntered?.complete(Unit); readFinish?.await(); return frame }
+        var performed: PhoneAction? = null
+        var previews = 0
+        var image: DevicePreview? = DevicePreview(byteArrayOf(1), "image/png", 100, 200)
         override suspend fun perform(action: PhoneAction, target: DeviceElement?): DeviceOutcome {
             calls++
+            performed = action
             entered?.complete(Unit)
             finish?.await()
             failure?.let { throw it }
             return DeviceOutcome(true)
         }
         override suspend fun awaitChange(timeoutMs: Long) { entered?.complete(Unit); finish?.await() }
-        override suspend fun preview() = DevicePreview(byteArrayOf(1), "image/png", 100, 200)
+        override suspend fun preview(): DevicePreview? { previews++; return image }
         override suspend fun handoff() {}
         override suspend fun resume() {}
         override suspend fun close() { closes++ }
@@ -502,5 +506,119 @@ class PhoneEngineTest {
         assertTrue(prompt.targets.isEmpty())
         expectFailure(PhoneFailure.HANDOFF) { engine.execute(id, PhoneAction.Back, prompt.snapshotId) }
         assertEquals(0, device.calls)
+    }
+
+    // ---- Vision fallback: look + point actions
+
+    @Test fun pointActionsUseTheScreenshotsPixelsAndNeedApproval() = runBlocking {
+        val device = FakeDevice().apply {
+            frame = frame.copy(width = 1000, height = 2000)
+            image = DevicePreview(byteArrayOf(1), "image/jpeg", 360, 720)
+        }
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val look = engine.look(id)
+        assertEquals(360, look.image.width)
+        val approved = engine.assessPoint(id, look.observation.snapshotId, 180, 360)
+        assertEquals("(180, 360)", approved.label)
+        assertEquals(PhoneEffect.WRITE, approved.effect)
+        // Without the matching approval nothing is dispatched.
+        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.TapAt(180, 360), look.observation.snapshotId) }
+        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.TapAt(181, 360), look.observation.snapshotId, approved = approved) }
+        assertEquals(0, device.calls)
+        val look2 = engine.look(id)
+        val approval = engine.assessPoint(id, look2.observation.snapshotId, 180, 360)
+        engine.execute(id, PhoneAction.TapAt(180, 360), look2.observation.snapshotId, approved = approval)
+        // The centre of screenshot pixel (180, 360) of 360x720 → display pixel (501, 1001) of 1000x2000.
+        assertEquals(PhoneAction.TapAt(501, 1001), device.performed)
+        // A dispatched action consumes the screenshot.
+        expectFailure(PhoneFailure.STALE) { engine.assessPoint(id, look2.observation.snapshotId, 10, 10) }
+        engine.end(id)
+    }
+
+    @Test fun pointsMustComeFromTheLatestScreenshotAndLieInsideIt() = runBlocking {
+        val device = FakeDevice()
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val observed = engine.observe(id)
+        // An element observation is not a screenshot.
+        expectFailure(PhoneFailure.STALE) { engine.assessPoint(id, observed.snapshotId, 10, 10) }
+        val look = engine.look(id)
+        expectFailure(PhoneFailure.INVALID) { engine.assessPoint(id, look.observation.snapshotId, 100, 10) }
+        expectFailure(PhoneFailure.INVALID) { engine.assessPoint(id, look.observation.snapshotId, -1, 10) }
+        val newer = engine.observe(id)
+        expectFailure(PhoneFailure.STALE) { engine.assessPoint(id, look.observation.snapshotId, 10, 10) }
+        expectFailure(PhoneFailure.STALE) { engine.assessPoint(id, newer.snapshotId, 10, 10) }
+        assertEquals(0, device.calls)
+        engine.end(id)
+    }
+
+    @Test fun tickingTextKeepsAPointValidButAStructuralChangeDoesNot() = runBlocking {
+        val clock = DeviceElement("node-2", "text", "10:00:01", listOf(0, 600, 999, 700))
+        val device = FakeDevice().apply { frame = frame.copy(elements = frame.elements + clock) }
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val look = engine.look(id)
+        val approved = engine.assessPoint(id, look.observation.snapshotId, 50, 150)
+        device.frame = device.frame.copy(elements = device.frame.elements.map { if (it.key == "node-2") it.copy(text = "10:00:02") else it }, unstable = true)
+        engine.execute(id, PhoneAction.TypeAt(50, 150, "hi"), look.observation.snapshotId, approved = approved)
+        assertEquals(1, device.calls)
+        val again = engine.look(id)
+        val ok = engine.assessPoint(id, again.observation.snapshotId, 50, 150)
+        device.frame = device.frame.copy(elements = device.frame.elements + DeviceElement("node-3", "button", "New", listOf(0, 800, 999, 900)))
+        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.TapAt(50, 150), again.observation.snapshotId, approved = ok) }
+        assertEquals(1, device.calls)
+        engine.end(id)
+    }
+
+    @Test fun protectedOrUserAttentionScreensAreNeverCaptured() = runBlocking {
+        val device = FakeDevice().apply { frame = frame.copy(protected = true) }
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        expectFailure(PhoneFailure.HANDOFF) { engine.look(id) }
+        device.frame = device.frame.copy(protected = false, needsUser = true)
+        expectFailure(PhoneFailure.HANDOFF) { engine.look(id) }
+        device.frame = device.frame.copy(needsUser = false, windowPackages = setOf("org.example.notes", "org.example.other"))
+        expectFailure(PhoneFailure.APP_SCOPE) { engine.look(id) }
+        assertEquals(0, device.previews)
+        engine.handoff(id)
+        expectFailure(PhoneFailure.HANDOFF) { engine.look(id) }
+        assertEquals(0, device.previews)
+        engine.end(id)
+    }
+
+    @Test fun aScreenThatBecomesProtectedDuringCaptureIsDiscarded() = runBlocking {
+        val fake = FakeDevice()
+        val protecting = object : DevicePort, DeviceSession by fake {
+            override suspend fun open(allowedPackages: Set<String>) = this
+            override suspend fun preview(): DevicePreview? { fake.frame = fake.frame.copy(protected = true); return fake.image }
+        }
+        val engine = PhoneEngine(protecting, ActionPolicy { _, _ -> PhoneEffect.WRITE }, "org.pkuinfo.harness")
+        val id = engine.begin(setOf("org.example.notes")).id
+        expectFailure(PhoneFailure.STALE) { engine.look(id) }
+        // Nothing to act on: the discarded capture left no screenshot behind.
+        fake.frame = fake.frame.copy(protected = false)
+        expectFailure(PhoneFailure.STALE) { engine.assessPoint(id, "$id:1", 2, 2) }
+        engine.end(id)
+    }
+
+    @Test fun pointsOnMoneyScreensOrPasswordFieldsAreRefused() = runBlocking {
+        val device = FakeDevice()
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val look = engine.look(id)
+        // The element under (2, 2) is judged like a tap on it.
+        device.effect = PhoneEffect.MONEY
+        val money = engine.assessPoint(id, look.observation.snapshotId, 2, 2)
+        assertEquals(PhoneEffect.MONEY, money.effect)
+        expectFailure(PhoneFailure.HANDOFF) { engine.execute(id, PhoneAction.TapAt(2, 2), look.observation.snapshotId, approved = money) }
+        // Nothing observed under the point: at least WRITE.
+        assertEquals(PhoneEffect.WRITE, engine.assessPoint(id, look.observation.snapshotId, 90, 190).effect)
+        device.effect = PhoneEffect.WRITE
+        device.frame = device.frame.copy(elements = listOf(device.frame.elements.single().copy(secret = true, editable = true)))
+        val secret = engine.look(id)
+        expectFailure(PhoneFailure.HANDOFF) { engine.assessPoint(id, secret.observation.snapshotId, 2, 2) }
+        assertEquals(0, device.calls)
+        engine.end(id)
     }
 }

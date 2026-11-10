@@ -6,6 +6,7 @@ import { registry } from '@/core/runtime/registry';
 import { resolveDynamic, type TurnInfo } from '@/core/runtime/types';
 
 import { byStability } from './context/assembly';
+import { dropModelImage, type ToolImages } from './tool-images';
 
 /** Model-facing tool names can't contain dots: `wallet.cardBalance` → `wallet__cardBalance`. */
 export const toModelName = (id: string) => id.replace('.', '__');
@@ -27,9 +28,10 @@ export function agentToolStepLimits(names: Iterable<string>): Map<string, number
  * same for every request until the user changes plugins in Settings: DeepSeek renders it right
  * after the system prompt, so narrowing or reordering it per turn would invalidate the cached
  * conversation behind it (docs/AGENT-HARNESS.md §5.1). `turn` is the chat turn's taint state
- * (docs/AGENT-HARNESS.md §5.7), shared by every call the agent makes in it.
+ * (docs/AGENT-HARNESS.md §5.7), shared by every call the agent makes in it. `images` (a chat reply
+ * only) takes images tools hand to the model (./tool-images.ts); without it they are dropped.
  */
-export function buildToolSet(signal?: AbortSignal, turn?: TurnInfo, actor: 'agent' | 'scheduler' = 'agent'): ToolSet {
+export function buildToolSet(signal?: AbortSignal, turn?: TurnInfo, actor: 'agent' | 'scheduler' = 'agent', images?: ToolImages): ToolSet {
   const set: ToolSet = {};
   // Most stable plugins first (core → bundled → remote), then by tool id: installing or turning
   // off a plugin changes the block as late as possible (assembly.ts).
@@ -43,9 +45,13 @@ export function buildToolSet(signal?: AbortSignal, turn?: TurnInfo, actor: 'agen
     set[toModelName(entry.id)] = tool({
       description: `${entry.def.title}. ${resolveDynamic(entry.def.description, services)}`,
       inputSchema: entry.def.input,
-      execute: async (input: unknown) => {
+      execute: async (input: unknown, { toolCallId }) => {
         try {
-          return await invokeTool(entry.id, input, { actor, signal, turn });
+          const out = await invokeTool(entry.id, input, { actor, signal, turn });
+          // A model image never stays in the output (shown, stored, sent as tool text). Only bundled
+          // plugins may pass one, in a chat reply (§ tool-images.ts).
+          if (!images || registry.get(entry.pluginId)?.remote) return dropModelImage(out);
+          return images.accept(out, { callId: toolCallId, toolId: entry.id, acceptsImages: !!turn?.acceptsImages });
         } catch (e) {
           // Return errors as data so the model can explain or recover.
           return { error: e instanceof Error ? e.message : String(e) };

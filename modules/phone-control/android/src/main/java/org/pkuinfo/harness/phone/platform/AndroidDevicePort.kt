@@ -108,6 +108,9 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
                     is PhoneAction.Type -> screen.typeText(requireNotNull(target).key, snapshotId, action.text)
                     is PhoneAction.Scroll -> screen.scroll(target?.key, snapshotId, action.forward)
                     PhoneAction.Back -> screen.back()
+                    // Display pixels, already checked against the screenshot by the engine.
+                    is PhoneAction.TapAt -> screen.tapXY(action.x, action.y)
+                    is PhoneAction.TypeAt -> screen.typeAt(action.x, action.y, action.text)
                 }
                 latest = null
                 return when (result) {

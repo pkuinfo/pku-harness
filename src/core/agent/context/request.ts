@@ -14,6 +14,7 @@ import { fetch as expoFetch } from 'expo/fetch';
 import { File } from 'expo-file-system';
 
 import { aiConfig, getModel } from '@/core/agent/provider';
+import type { ToolImages } from '@/core/agent/tool-images';
 import { buildToolSet } from '@/core/agent/tools';
 import { registry } from '@/core/runtime/registry';
 import type { TurnInfo } from '@/core/runtime/types';
@@ -77,10 +78,10 @@ export type RequestPrefix = { system: string; tools: ToolSet; messages: ModelMes
  */
 export async function requestPrefix(
   history: ModelMessage[],
-  opts: { signal?: AbortSignal; sideRequest?: boolean; turn?: TurnInfo; actor?: 'agent' | 'scheduler' } = {},
+  opts: { signal?: AbortSignal; sideRequest?: boolean; turn?: TurnInfo; actor?: 'agent' | 'scheduler'; images?: ToolImages } = {},
 ): Promise<RequestPrefix> {
   // The same tool block for every actor (the cached prefix); who may run what is decided in invokeTool.
-  const tools = buildToolSet(opts.signal, opts.turn, opts.actor);
+  const tools = buildToolSet(opts.signal, opts.turn, opts.actor, opts.images);
   if (opts.sideRequest) for (const name of Object.keys(tools)) tools[name] = { ...tools[name], execute: undefined };
   return { system: buildSystemPrompt(), tools, messages: await resolveImages(history) };
 }

@@ -156,6 +156,9 @@ class PhoneControlModule : Module() {
         AsyncFunction("assessTap") Coroutine { sessionId: String, snapshotId: String, ref: String ->
             result { PhoneRuntime.assessTap(sessionId, snapshotId, ref) }
         }
+        AsyncFunction("assessAt") Coroutine { sessionId: String, snapshotId: String, x: Int, y: Int ->
+            result { PhoneRuntime.assessAt(sessionId, snapshotId, x, y) }
+        }
         AsyncFunction("execute") Coroutine { sessionId: String, operation: String, args: Map<String, Any?> ->
             result { withContext(Dispatchers.Default) { PhoneRuntime.execute(context, sessionId, operation, args) } }
         }

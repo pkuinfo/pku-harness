@@ -154,6 +154,9 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         val title = service.getString(when (operation.operation) {
             "launch" -> R.string.copilot_operation_launch
             "observe" -> R.string.copilot_operation_observe
+            "look" -> R.string.copilot_operation_look
+            "tapAt" -> R.string.copilot_operation_tap_at
+            "typeAt" -> R.string.copilot_operation_type
             "tap" -> R.string.copilot_operation_tap
             "type" -> R.string.copilot_operation_type
             "submit" -> R.string.copilot_operation_submit

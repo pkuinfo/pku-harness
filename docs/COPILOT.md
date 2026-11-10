@@ -160,6 +160,55 @@ verification flag. The model must check readback before claiming success; a sepa
 verify the state again, and adaptive mode may subsequently change the level. An uncertain result does not authorize a blind repeat write.
 
 Preview images stay local: they are not saved by the feature or returned in model tool results.
+The one exception is the opt-in vision fallback below.
+
+### Vision fallback (opt-in screenshots, 2026-11-10)
+
+WeChat (com.tencent.mm ≥ 8.0.5x) blanks or scrambles its accessibility tree for accessibility
+services it does not recognise, so `observe` returns no usable elements. Copilot does not
+impersonate TalkBack/Select to Speak, and there are no on-device models (ML Kit was removed;
+`readVisibleText()` returns null). Instead the chat model looks at the screen:
+
+- **Opt-in, off by default.** /copilot has a switch “Let the AI see screenshots” (「允许 AI 查看截图」),
+  stored in the plugin's KV (`vision-preferences`), changed only by the user (`setScreenshots` is
+  `userOnly`). Screenshots are of the app Copilot is operating on its own display, never the
+  user's screen, and are sent to the user's AI provider.
+- **`look`** (read, untrusted): `PhoneEngine.look` publishes a normal observation and captures
+  the same downscaled frame as the preview (≤ 720 px long side, JPEG). Unlike the preview it is
+  strict: a protected (FLAG_SECURE) or user-attention screen is refused before capture, other
+  apps on the display fail the scope check, and a capture during which the screen became
+  protected or the windows changed is discarded. The tool refuses unless the switch is on, the
+  call is an agent call in a chat reply, and the reply's model lists `image` in its catalog
+  `inputModalities` (`TurnInfo.acceptsImages`); otherwise it returns a message the agent relays
+  (turn screenshots on in /copilot, or switch to e.g. DeepSeek-V4.1-Flash).
+- **How the image reaches the model.** OpenAI-compatible Chat Completions accept no images in
+  `role: "tool"` messages, and `@ai-sdk/openai-compatible` would stringify the base64 into the tool
+  text. The plugin returns `withModelImage(result, image)` (SDK); the host's tool wrapper
+  (`src/core/agent/tools.ts`) takes the image off before the result is shown or stored and
+  queues it in a per-request `ToolImages` (`src/core/agent/tool-images.ts`). The run's
+  `prepareStep` appends it as a user-role message `[note, image]` right after that step's tool
+  results. Only the model call immediately after `look` carries it; on later calls it becomes a
+  text stub. `step.response.messages` (saved as history) never contains prepareStep additions, so
+  screenshots are never persisted in chat history, the UI tool part, or usage records. Remote
+  plugins and scheduled runs cannot pass images (dropped, error returned).
+- **`tapAt` / `typeAt`** take the `look` result's `snapshotId` and x/y in screenshot pixels
+  (origin top-left) plus `target`, the model's words for what it is tapping. The engine requires
+  the latest screenshot's snapshot, bounds-checks the point, maps the pixel centre to display
+  pixels, and re-reads the screen: windows and every element's identity, position and state must
+  match (text and slider values may change, so a ticking clock does not block). A point over a
+  password field is refused; `ActionPolicy.assessPoint` judges an element the tree does show under
+  the point like a tap on it, a payment sheet anywhere on screen makes it MONEY (refused, handoff),
+  and otherwise it is WRITE. Both tools set `ToolDef.alwaysAsk`: every agent call shows the
+  approval prompt (no “always allow”) with the AI-stated target, the point and the app, whatever
+  the plugin's modes; scheduled calls are refused. `typeAt` uses the driver's tap-then-paste path
+  (`typeAt`), whose verification is UNKNOWN without on-device OCR, so the agent looks again.
+  `scroll` and `back` also accept a look's snapshotId.
+- **Agent instructions:** try `observe` first; use the fallback only when it shows no or very few
+  usable elements for an allowed app; never use coordinates when an element is available; never
+  for payments or passwords; mention once that WeChat's terms forbid automation and Tencent may
+  restrict accounts.
+- Native changes (engine, Expo `assessAt`, `look`/`tapAt`/`typeAt` operations) need a new APK; an
+  older APK reached by OTA answers with “update PKU Harness”.
 The native preview polls only when expanded and appropriate for the current session state;
 the in-app preview polls only while its screen is focused and Harness is active. Handoff moves
 the task to the user's screen only when explicitly requested or needed for a manual step.

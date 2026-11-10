@@ -26,6 +26,8 @@ export const approvals = {
     const req = requests.get(id);
     if (!req) return;
     if (req.entry.def.grant) return requests.answer(id, ok && always ? 'always' : ok);
+    // Asked every time by design: "always" never turns its effect to auto.
+    if (req.entry.def.alwaysAsk) return requests.answer(id, ok);
     await requests.answer(id, ok, always ? async () => {
       const s = pluginSettings.get(req.entry.pluginId);
       await pluginSettings.update(req.entry.pluginId, { modes: { ...s.modes, [req.entry.def.effect]: 'auto' } });

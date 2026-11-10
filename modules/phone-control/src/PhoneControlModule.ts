@@ -1,5 +1,5 @@
 import { NativeModule, requireOptionalNativeModule } from 'expo';
-import type { PhoneApp, PhoneBrightness, PhoneBrightnessChange, PhoneReadiness, PhoneResult, PhoneOperation, PhonePreview, PhoneTapAssessment } from '@pku-harness/sdk';
+import type { PhoneApp, PhoneBrightness, PhoneBrightnessChange, PhoneLook, PhoneReadiness, PhoneResult, PhoneOperation, PhonePreview, PhoneTapAssessment } from '@pku-harness/sdk';
 
 type NativeFailure = { nativeError: { code: string; message: string } };
 
@@ -21,7 +21,11 @@ declare class PhoneControlModule extends NativeModule<{ onControlStopped: (event
   setBrightness(sessionId: string, percent: number, adaptive: boolean | null): Promise<PhoneBrightnessChange | NativeFailure>;
   assessSubmit(sessionId: string, snapshotId: string, ref: string): Promise<PhoneTapAssessment | NativeFailure>;
   assessTap(sessionId: string, snapshotId: string, ref: string): Promise<PhoneTapAssessment | NativeFailure>;
+  /** Approval target of a point on a `look` screenshot (screenshot pixels). Missing on APKs before the vision fallback. */
+  assessAt?(sessionId: string, snapshotId: string, x: number, y: number): Promise<PhoneTapAssessment | NativeFailure>;
   execute(sessionId: string, operation: PhoneOperation, args: Record<string, unknown>): Promise<PhoneResult | NativeFailure>;
+  /** 'look': the screenshot for the model (Copilot's opt-in vision fallback). */
+  execute(sessionId: string, operation: 'look', args: Record<string, never>): Promise<PhoneLook | NativeFailure>;
   end(sessionId: string): Promise<void>;
   takeover(sessionId: string): Promise<void>;
   handback(sessionId: string): Promise<void>;

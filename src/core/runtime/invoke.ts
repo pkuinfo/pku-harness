@@ -78,12 +78,14 @@ export async function invokeTool(
   let effect = entry.def.effect;
   let grant: 'once' | 'always' | undefined;
   const isGrant = !!entry.def.grant;
+  const alwaysAsk = !!entry.def.alwaysAsk;
   try {
     const authorization = await authorizeTool({
       base: entry.def.effect,
       actor: opts.actor,
       signal: opts.signal,
       grant: isGrant,
+      alwaysAsk,
       state: readPermissions,
       classify: entry.def.resolveEffect ? () => entry.def.resolveEffect!(parsed.data, services) : undefined,
       ask: async (effective, assessment) => {
@@ -94,7 +96,7 @@ export async function invokeTool(
     effect = authorization.effect;
     grant = authorization.grant;
     opts.signal?.throwIfAborted();
-    assertToolPermission(readPermissions(), entry.def.effect, effect, opts.actor, authorization.approved, isGrant);
+    assertToolPermission(readPermissions(), entry.def.effect, effect, opts.actor, authorization.approved, isGrant || alwaysAsk);
   } catch (error) {
     if (error instanceof ToolError) throw error;
     if (error instanceof ToolPermissionDenied) {
@@ -109,7 +111,7 @@ export async function invokeTool(
     throw new ToolError(scrubShareLinks(error instanceof Error ? error.message : String(error)), 'failed');
   }
 
-  const turn = opts.turn ? { sessionId: opts.turn.sessionId, tainted: opts.turn.tainted, userAsked: opts.turn.userAsked } : undefined;
+  const turn = opts.turn ? { sessionId: opts.turn.sessionId, tainted: opts.turn.tainted, userAsked: opts.turn.userAsked, acceptsImages: opts.turn.acceptsImages } : undefined;
   if (opts.turn && isUntrusted(entry)) opts.turn.tainted = true;
 
   try {

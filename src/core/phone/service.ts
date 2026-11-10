@@ -1,4 +1,4 @@
-import type { PhoneService } from '@pku-harness/sdk';
+import type { PhoneLook, PhoneService } from '@pku-harness/sdk';
 import PhoneControl from '../../../modules/phone-control';
 import { PhoneSessionLease } from './session-lease';
 
@@ -14,6 +14,8 @@ function unwrap<T>(value: T | { nativeError: { code: string; message: string } }
   }
   return value;
 }
+
+const UPDATE_FOR_VISION = 'This app version cannot show screenshots to the AI. Tell the user to update PKU Harness.';
 
 const isEnded = (value: unknown) => !!value && typeof value === 'object' && 'nativeError' in value
   && (value as { nativeError: { code: string } }).nativeError.code === 'ENDED';
@@ -79,6 +81,23 @@ export const phoneService: PhoneService = {
   },
   assessSubmit: (id, snapshotId, ref) => native().assessSubmit(id, snapshotId, ref).then(unwrap),
   assessTap: (id, snapshotId, ref) => native().assessTap(id, snapshotId, ref).then(unwrap),
+  // Copilot's opt-in vision fallback. An OTA can reach an APK built before these existed.
+  assessAt: async (id, snapshotId, x, y) => {
+    const module = native();
+    if (typeof module.assessAt !== 'function') throw new Error(UPDATE_FOR_VISION);
+    return unwrap(await module.assessAt(id, snapshotId, x, y));
+  },
+  look: async (id, signal) => {
+    signal?.throwIfAborted();
+    const module = native();
+    if (typeof module.assessAt !== 'function') throw new Error(UPDATE_FOR_VISION);
+    leases.claim(id, signal);
+    const result = await module.execute(id, 'look', {});
+    signal?.throwIfAborted();
+    if (isEnded(result)) leases.forgetStale(id, signal);
+    else leases.confirm(id, signal);
+    return unwrap(result) as unknown as PhoneLook;
+  },
   execute: async (sessionId, operation, args, signal) => {
     signal?.throwIfAborted();
     const module = native();

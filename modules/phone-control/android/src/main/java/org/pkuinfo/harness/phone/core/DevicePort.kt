@@ -67,4 +67,20 @@ sealed interface PhoneAction {
     data class Type(val text: String) : PhoneAction
     data class Scroll(val forward: Boolean) : PhoneAction
     data object Back : PhoneAction
+    /**
+     * Copilot's vision fallback: a point the model picked on a screenshot, for apps whose
+     * accessibility tree is empty. [x]/[y] arrive in the screenshot's pixels; the engine checks
+     * them against that screenshot and hands the device display pixels ([at]).
+     */
+    sealed interface Point : PhoneAction {
+        val x: Int
+        val y: Int
+        fun at(x: Int, y: Int): Point
+    }
+    data class TapAt(override val x: Int, override val y: Int) : Point {
+        override fun at(x: Int, y: Int) = copy(x = x, y = y)
+    }
+    data class TypeAt(override val x: Int, override val y: Int, val text: String) : Point {
+        override fun at(x: Int, y: Int) = copy(x = x, y = y)
+    }
 }

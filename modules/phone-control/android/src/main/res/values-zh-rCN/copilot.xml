@@ -21,6 +21,8 @@
 <string name="copilot_attention">正在检查需要处理的操作</string>
 <string name="copilot_operation_launch">正在打开应用</string>
 <string name="copilot_operation_observe">正在读取应用画面</string>
+<string name="copilot_operation_look">正在截图给 AI 查看</string>
+<string name="copilot_operation_tap_at">正在点按屏幕上的位置</string>
 <string name="copilot_operation_tap">正在选择控件</string>
 <string name="copilot_operation_type">正在输入文字</string>
 <string name="copilot_operation_submit">正在提交输入</string>

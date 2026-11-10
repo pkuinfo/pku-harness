@@ -22,6 +22,8 @@
 <string name="copilot_attention">Checking an operation that needs attention</string>
 <string name="copilot_operation_launch">Opening an app</string>
 <string name="copilot_operation_observe">Reading the app screen</string>
+<string name="copilot_operation_look">Taking a screenshot for the AI</string>
+<string name="copilot_operation_tap_at">Tapping a point on the screen</string>
 <string name="copilot_operation_tap">Selecting a control</string>
 <string name="copilot_operation_type">Entering text</string>
 <string name="copilot_operation_submit">Submitting the field</string>
