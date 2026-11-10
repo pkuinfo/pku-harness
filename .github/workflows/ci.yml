@@ -2,7 +2,15 @@ name: CI
 on:
   push:
     branches: [main]
+    # Markdown and docs alone can't break the app; docs/legal feeds a generated file and its test.
+    paths: ['**', '!**/*.md', '!docs/**', 'docs/legal/**']
   pull_request:
+    paths: ['**', '!**/*.md', '!docs/**', 'docs/legal/**']
+
+# A newer push to the same branch supersedes a run still in progress.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   check:
     runs-on: ubuntu-latest

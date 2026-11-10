@@ -23,6 +23,7 @@ on:
 concurrency: release-${{ github.ref }}
 permissions:
   contents: write
+  actions: read # whether CI already passed this commit
 
 jobs:
   # Checks that run once, without secrets: the normal verify gate and the version/tag rules.
@@ -49,8 +50,18 @@ jobs:
       - if: steps.bun.outcome == 'failure'
         run: npm install -g "bun@$(cat .bun-version)" && bun --version
       - run: bun install --frozen-lockfile
+      # CI already ran exactly these checks on this commit; don't repeat them (it's skipped for
+      # docs-only commits, and then they run here).
+      - name: CI result for this commit
+        id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          OK=$(gh run list -R "$GITHUB_REPOSITORY" --workflow CI --commit "$GITHUB_SHA" --status success --json databaseId -q 'length')
+          echo "passed=$([ "${OK:-0}" -gt 0 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
       # Never ship a commit that fails the normal checks.
-      - run: bun run verify
+      - if: steps.ci.outputs.passed != 'true'
+        run: bun run verify
 
       - name: Version matches the tag; versionCode increases
         id: version
