@@ -24,6 +24,8 @@ import { getLocalePreference, setLocalePreference, subscribeLocale, type LocaleP
 import { getThemePreference, setThemePreference, subscribeThemePreference, type ThemePreference } from '@/theme';
 import { hapticsEnabled, setHapticsEnabled, subscribeHaptics } from '@/utils/haptics';
 import { startPerfMonitor } from '@/core/perf/monitor';
+import { startApprovalNotice } from '@/core/runtime/approval-notice';
+import { isMirrored } from '@/core/phone/use-overlay-approvals';
 
 let core: Promise<void> | null = null;
 let onboarded = true;
@@ -114,6 +116,7 @@ export function boot(): Promise<void> {
       startPerfMonitor();
       await bootCore();
       installApprovalHandler();
+      startApprovalNotice(isMirrored);
       const prefs = kv('prefs');
       onboarded = !!(await prefs.get<boolean>('onboarded'));
       onboarding = onboarded ? null : ((await prefs.get<unknown>(ONBOARDING_KEY)) ?? null);

@@ -293,6 +293,8 @@ export const chat: Messages['chat'] = {
     grantOnce: 'Allow once',
     grantAlways: 'Always allow',
     grantAlwaysA11y: 'Always allow, saved so you won’t be asked again',
+    noticeTitle: 'PKU Harness needs your confirmation',
+    noticeGrant: '“{plugin}” wants to use {app}',
     grantOverlayTitle: '“{plugin}” wants to use {app}',
     grantOverlayDetail: 'Allowing covers this task only. To always allow it, answer in PKU Harness.',
   },

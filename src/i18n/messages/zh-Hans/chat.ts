@@ -298,6 +298,8 @@ export const chat = {
     grantOnce: '仅本次允许',
     grantAlways: '始终允许',
     grantAlwaysA11y: '始终允许，保存后以后不再询问',
+    noticeTitle: 'PKU Harness 需要你确认',
+    noticeGrant: '「{plugin}」想使用「{app}」',
     grantOverlayTitle: '「{plugin}」想使用「{app}」',
     grantOverlayDetail: '允许仅用于这次任务。如需始终允许，请在 PKU Harness 中回答。',
   },
