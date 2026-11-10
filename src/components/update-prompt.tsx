@@ -1,8 +1,7 @@
-import { BottomSheet, RNHostView } from '@expo/ui';
 import { router } from 'expo-router';
-import { useEffect, useRef, useSyncExternalStore } from 'react';
-import { Alert, View } from 'react-native';
-import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
+import { Alert, BackHandler, Pressable, View } from 'react-native';
+import Animated, { Easing, FadeIn, FadeOut, LinearTransition, SlideInDown, SlideOutDown, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isOnboarded } from '@/core/boot';
@@ -10,7 +9,7 @@ import { legalNoticeDue, markLegalAccepted } from '@/core/legal';
 import { checkOnLaunch, installedVersion, snooze, type AppUpdate } from '@/core/update/app-update';
 import { cancelInstall, cleanUpdateDownloads, installUpdate, useInstallState, type InstallState } from '@/core/update/install';
 import { t, useLocale, useT } from '@/i18n';
-import { curves, spacing, useTheme } from '@/theme';
+import { curves, shadows, spacing, springs, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { Button } from './button';
@@ -19,7 +18,11 @@ import { Logo } from './logo';
 import { Text } from './text';
 
 const CURVE = { borderCurve: 'continuous' } as const;
+/** Material 3's maximum width for a bottom sheet (dp); wider screens centre it. */
+const SHEET_MAX_WIDTH = 640;
 const mb = (bytes: number) => `${Math.max(1, Math.round(bytes / 1_048_576))} MB`;
+/** Progress counts from 0 (`mb` rounds a tiny size up to 1 MB). */
+const mbDone = (bytes: number) => `${Math.round(bytes / 1_048_576)} MB`;
 
 // The release the sheet is offering (set by the launch check or Settings; cleared by Later / Update).
 let offered: AppUpdate | null = null;
@@ -83,22 +86,37 @@ function UpdateSheet() {
     phase.current = install.phase;
   }, [install.phase]);
 
-  // Swiping the sheet away: an unanswered offer counts as Later; a running download keeps going in
+  // Back or a tap outside: an unanswered offer counts as Later; a running download keeps going in
   // the background (the installer still opens when it finishes); a failure is dismissed.
-  const onDismiss = () => {
+  const dismiss = useCallback(() => {
     if (install.phase === 'failed') cancelInstall();
     else if (install.phase === 'idle' && update) void snooze(update);
     setOffered(null);
-  };
+  }, [install.phase, update]);
 
+  useEffect(() => {
+    if (!open) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => (dismiss(), true));
+    return () => sub.remove();
+  }, [open, dismiss]);
+
+  if (!open) return null;
   return (
-    <BottomSheet isPresented={open} onDismiss={onDismiss} containerColor={c.elevated} contentPadding={{ left: 0, right: 0, top: 0, bottom: 0 }}>
-      <RNHostView matchContents>
-        <View className="gap-5 px-6 pt-2" style={{ paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }} accessibilityViewIsModal>
-          {update || install.phase !== 'idle' ? <Body update={update} install={install} /> : null}
-        </View>
-      </RNHostView>
-    </BottomSheet>
+    <View className="absolute inset-0" pointerEvents="box-none">
+      <Animated.View entering={FadeIn} exiting={FadeOut} className="absolute inset-0" style={{ backgroundColor: c.scrim }}>
+        <Pressable className="flex-1" accessibilityRole="button" accessibilityLabel={t('app.settings.updateLater')} onPress={dismiss} />
+      </Animated.View>
+      <Animated.View
+        entering={SlideInDown.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
+        exiting={SlideOutDown}
+        layout={LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
+        accessibilityViewIsModal
+        className="absolute bottom-0 left-0 right-0 mx-auto gap-5 rounded-t-xl bg-elevated px-6 pt-3"
+        style={{ ...CURVE, maxWidth: SHEET_MAX_WIDTH, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm, boxShadow: shadows.overlay }}>
+        <View className="h-1 w-9 self-center rounded-full opacity-40" style={{ backgroundColor: c.textFaint }} />
+        <Body update={update} install={install} />
+      </Animated.View>
+    </View>
   );
 }
 
@@ -163,7 +181,7 @@ function Body({ update, install }: { update: AppUpdate | null; install: InstallS
         </View>
       ) : null}
 
-      <View className="flex-row items-center gap-2.5 rounded-lg bg-surface-2 px-4 py-3" style={CURVE}>
+      <View className="flex-row items-center gap-2.5 rounded-lg bg-surface-3 px-4 py-3" style={CURVE}>
         <Icon name={install.phase === 'downloading' ? 'shield' : 'check'} size={16} color={c.textMuted} />
         <Text variant="caption" tone="muted" className="flex-1">
           {t(install.phase === 'downloading' ? 'app.settings.updateInstallHint' : 'app.settings.updateKeeps')}
@@ -202,14 +220,14 @@ function Progress({ written, total }: { written: number; total: number }) {
       <View className="flex-row items-baseline justify-between">
         <Text variant="callout">{t('app.settings.updateDownloadingShort')}</Text>
         <Text variant="callout" tone="muted" style={{ fontVariant: ['tabular-nums'] }}>
-          {total > 0 ? `${percent}%` : mb(written)}
+          {total > 0 ? `${percent}%` : mbDone(written)}
         </Text>
       </View>
       <View className="h-2 overflow-hidden rounded-full bg-surface-3" accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: percent }}>
         <Animated.View className="h-full rounded-full bg-brand" style={bar} />
       </View>
       <Text variant="caption" tone="faint" style={{ fontVariant: ['tabular-nums'] }}>
-        {total > 0 ? t('app.settings.updateProgress', { written: mb(written), total: mb(total) }) : mb(written)}
+        {total > 0 ? t('app.settings.updateProgress', { written: mbDone(written), total: mb(total) }) : mbDone(written)}
       </Text>
     </View>
   );
