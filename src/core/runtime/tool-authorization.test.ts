@@ -56,3 +56,27 @@ test('turning ask on at the final dispatch boundary requires fresh approval', ()
   expect(() => assertToolPermission(state(), 'write', 'public', 'agent', false)).toThrow(ToolPermissionDenied);
   expect(() => assertToolPermission({ ...state(), enabled: false }, 'write', 'write', 'agent', true)).toThrow(ToolPermissionDenied);
 });
+
+test('a grant tool asks the agent every time, even when its effect is set to auto', async () => {
+  let prompts = 0;
+  const ask = (answer: boolean | 'always') => async () => { prompts++; return answer; };
+  const once = await authorizeTool({ base: 'write', actor: 'agent', grant: true, state, ask: ask(true) });
+  expect(once).toMatchObject({ approved: true, grant: 'once' });
+  const always = await authorizeTool({ base: 'write', actor: 'agent', grant: true, state, ask: ask('always') });
+  expect(always.grant).toBe('always');
+  expect(prompts).toBe(2);
+  await expect(authorizeTool({ base: 'write', actor: 'agent', grant: true, state, ask: ask(false) })).rejects.toMatchObject({ reason: 'declined' });
+  // The same tool without grant runs on 'auto' with no prompt and no grant.
+  const plain = await authorizeTool({ base: 'write', actor: 'agent', state, ask: ask(true) });
+  expect(plain.grant).toBeUndefined();
+  expect(prompts).toBe(3);
+});
+
+test('a grant cannot be taken by the scheduler, skipped at dispatch, or used when blocked', async () => {
+  await expect(authorizeTool({ base: 'read', actor: 'scheduler', grant: true, state, ask: async () => true })).rejects.toMatchObject({ reason: 'scheduledAsk' });
+  expect(() => assertToolPermission(state(), 'write', 'write', 'agent', false, true)).toThrow(ToolPermissionDenied);
+  const blocked = () => ({ ...state(), modes: { ...state().modes, write: 'off' as const } });
+  await expect(authorizeTool({ base: 'write', actor: 'agent', grant: true, state: blocked, ask: async () => true })).rejects.toMatchObject({ reason: 'blocked' });
+  // A person calling the tool from a screen needs no prompt and gets no grant answer.
+  expect((await authorizeTool({ base: 'write', actor: 'user', grant: true, state, ask: async () => true })).grant).toBeUndefined();
+});

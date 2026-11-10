@@ -6,7 +6,7 @@ import { t } from '@/i18n';
 import { pluginName, toolTitle } from './localize';
 import { pluginSettings } from './plugin-settings';
 import { registry, type ToolEntry } from './registry';
-import { assertToolPermission, authorizeTool, ToolPermissionDenied } from './tool-authorization';
+import { assertToolPermission, authorizeTool, ToolPermissionDenied, type ApprovalAnswer } from './tool-authorization';
 import type { Actor, HostServices, TurnInfo, ToolAssessment } from './types';
 
 export class ToolError extends Error {
@@ -18,7 +18,7 @@ export class ToolError extends Error {
   }
 }
 
-type AskHandler = (entry: ToolEntry, input: unknown, signal?: AbortSignal, assessment?: ToolAssessment) => Promise<boolean>;
+type AskHandler = (entry: ToolEntry, input: unknown, signal?: AbortSignal, assessment?: ToolAssessment) => Promise<ApprovalAnswer>;
 
 let askHandler: AskHandler | null = null;
 export const services = {} as HostServices;
@@ -76,11 +76,14 @@ export async function invokeTool(
     return pluginSettings.get(entry.pluginId);
   };
   let effect = entry.def.effect;
+  let grant: 'once' | 'always' | undefined;
+  const isGrant = !!entry.def.grant;
   try {
     const authorization = await authorizeTool({
       base: entry.def.effect,
       actor: opts.actor,
       signal: opts.signal,
+      grant: isGrant,
       state: readPermissions,
       classify: entry.def.resolveEffect ? () => entry.def.resolveEffect!(parsed.data, services) : undefined,
       ask: async (effective, assessment) => {
@@ -89,8 +92,9 @@ export async function invokeTool(
       },
     });
     effect = authorization.effect;
+    grant = authorization.grant;
     opts.signal?.throwIfAborted();
-    assertToolPermission(readPermissions(), entry.def.effect, effect, opts.actor, authorization.approved);
+    assertToolPermission(readPermissions(), entry.def.effect, effect, opts.actor, authorization.approved, isGrant);
   } catch (error) {
     if (error instanceof ToolError) throw error;
     if (error instanceof ToolPermissionDenied) {
@@ -112,6 +116,7 @@ export async function invokeTool(
     const out = await entry.def.execute(parsed.data, {
       pluginId: entry.pluginId,
       effect,
+      grant,
       actor: opts.actor,
       turn,
       kv: kv(`plugin:${entry.pluginId}`),

@@ -10,6 +10,8 @@ interface DeviceSession {
     val settingsPackage: String? get() = null
     suspend fun readBrightness(): DeviceBrightness = throw UnsupportedOperationException("Physical brightness is unavailable")
     suspend fun setBrightness(percent: Float, adaptive: Boolean?): DeviceBrightnessChange = throw UnsupportedOperationException("Physical brightness is unavailable")
+    /** Widen this session's app scope by one installed app the user granted. */
+    suspend fun allow(packageName: String): Unit = throw UnsupportedOperationException("This session's app scope is fixed")
     suspend fun isLocked(): Boolean
     suspend fun read(): DeviceFrame
     suspend fun perform(action: PhoneAction, target: DeviceElement?): DeviceOutcome

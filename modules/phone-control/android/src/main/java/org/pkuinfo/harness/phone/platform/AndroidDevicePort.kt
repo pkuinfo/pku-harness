@@ -37,6 +37,8 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
         PhoneScope.state = AppAccessState(blocked = blocked + context.packageName, revision = PhoneScope.state.revision + 1)
         return object : DeviceSession {
             private var handedOver = false
+            /** Starts as the session's apps; grows only through [allow] (a user grant). */
+            @Volatile private var allowed: Set<String> = allowedPackages.toSet()
             private var latest: ScreenSnapshot? = null
             private var closed = false
             private val screen = AndroidScreenDriver(accessibility, helper, display, handedOver = { handedOver }, appAccess = PhoneScope.policy)
@@ -61,11 +63,19 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
                     value.getFloat("requestedPercent"), value.getBoolean("verified"))
             }
 
+            override suspend fun allow(packageName: String) {
+                check(!closed) { "Device session closed" }
+                check(runCatching { context.packageManager.getApplicationInfo(packageName, 0) }.isSuccess) { "App is not installed: $packageName" }
+                allowed = allowed + packageName
+                val scope = PhoneScope.state
+                PhoneScope.state = scope.copy(blocked = scope.blocked - packageName, revision = scope.revision + 1)
+            }
+
             override suspend fun isLocked() = context.getSystemService(KeyguardManager::class.java).isKeyguardLocked
 
             private suspend fun scope(): Set<String?> {
                 val packages = screen.accessPackages().toSet()
-                if (packages.any { it == null || it !in allowedPackages }) throw PhoneException(PhoneFailure.APP_SCOPE, "An app outside this session needs the user's attention")
+                if (packages.any { it == null || it !in allowed }) throw PhoneException(PhoneFailure.APP_SCOPE, "An app outside this session needs the user's attention")
                 return packages
             }
 
@@ -89,7 +99,7 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
                 // Only registered targets from the engine's fresh read reach these mechanisms.
                 val result = when (action) {
                     is PhoneAction.Launch -> {
-                        require(action.packageName in allowedPackages)
+                        require(action.packageName in allowed)
                         screen.openApp(action.packageName, cold = action.restart)
                     }
                     is PhoneAction.SetProgress -> screen.setProgress(requireNotNull(target).key, requireNotNull(snapshotId), action.value)

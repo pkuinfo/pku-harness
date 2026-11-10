@@ -15,6 +15,7 @@ declare class PhoneControlModule extends NativeModule<{ onControlStopped: (event
   disconnect(): Promise<void>;
   apps(): Promise<PhoneApp[]>;
   begin(packages: string[]): Promise<{ sessionId: string; packages: string[] }>;
+  allow(sessionId: string, packageName: string): Promise<{ sessionId: string; packages: string[] } | NativeFailure>;
   preview(sessionId: string): Promise<PhonePreview | null>;
   readBrightness(sessionId: string): Promise<PhoneBrightness | NativeFailure>;
   setBrightness(sessionId: string, percent: number, adaptive: boolean | null): Promise<PhoneBrightnessChange | NativeFailure>;

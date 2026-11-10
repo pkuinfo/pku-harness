@@ -130,6 +130,12 @@ object PhoneRuntime {
         return mapOf("sessionId" to opened.id, "packages" to opened.packages.toList())
     }
 
+    /** Called only after the user granted [packageName] in the host's prompt (copilot.requestApp). */
+    suspend fun allow(context: Context, id: String, packageName: String): Map<String, Any?> {
+        val state = engine(context).allow(id, packageName)
+        return mapOf("sessionId" to state.id, "packages" to state.packages.toList())
+    }
+
     suspend fun preview(context: Context, id: String): Map<String, Any?>? {
         val image = engine(context).preview(id) ?: return null
         return mapOf("uri" to "data:${image.mimeType};base64,${Base64.encodeToString(image.bytes, Base64.NO_WRAP)}",

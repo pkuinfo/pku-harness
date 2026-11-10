@@ -33,7 +33,9 @@ class PhoneEngineTest {
         var readFinish: CompletableDeferred<Unit>? = null
         var frame = DeviceFrame("org.example.notes", setOf("org.example.notes"), 100, 200,
             listOf(DeviceElement("node-1", "button", "Open", listOf(0, 0, 50, 50), clickable = true)), "window-1")
+        val granted = mutableListOf<String>()
         override suspend fun open(allowedPackages: Set<String>) = this
+        override suspend fun allow(packageName: String) { granted += packageName }
         override suspend fun isLocked() = locked
         override suspend fun read(): DeviceFrame { readEntered?.complete(Unit); readFinish?.await(); return frame }
         override suspend fun perform(action: PhoneAction, target: DeviceElement?): DeviceOutcome {
@@ -121,6 +123,44 @@ class PhoneEngineTest {
         expectFailure(PhoneFailure.ENDED) { engine.readBrightness(id) }
         expectFailure(PhoneFailure.ENDED) { engine.setBrightness(id, 70f, false) }
         assertEquals(2, device.brightnessWrites)
+    }
+
+    @Test fun grantedAppJoinsTheRunningSessionScope() = runBlocking {
+        val device = FakeDevice()
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        expectFailure(PhoneFailure.APP_SCOPE) { engine.execute(id, PhoneAction.Launch("org.example.chat")) }
+        val state = engine.allow(id, "org.example.chat")
+        assertEquals(setOf("org.example.notes", "org.example.chat"), state.packages)
+        assertEquals(state.packages, engine.state()?.packages)
+        assertEquals(listOf("org.example.chat"), device.granted)
+        engine.execute(id, PhoneAction.Launch("org.example.chat"))
+        assertEquals(1, device.calls)
+        // Already in scope: no second widening at the device.
+        engine.allow(id, "org.example.chat")
+        assertEquals(1, device.granted.size)
+        engine.end(id)
+    }
+
+    @Test fun grantsCannotTargetHarnessInvalidNamesOrEndedSessions() = runBlocking {
+        val device = FakeDevice()
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        expectFailure(PhoneFailure.INVALID) { engine.allow(id, "org.pkuinfo.harness") }
+        expectFailure(PhoneFailure.INVALID) { engine.allow(id, "not a package") }
+        expectFailure(PhoneFailure.ENDED) { engine.allow("other-session", "org.example.chat") }
+        engine.end(id)
+        expectFailure(PhoneFailure.ENDED) { engine.allow(id, "org.example.chat") }
+        assertTrue(device.granted.isEmpty())
+    }
+
+    @Test fun aSessionNeverGrowsPastTwentyApps() = runBlocking {
+        val device = FakeDevice()
+        val engine = device.engine()
+        val id = engine.begin((1..20).map { "org.example.app$it" }.toSet()).id
+        expectFailure(PhoneFailure.INVALID) { engine.allow(id, "org.example.chat") }
+        assertEquals(20, engine.state()?.packages?.size)
+        engine.end(id)
     }
 
     @Test fun beginningOnlyAllocatesSessionWithoutOperatingAnApp() = runBlocking {

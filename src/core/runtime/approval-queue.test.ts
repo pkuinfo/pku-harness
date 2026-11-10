@@ -43,3 +43,10 @@ test('already cancelled requests never become visible', async () => {
   expect(await queue.enqueue({}, controller.signal)).toBe(false);
   expect(queue.current()).toBeNull();
 });
+
+test('a remember answer reaches the waiting call', async () => {
+  const queue = new ApprovalQueue<object>();
+  const approval = queue.enqueue({});
+  await queue.answer(queue.current()!.id, 'always');
+  expect(await approval).toBe('always');
+});

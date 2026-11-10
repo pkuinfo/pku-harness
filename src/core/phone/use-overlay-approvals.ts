@@ -3,12 +3,24 @@ import { AppState } from 'react-native';
 import PhoneControl from '../../../modules/phone-control';
 import { approvals } from '../runtime/approvals';
 import { registry } from '../runtime/registry';
-import { toolTitle } from '../runtime/localize';
+import { pluginName, toolTitle } from '../runtime/localize';
+import { t } from '@/i18n';
 import { OverlayWriter } from './overlay-writer';
 import { stopPhoneRun } from './service';
 
 const writer = new OverlayWriter();
 let started = false;
+
+/**
+ * The phone session an approval belongs to: its sessionId argument. A grant (copilot.requestApp)
+ * may omit it; it then widens whichever session is running, so it shows on that session's controls.
+ */
+let runningSession: string | null = null;
+function overlaySession(req: ReturnType<typeof approvals.current>): string | null {
+  const input = req?.input as Record<string, unknown> | undefined;
+  if (typeof input?.sessionId === 'string') return input.sessionId;
+  return req?.entry.def.grant ? runningSession : null;
+}
 
 /**
  * Mirror the existing approval queue into native controls while Harness is backgrounded. Runs for
@@ -25,15 +37,22 @@ export function startOverlayApprovals() {
     const input = req?.input as Record<string, unknown> | undefined;
     const state = await native.readiness();
     if (!current()) return;
+    runningSession = state.sessionId;
+    const sessionId = overlaySession(req);
     const eligible = AppState.currentState !== 'active' && req?.entry.pluginId === 'copilot'
-      && typeof input?.sessionId === 'string' && input.sessionId === state.sessionId;
-    const detail = [req?.assessment?.target?.label, req?.assessment?.target?.context,
-      ...Object.entries(input ?? {}).filter(([key]) => !['sessionId', 'snapshotId', 'ref'].includes(key))
-        .map(([key, value]) => `${key}: ${String(value).slice(0, 300)}`)].filter(Boolean).join('\n');
-    await native.overlayApproval(eligible ? {
-      id: req.id, sessionId: input.sessionId as string,
-      title: toolTitle(registry.get(req.entry.pluginId), req.entry.name, req.entry.def.title), detail,
-    } : null);
+      && !!sessionId && sessionId === state.sessionId;
+    const plugin = req ? registry.get(req.entry.pluginId) : undefined;
+    // A grant (copilot.requestApp) names the app it adds. The floating controls have only
+    // Allow / Deny, so Allow there means once; Always allow is offered in the app.
+    const grant = req?.entry.def.grant ? req.assessment?.target : undefined;
+    const detail = grant ? [grant.context, t('chat.approval.grantOverlayDetail')].filter(Boolean).join('\n')
+      : [req?.assessment?.target?.label, req?.assessment?.target?.context,
+        ...Object.entries(input ?? {}).filter(([key]) => !['sessionId', 'snapshotId', 'ref'].includes(key))
+          .map(([key, value]) => `${key}: ${String(value).slice(0, 300)}`)].filter(Boolean).join('\n');
+    const title = !req ? '' : grant
+      ? t('chat.approval.grantOverlayTitle', { plugin: plugin ? pluginName(plugin) : req.entry.pluginId, app: grant.label })
+      : toolTitle(plugin, req.entry.name, req.entry.def.title);
+    await native.overlayApproval(eligible ? { id: req.id, sessionId: sessionId!, title, detail } : null);
   };
   const sync = () => { void owner.update(mirror); };
   // Retry missed writes/clears without superseding a slower in-flight read or native call.
@@ -41,8 +60,7 @@ export function startOverlayApprovals() {
   native.addListener('onControlStopped', ({ sessionId }) => stopPhoneRun(sessionId));
   native.addListener('onOverlayAnswer', (event) => {
     const req = approvals.current();
-    const input = req?.input as Record<string, unknown> | undefined;
-    if (req?.id === event.id && req.entry.pluginId === 'copilot' && input?.sessionId === event.sessionId) {
+    if (req?.id === event.id && req.entry.pluginId === 'copilot' && overlaySession(req) === event.sessionId) {
       void approvals.answer(req.id, event.allowed);
     }
   });

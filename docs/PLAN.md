@@ -148,6 +148,8 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 
 - [x] Copilot app alphabet index: All apps is grouped by initial with a pinned, scrollable letter rail; tap jumps to the group. Search and Allowed apps retain their existing behavior. Latin accents normalize to base letters, other names group under #. C/S navigation checked on the emulator in light/dark; main 1,660 pass/3 skip, plugins 1,247 pass (2026-11-08).
 
+- [ ] Copilot asks for an app inline: `copilot.requestApp` (SDK `ToolDef.grant`, `PhoneService.allow`, native `PhoneEngine.allow`) shows "Copilot wants to use <app>" with Allow once / Always allow / Don't allow (floating controls: Allow = once) and adds the app to the running session instead of sending the user to /copilot. Unit-tested (TS + PhoneEngine); needs an on-device check (2026-11-10).
+
 ## Full-app UI refinement (2026-11-08)
 
 - [x] Apply the restrained Codex-inspired direction across Chat, Dashboard, Schedule,

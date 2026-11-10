@@ -51,6 +51,17 @@ export const phoneService: PhoneService = {
   disconnect: () => native().disconnect(),
   apps: () => native().apps(),
   begin: (packages, signal) => leases.begin(() => native().begin(packages), signal),
+  // Widens a running session only after a grant prompt (copilot.requestApp); the run must own it.
+  allow: async (id, packageName, signal) => {
+    signal?.throwIfAborted();
+    leases.claim(id, signal);
+    const module = native();
+    // An OTA can reach an APK built before `allow` existed.
+    if (typeof module.allow !== 'function') throw new Error('This app version cannot add apps to a running Copilot task. Update PKU Harness, or tell the user to add the app in /copilot.');
+    const result = await module.allow(id, packageName);
+    signal?.throwIfAborted();
+    return unwrap(result);
+  },
   preview: (id) => native().preview(id),
   readBrightness: async (id, signal) => {
     signal?.throwIfAborted();

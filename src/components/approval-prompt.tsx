@@ -43,12 +43,53 @@ export function ApprovalPrompt() {
   const effect = EFFECT[req.entry.def.effect as keyof typeof EFFECT];
   const from = { plugin: plugin ? pluginName(plugin) : req.entry.pluginId };
   const fields = approvalFields(req.input);
+  // A grant (ToolDef.grant) gives the agent new access, named by the tool's observed target:
+  // "<plugin> wants to use / WeChat", with Allow once / Always allow / Don't allow.
+  const grant = req.entry.def.grant && req.assessment?.target ? req.assessment.target : null;
 
   const answer = (ok: boolean, always = false) => {
     if (ok) haptics.success();
     else haptics.warning();
     approvals.answer(req.id, ok, always);
   };
+
+  if (grant) return (
+    <View className="absolute inset-0" pointerEvents="box-none">
+      <Animated.View entering={FadeIn} exiting={FadeOut} className="absolute inset-0" style={{ backgroundColor: c.scrim }} />
+      <Animated.View
+        key={req.id}
+        entering={SlideInDown.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
+        exiting={SlideOutDown}
+        accessibilityViewIsModal
+        className="absolute bottom-2 left-2 right-2 gap-3 rounded-xl bg-elevated p-4"
+        style={{ borderCurve: 'continuous', paddingBottom: Math.max(insets.bottom, spacing.lg), boxShadow: shadows.overlay }}>
+        <View className="flex-row items-center gap-3">
+          <View className="size-10 items-center justify-center rounded-md bg-accent-muted" style={CURVE}>
+            <Icon name="shield" size={20} color={c.accent} />
+          </View>
+          <View className="flex-1 gap-0.5">
+            <Text variant="micro" tone="faint">
+              {t('chat.approval.grantEyebrow', from)}
+            </Text>
+            <Text variant="headline" numberOfLines={2}>{grant.label}</Text>
+            {grant.context ? <Text variant="caption" tone="muted" selectable numberOfLines={1}>{grant.context}</Text> : null}
+          </View>
+        </View>
+        <Text variant="callout" tone="muted">
+          {t('chat.approval.grantBody')}
+        </Text>
+        <View className="flex-row gap-2">
+          <Button title={t('chat.approval.grantDeny')} variant="secondary" onPress={() => answer(false)} className="flex-1" />
+          <Button title={t('chat.approval.grantOnce')} onPress={() => answer(true)} className="flex-[2]" />
+        </View>
+        <PressableScale accessibilityRole="button" accessibilityLabel={t('chat.approval.grantAlwaysA11y')} haptic={false} onPress={() => answer(true, true)} className="self-center py-1">
+          <Text variant="caption" tone="muted">
+            {t('chat.approval.grantAlways')}
+          </Text>
+        </PressableScale>
+      </Animated.View>
+    </View>
+  );
 
   return (
     <View className="absolute inset-0" pointerEvents="box-none">

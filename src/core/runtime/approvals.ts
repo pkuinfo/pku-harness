@@ -18,10 +18,14 @@ const requests = new ApprovalQueue<Omit<Approval, 'id'>>();
 export const approvals = {
   current: requests.current,
   subscribe: requests.subscribe,
-  /** Answer the front request. `always` switches that plugin's effect to 'auto'. */
+  /**
+   * Answer the front request. `always` switches that plugin's effect to 'auto'; for a grant tool
+   * (`ToolDef.grant`) it is passed to the tool instead ("Always allow" this access) and no mode changes.
+   */
   async answer(id: number, ok: boolean, always = false) {
     const req = requests.get(id);
     if (!req) return;
+    if (req.entry.def.grant) return requests.answer(id, ok && always ? 'always' : ok);
     await requests.answer(id, ok, always ? async () => {
       const s = pluginSettings.get(req.entry.pluginId);
       await pluginSettings.update(req.entry.pluginId, { modes: { ...s.modes, [req.entry.def.effect]: 'auto' } });

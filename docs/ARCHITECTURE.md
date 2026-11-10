@@ -173,6 +173,11 @@ widgets) applies unchanged. TypeScript stays for the harness's own features and 
   `src/core/runtime/approvals.ts`; the root layout shows a prompt (plugin, tool, effect,
   inputs) with allow / deny / always allow. User taps never ask; the background runtime has no
   prompt, so `ask` there means decline.
+  A tool flagged `grant` (new access for the agent, e.g. `copilot.requestApp` adding an app to
+  Copilot's scope) asks on every agent call whatever the modes say, never runs from the
+  scheduler, and offers Allow once / Always allow; the answer reaches `execute` as `ctx.grant`
+  and never changes the plugin's modes. Copilot approvals for the running phone session are
+  mirrored to the native floating controls while the app is in the background (Allow there = once).
 - **Untrusted content**: text coming from campus services (forum posts, announcements) is
   wrapped as data in tool results, never concatenated into instructions. Tools that return it
   are flagged `untrusted` (remote plugins always are); calling one taints the agent's turn, and

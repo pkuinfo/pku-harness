@@ -1,7 +1,10 @@
+/** Allow (true), the prompt's remember option ('always'), or Deny (false). */
+type Answer = boolean | 'always';
+
 /** UI approval requests stay cancellable while queued and while saving a user's preference. */
 export class ApprovalQueue<T extends object> {
   private queue: (T & { id: number })[] = [];
-  private pending = new Map<number, { value: T & { id: number }; resolve: (ok: boolean) => void; detach: () => void; answering: boolean }>();
+  private pending = new Map<number, { value: T & { id: number }; resolve: (ok: Answer) => void; detach: () => void; answering: boolean }>();
   private listeners = new Set<() => void>();
   private nextId = 1;
 
@@ -12,7 +15,7 @@ export class ApprovalQueue<T extends object> {
   };
   get(id: number) { return this.pending.get(id)?.value; }
 
-  enqueue(value: T, signal?: AbortSignal): Promise<boolean> {
+  enqueue(value: T, signal?: AbortSignal): Promise<Answer> {
     if (signal?.aborted) return Promise.resolve(false);
     return new Promise((resolve) => {
       const id = this.nextId++;
@@ -25,7 +28,7 @@ export class ApprovalQueue<T extends object> {
     });
   }
 
-  async answer(id: number, ok: boolean, beforeAccept?: () => Promise<void>): Promise<void> {
+  async answer(id: number, ok: Answer, beforeAccept?: () => Promise<void>): Promise<void> {
     const request = this.pending.get(id);
     if (!request || request.answering) return;
     request.answering = true;
@@ -39,7 +42,7 @@ export class ApprovalQueue<T extends object> {
     }
   }
 
-  private settle(id: number, ok: boolean) {
+  private settle(id: number, ok: Answer) {
     const request = this.pending.get(id);
     if (!request) return;
     this.pending.delete(id);

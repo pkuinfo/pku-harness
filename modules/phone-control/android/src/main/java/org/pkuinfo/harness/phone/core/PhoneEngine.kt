@@ -18,7 +18,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
     private val mutex = Mutex()
     @Volatile private var current: Session? = null
 
-    private class Session(val id: String, val packages: Set<String>, val device: DeviceSession) {
+    private class Session(val id: String, @Volatile var packages: Set<String>, val device: DeviceSession) {
         val stopped = AtomicBoolean(false)
         val stop = CompletableDeferred<Unit>()
         @Volatile var handedOver = false
@@ -33,7 +33,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
 
     suspend fun begin(packages: Set<String>): PhoneSessionState = mutex.withLock {
         if (current != null) fail(PhoneFailure.BUSY, "A phone session is already active")
-        if (packages.isEmpty() || packages.size > 20 || ownPackage in packages || packages.any { !PACKAGE.matches(it) }) {
+        if (packages.isEmpty() || packages.size > MAX_APPS || ownPackage in packages || packages.any { !PACKAGE.matches(it) }) {
             fail(PhoneFailure.INVALID, "Choose between 1 and 20 installed apps other than Harness")
         }
         val allowed = packages.toSet()
@@ -48,6 +48,22 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
             withContext(NonCancellable) { runCatching { opened.close() } }
             throw error
         }
+    }
+
+    /**
+     * Add one app the user just granted to a running session. Everything else (display, handoff,
+     * observations) is kept; only an explicit user grant in the host may call this.
+     */
+    suspend fun allow(id: String, packageName: String): PhoneSessionState = mutex.withLock {
+        val session = active(id)
+        if (!PACKAGE.matches(packageName) || packageName == ownPackage) fail(PhoneFailure.INVALID, "Choose an installed app other than Harness")
+        if (packageName !in session.packages) {
+            if (session.packages.size >= MAX_APPS) fail(PhoneFailure.INVALID, "A session can use up to $MAX_APPS apps")
+            session.device.allow(packageName)
+            live(session)
+            session.packages = session.packages + packageName
+        }
+        PhoneSessionState(session.id, session.packages, session.handedOver, session.pauseGate != null)
     }
 
     fun pause(id: String, paused: Boolean) {
@@ -294,5 +310,8 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
     }
     private fun label(element: DeviceElement) = element.text.ifBlank { element.resourceId ?: element.role.ifBlank { element.key } }
     private fun fail(code: PhoneFailure, message: String): Nothing = throw PhoneException(code, message)
-    private companion object { val PACKAGE = Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+") }
+    private companion object {
+        val PACKAGE = Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")
+        const val MAX_APPS = 20
+    }
 }

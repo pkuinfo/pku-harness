@@ -144,6 +144,9 @@ class PhoneControlModule : Module() {
 
         }
         AsyncFunction("begin") Coroutine { packages: List<String> -> PhoneRuntime.begin(context, packages) }
+        AsyncFunction("allow") Coroutine { sessionId: String, packageName: String ->
+            result { PhoneRuntime.allow(context, sessionId, packageName) }
+        }
         AsyncFunction("preview") Coroutine { sessionId: String ->
             withContext(Dispatchers.Default) { PhoneRuntime.preview(context, sessionId) }
         }
