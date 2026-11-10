@@ -55,7 +55,7 @@ export function ToolGroup({ parts }: { parts: ToolPart[] }) {
     : t('chat.tools.used', { count: parts.length, names: `${names.slice(0, 3).join(t('chat.tools.listSep'))}${names.length > 3 ? '…' : ''}` });
 
   return (
-    <Animated.View layout={LinearTransition.springify().damping(22)} className="max-w-full self-start gap-1.5">
+    <Animated.View layout={LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)} className="max-w-full self-start gap-1.5">
       <PressableScale
         disabled={!!running}
         onPress={() => setOpen((o) => !o)}

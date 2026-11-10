@@ -7,11 +7,14 @@ export const duration = {
   slow: 420,
 } as const;
 
-/** Shared spring configs so motion across the app feels related. */
+/**
+ * Shared spring configs so motion across the app feels related. Both are critically damped
+ * (damping = 2·√(stiffness·mass)): they settle as fast as possible without overshoot, so nothing
+ * bounces or wobbles into place (docs/DESIGN.md, Motion). Use only these; no bare `.springify()`.
+ */
 export const springs = {
-  snappy: { damping: 22, stiffness: 420, mass: 0.6 },
-  smooth: { damping: 26, stiffness: 220, mass: 1 },
-  bouncy: { damping: 12, stiffness: 180, mass: 0.9 },
+  snappy: { damping: 32, stiffness: 420, mass: 0.6 },
+  smooth: { damping: 30, stiffness: 220, mass: 1 },
 } as const satisfies Record<string, WithSpringConfig>;
 
 export const stagger = {

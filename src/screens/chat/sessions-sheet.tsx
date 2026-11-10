@@ -29,7 +29,7 @@ import {
   type SessionMeta,
 } from "@/core/agent/session/sessions";
 import { useT } from "@/i18n";
-import { shadows, spacing, typography, useTheme } from "@/theme";
+import { shadows, spacing, springs, typography, useTheme } from "@/theme";
 import { cx } from "@/utils/cx";
 import { haptics } from "@/utils/haptics";
 
@@ -222,7 +222,7 @@ export function SessionsSheet() {
       {lastPending ? (
         <Animated.View
           key={lastPending.id}
-          entering={FadeInDown.springify()}
+          entering={FadeInDown.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
           exiting={FadeOut}
           className="absolute right-4 left-4 flex-row items-center gap-3 rounded-lg border-[0.5px] border-edge bg-elevated py-2 pr-2 pl-4"
           style={{
@@ -274,7 +274,7 @@ const SessionRow = memo(function SessionRow({
 
   return (
     <Animated.View
-      layout={reduced ? undefined : LinearTransition.springify()}
+      layout={reduced ? undefined : LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
       className="mb-0.5"
     >
       <Swipeable

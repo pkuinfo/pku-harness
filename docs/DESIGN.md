@@ -58,7 +58,7 @@ stay for Reanimated, Skia and native props that can't take a className.
 | Typography | `src/theme/typography.ts` | Named styles: `display`, `title`, `headline`, `body`, `callout`, `caption`, `micro`, plus `number` variants with tabular figures. |
 | Radius | `src/theme/radius.ts` | Concentric: `sm 6` chips · `md 10` controls · `lg 16` cards · `xl 20` hero/sheets · `full` dots only. Always with `borderCurve: 'continuous'`. |
 | Elevation | `src/theme/shadows.ts` | Dark surfaces combine tonal separation with `darkCard` and `darkControl` shadows. Reserve stronger `float` / `overlay` shadows for floating elements. Use `boxShadow` strings. |
-| Motion | `src/theme/motion.ts` | Durations `fast 140 · base 240 · slow 420`; springs `snappy`, `smooth`, `bouncy`; stagger `40ms`. |
+| Motion | `src/theme/motion.ts` | Durations `fast 140 · base 240 · slow 420`; critically damped springs `snappy`, `smooth`; stagger `40ms`. |
 
 ### Semantic colour roles (dark)
 
@@ -114,6 +114,22 @@ come from `@expo/ui` (Jetpack Compose on Android, SwiftUI on iOS). Only wrap the
 Use short native/host press feedback and restrained selection transitions. Do not animate idle
 surfaces or bounce navigation icons. Preserve reduced-motion support. Enter/exit animations must
 not delay input, hide errors, or leave transparent interactive layers over content.
+
+The standard for every screen, sheet and plugin:
+
+- **No bounce.** Springs come only from `springs` in `src/theme/motion.ts`, which are critically
+  damped: they settle without overshoot. Never a bare `.springify()` or `withSpring(x)` without a
+  preset; timing animations use the `curves`.
+- **Nothing appears or moves in one frame.** Things that enter fade or slide in; things that
+  change size or position animate (`LinearTransition` with a preset). A visible jump is a bug.
+- **One motion at a time, tied to its cause.** Whatever moves with the keyboard follows the
+  keyboard's own animation frame by frame (`react-native-keyboard-controller`: the composer uses
+  `useReanimatedKeyboardAnimation`, lists use `KeyboardChatScrollView`/`KeyboardAwareScrollView`).
+  Don't add a second scroll or jump on top of a keyboard-driven move.
+- **Chat:** tapping the input raises the keyboard, the composer and the end of the conversation
+  together; sending closes the keyboard and the conversation glides down to the new message
+  (animated scroll); while a reply streams and the reader is at the end, the view follows it;
+  a reader who scrolled up is never moved.
 
 ## 6. Generative-UI styling
 

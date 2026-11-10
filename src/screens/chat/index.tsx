@@ -211,10 +211,10 @@ export function Chat() {
         style={{ flex: 1 }}
         contentContainerStyle={[styles.list, empty && { flexGrow: 1, justifyContent: 'center' }]}
         keyboardShouldPersistTaps="handled"
+        // Only record the keyboard space: the list itself rides the keyboard frame by frame
+        // (whenAtEnd). Scrolling here too snapped the conversation ahead of the keyboard.
         onContentInsetChange={(i) => {
-          const grew = i.bottom > size.current.inset;
           size.current.inset = i.bottom;
-          if (grew && pinned.current && !dragging.current) scrollEnd(false);
         }}
         onScroll={onScroll}
         scrollEventThrottle={32}
