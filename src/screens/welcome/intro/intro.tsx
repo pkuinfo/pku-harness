@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, View, useWindowDimensions } from 'react-native';
 import Animated, {
@@ -209,10 +210,15 @@ export function Intro({ onAccept, startAtEnd = false, live, forceFallback }: { o
           </Animated.View>
         ) : null}
         <Button title={last ? t('welcome.intro.accept') : t('welcome.intro.next')} size="lg" onPress={next} disabled={last && !agreed} />
-        {/* Keeps its slot on the last page so the primary button doesn't jump. */}
-        <View className={last ? 'opacity-0' : undefined} pointerEvents={last ? 'none' : 'auto'} accessibilityElementsHidden={last}>
+        {/* The last page puts the terms links in the skip button's slot, so the primary button doesn't jump. */}
+        {last ? (
+          <View className="flex-row justify-center">
+            <Button title={t('welcome.intro.terms')} variant="ghost" size="sm" onPress={() => router.push('/legal/terms')} />
+            <Button title={t('welcome.intro.privacy')} variant="ghost" size="sm" onPress={() => router.push('/legal/privacy')} />
+          </View>
+        ) : (
           <Button title={t('welcome.intro.skip')} variant="ghost" size="sm" onPress={() => goTo(PAGES.length - 1)} />
-        </View>
+        )}
       </Animated.View>
     </View>
   );

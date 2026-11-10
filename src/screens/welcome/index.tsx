@@ -4,6 +4,7 @@ import { BackHandler, StyleSheet, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { completeOnboarding, onboardingProgress } from '@/core/boot';
+import { markLegalAccepted } from '@/core/legal';
 import { curves, duration } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
@@ -100,6 +101,7 @@ export function Welcome() {
 
   const accept = () => {
     haptics.success();
+    void markLegalAccepted();
     const p = progress ?? startSetup(Date.now());
     save({ ...p, step: 'ai' });
     go({ kind: 'setup', step: 'ai' }, 1);

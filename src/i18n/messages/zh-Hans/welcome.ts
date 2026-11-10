@@ -9,11 +9,13 @@ export const welcome = {
   
   plugins: { kicker: '一切皆插件', title: '我们做框架，\n内容来自社区', body: '每个能力都是插件，内置与社区平等。凭据只留在你的手机上。' },
     pageA11y: '第 {page} 页，共 {total} 页',
-    consentLabel: '同意条款',
-    consent: '我已了解：AI 会按我授予的权限代我操作校园服务；校园密码只保存在这台手机上。',
+    consentLabel: '同意《用户协议》和《隐私政策》',
+    consent: '我已阅读并同意《用户协议》和《隐私政策》，并了解：AI 会按我授予的权限代我操作校园服务；校园密码只保存在这台手机上。',
     next: '继续',
     accept: '同意并继续',
     skip: '跳过介绍',
+    terms: '用户协议',
+    privacy: '隐私政策',
   },
   /** Accessibility label of the 3D hero. */
   heroA11y: 'PKU Harness 助手',

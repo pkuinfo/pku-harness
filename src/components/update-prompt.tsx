@@ -1,7 +1,9 @@
+import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Alert, Modal, View } from 'react-native';
 
 import { isOnboarded } from '@/core/boot';
+import { legalNoticeDue, markLegalAccepted } from '@/core/legal';
 import { checkOnLaunch, installedVersion, snooze, type AppUpdate } from '@/core/update/app-update';
 import { cancelInstall, cleanUpdateDownloads, installUpdate, useInstallState } from '@/core/update/install';
 import { t, useT } from '@/i18n';
@@ -20,16 +22,29 @@ export function promptAppUpdate(update: AppUpdate) {
   ]);
 }
 
+function promptLegalNotice() {
+  void markLegalAccepted();
+  Alert.alert(t('app.settings.legalNoticeTitle'), t('app.settings.legalNoticeBody'), [
+    { text: t('app.settings.legalNoticeRead'), onPress: () => router.push('/legal/privacy') },
+    { text: t('app.settings.legalNoticeOk') },
+  ]);
+}
+
 /**
  * Mounted once at the root: checks for a newer APK shortly after launch (not during the welcome)
- * and shows the download progress while an update is being fetched.
+ * (after a one-time notice about the terms, when due) and shows the download progress while an update is being fetched.
  */
 export function UpdatePrompt() {
   useEffect(() => {
     cleanUpdateDownloads();
     if (!isOnboarded()) return;
     const id = setTimeout(() => {
-      void checkOnLaunch().then((u) => u && promptAppUpdate(u));
+      void (async () => {
+        // People who set up before the terms existed (or before a material change) hear about them once.
+        if (await legalNoticeDue()) return promptLegalNotice();
+        const u = await checkOnLaunch();
+        if (u) promptAppUpdate(u);
+      })();
     }, 3000);
     return () => clearTimeout(id);
   }, []);
