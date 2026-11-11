@@ -160,7 +160,8 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                     val (frame, at) = freshPoint(session, snapshotId, action.x, action.y)
                     val assessment = pointAssessment(frame, snapshotId!!, action.x, action.y, at)
                     if (assessment.effect == PhoneEffect.MONEY) fail(PhoneFailure.HANDOFF, "Hand payment or purchase confirmation to the user")
-                    if (approved != assessment) fail(PhoneFailure.STALE, "The approved action no longer matches the screenshot")
+                    // Only a change in what the tap does needs a new approval; the screen moving does not.
+                    if (approved?.effect != assessment.effect) fail(PhoneFailure.STALE, "What this point does changed; assess it again")
                     dispatch = action.at(at.first, at.second)
                 } else if (action is PhoneAction.Launch) {
                     if (action.packageName !in session.packages) fail(PhoneFailure.APP_SCOPE, "This app was not selected")
@@ -212,7 +213,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                 if (session.pauseGate != null) return@withLock null
                 live(session)
                 session.observed = null
-                session.shot = null
+                // The last screenshot stays: it only gives the scale for the next screenshot tap.
                 val outcome = session.device.perform(dispatch, element)
                 live(session)
                 PhoneExecution(outcome, publish(session))
@@ -339,11 +340,15 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
      * inside its pixels) and the screen is structurally the one captured. Returns the current
      * frame and the point in display pixels.
      */
-    private suspend fun freshPoint(session: Session, snapshotId: String?, x: Int, y: Int): Pair<DeviceFrame, Pair<Int, Int>> {
-        val shot = session.shot?.takeIf { it.snapshotId == snapshotId && snapshotId != null }
-            ?: fail(PhoneFailure.STALE, "Look again; coordinates must come from the latest screenshot")
+    private suspend fun freshPoint(session: Session, @Suppress("UNUSED_PARAMETER") snapshotId: String?, x: Int, y: Int): Pair<DeviceFrame, Pair<Int, Int>> {
+        // Pages that redraw every second (rotating search hints, banners, countdowns) never match an
+        // earlier screenshot, so a screenshot tap lands on the screen as it is now: any recent
+        // screenshot gives the scale. Safety comes from the current screen instead: the app must be
+        // in scope and not protected, a password field is the user's, and a payment spot is handed
+        // to the user (assessment below).
+        val shot = session.shot ?: fail(PhoneFailure.STALE, "Look first; screenshot taps need a screenshot")
         if (x !in 0 until shot.width || y !in 0 until shot.height) fail(PhoneFailure.INVALID, "The point is outside the ${shot.width}x${shot.height} screenshot")
-        val (frame, _) = fresh(session, snapshotId, point = true)
+        val (frame, _) = current(session)
         val px = ((x + 0.5) * frame.width / shot.width).toInt().coerceIn(0, maxOf(0, frame.width - 1))
         val py = ((y + 0.5) * frame.height / shot.height).toInt().coerceIn(0, maxOf(0, frame.height - 1))
         if (elementAt(frame, px, py)?.secret == true) fail(PhoneFailure.HANDOFF, "The user must enter passwords")

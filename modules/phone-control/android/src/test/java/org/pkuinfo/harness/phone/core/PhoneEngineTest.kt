@@ -581,38 +581,35 @@ class PhoneEngineTest {
         val approved = engine.assessPoint(id, look.observation.snapshotId, 180, 360)
         assertEquals("(180, 360)", approved.label)
         assertEquals(PhoneEffect.WRITE, approved.effect)
-        // Without the matching approval nothing is dispatched.
+        // Without an approval nothing is dispatched.
         expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.TapAt(180, 360), look.observation.snapshotId) }
-        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.TapAt(181, 360), look.observation.snapshotId, approved = approved) }
         assertEquals(0, device.calls)
-        val look2 = engine.look(id)
-        val approval = engine.assessPoint(id, look2.observation.snapshotId, 180, 360)
-        engine.execute(id, PhoneAction.TapAt(180, 360), look2.observation.snapshotId, approved = approval)
+        engine.execute(id, PhoneAction.TapAt(180, 360), look.observation.snapshotId, approved = approved)
         // The centre of screenshot pixel (180, 360) of 360x720 → display pixel (501, 1001) of 1000x2000.
         assertEquals(PhoneAction.TapAt(501, 1001), device.performed)
-        // A dispatched action consumes the screenshot.
-        expectFailure(PhoneFailure.STALE) { engine.assessPoint(id, look2.observation.snapshotId, 10, 10) }
+        // The screenshot stays usable for the next tap (it only gives the scale).
+        assertEquals(PhoneEffect.WRITE, engine.assessPoint(id, look.observation.snapshotId, 10, 10).effect)
         engine.end(id)
     }
 
-    @Test fun pointsMustComeFromTheLatestScreenshotAndLieInsideIt() = runBlocking {
+    @Test fun pointsNeedAScreenshotAndMustLieInsideIt() = runBlocking {
         val device = FakeDevice()
         val engine = device.engine()
         val id = engine.begin(setOf("org.example.notes")).id
         val observed = engine.observe(id)
-        // An element observation is not a screenshot.
+        // No screenshot yet: nothing to scale coordinates by.
         expectFailure(PhoneFailure.STALE) { engine.assessPoint(id, observed.snapshotId, 10, 10) }
         val look = engine.look(id)
         expectFailure(PhoneFailure.INVALID) { engine.assessPoint(id, look.observation.snapshotId, 100, 10) }
         expectFailure(PhoneFailure.INVALID) { engine.assessPoint(id, look.observation.snapshotId, -1, 10) }
+        // A later observation doesn't invalidate the screenshot's scale.
         val newer = engine.observe(id)
-        expectFailure(PhoneFailure.STALE) { engine.assessPoint(id, look.observation.snapshotId, 10, 10) }
-        expectFailure(PhoneFailure.STALE) { engine.assessPoint(id, newer.snapshotId, 10, 10) }
+        assertEquals(PhoneEffect.WRITE, engine.assessPoint(id, newer.snapshotId, 10, 10).effect)
         assertEquals(0, device.calls)
         engine.end(id)
     }
 
-    @Test fun tickingTextKeepsAPointValidButAStructuralChangeDoesNot() = runBlocking {
+    @Test fun aScreenshotTapLandsOnAScreenThatKeepsChanging() = runBlocking {
         val clock = DeviceElement("node-2", "text", "10:00:01", listOf(0, 600, 999, 700))
         val device = FakeDevice().apply { frame = frame.copy(elements = frame.elements + clock) }
         val engine = device.engine()
@@ -622,11 +619,10 @@ class PhoneEngineTest {
         device.frame = device.frame.copy(elements = device.frame.elements.map { if (it.key == "node-2") it.copy(text = "10:00:02") else it }, unstable = true)
         engine.execute(id, PhoneAction.TypeAt(50, 150, "hi"), look.observation.snapshotId, approved = approved)
         assertEquals(1, device.calls)
-        val again = engine.look(id)
-        val ok = engine.assessPoint(id, again.observation.snapshotId, 50, 150)
+        // A banner rotated in and the layout changed: the tap still lands (same app, same effect).
         device.frame = device.frame.copy(elements = device.frame.elements + DeviceElement("node-3", "button", "New", listOf(0, 800, 999, 900)))
-        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.TapAt(50, 150), again.observation.snapshotId, approved = ok) }
-        assertEquals(1, device.calls)
+        engine.execute(id, PhoneAction.TapAt(50, 150), look.observation.snapshotId, approved = approved)
+        assertEquals(2, device.calls)
         engine.end(id)
     }
 
