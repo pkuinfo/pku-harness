@@ -221,7 +221,7 @@ object HelperProcess {
         private fun restoreAccessibility() {
             val me = PermissionCommands.accessibilityService(packageName)
             val current = service.runCommand(PermissionCommands.READ_ACCESSIBILITY).getString("output")
-            for (cmd in RestoreCommands.accessibility(current, me)) {
+            for (cmd in RestoreCommands.accessibility(current, me, PermissionCommands.ownServices(packageName))) {
                 val r = service.runCommand(cmd)
                 if (r.getInt("exitCode", -1) != 0) {
                     Log.w(TAG, "restore accessibility: '$cmd' failed: ${r.getString("output")?.trim()}")

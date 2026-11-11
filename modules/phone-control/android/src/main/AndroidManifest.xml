@@ -12,9 +12,18 @@
     <service android:name="expo.modules.phonecontrol.CopilotService" android:exported="false" android:foregroundServiceType="specialUse">
       <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="User-started Copilot phone interaction on a separate virtual display with a stop notification" />
     </service>
-    <service android:name="com.google.android.marvin.talkback.TalkBackService" android:exported="true" android:label="@string/copilot_name" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+    <!-- One service under three names (AccessibilityIdentity); only one is enabled at a time. -->
+    <service android:name="expo.modules.phonecontrol.CopilotAccessibilityService" android:exported="true" android:label="@string/copilot_name" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
       <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
       <meta-data android:name="android.accessibilityservice" android:resource="@xml/copilot_accessibility" />
+    </service>
+    <service android:name="com.nirenr.talkman.TalkManAccessibilityService" android:exported="true" android:label="@string/copilot_name_wechat" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+      <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+      <meta-data android:name="android.accessibilityservice" android:resource="@xml/copilot_accessibility_wechat" />
+    </service>
+    <service android:name="com.google.android.marvin.talkback.TalkBackService" android:exported="true" android:label="@string/copilot_name_wechat_compat" android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+      <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+      <meta-data android:name="android.accessibilityservice" android:resource="@xml/copilot_accessibility_wechat" />
     </service>
     <!-- The pairing notification's code box; explicit-component PendingIntent only. -->
     <receiver android:name="org.pkuinfo.harness.phone.connection.PairingCodeInput" android:exported="false" />

@@ -136,8 +136,8 @@ class HelperRecovery(context: Context, private val manager: BuiltinShellManager,
      */
     private fun boundObservation(): StateFlow<A11yObservation> {
         val cr = app.contentResolver
-        val me = PermissionCommands.accessibilityService(app.packageName)
-        fun enabled() = AccessibilityList.contains(Settings.Secure.getString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES), me)
+        val own = PermissionCommands.ownServices(app.packageName)
+        fun enabled() = AccessibilityList.containsAny(Settings.Secure.getString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES), own)
         fun observe(connected: Boolean): A11yObservation {
             val on = enabled()
             return A11yObservation(on, connected || !on)

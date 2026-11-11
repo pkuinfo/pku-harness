@@ -121,8 +121,8 @@ object RestoreCommands {
     const val ENABLE_ACCESSIBILITY = "settings put secure accessibility_enabled 1"
 
     /** 列表里没有 Mika 就追加(别的服务一个不动),有就只把总开关打开;[current] 是 `settings get` 读到的原样输出。 */
-    fun accessibility(current: String?, component: String): List<String> =
-        if (AccessibilityList.contains(current, component)) listOf(ENABLE_ACCESSIBILITY)
+    fun accessibility(current: String?, component: String, own: List<String> = listOf(component)): List<String> =
+        if (AccessibilityList.containsAny(current, own)) listOf(ENABLE_ACCESSIBILITY)
         else PermissionCommands.writeAccessibility(AccessibilityList.with(current, component))
 }
 

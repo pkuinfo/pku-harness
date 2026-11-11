@@ -1,5 +1,9 @@
 <resources>
 <string name="copilot_name">Copilot</string>
+<string name="copilot_name_wechat">Copilot · 微信</string>
+<string name="copilot_name_wechat_compat">Copilot · 微信（兼容）</string>
+<string name="copilot_accessibility_description">在你开始任务时，在 Copilot 的独立屏幕上读取和操作 App。</string>
+<string name="copilot_accessibility_description_wechat">只在 Copilot 操作微信时由它自动开启，结束后自动关闭。你不需要手动打开。</string>
 <string name="copilot_expand">Copilot · 展开</string>
 <string name="copilot_collapse">最小化</string>
 <string name="copilot_pause">暂停</string>

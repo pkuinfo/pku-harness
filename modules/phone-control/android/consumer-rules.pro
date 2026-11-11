@@ -2,4 +2,6 @@
 -keep class org.pkuinfo.harness.phone.ipc.IPhoneController$* { *; }
 -keep class org.pkuinfo.harness.phone.ipc.PhoneHandoffProvider { *; }
 -keep class com.google.android.marvin.talkback.TalkBackService { *; }
+-keep class com.nirenr.talkman.TalkManAccessibilityService { *; }
+-keep class expo.modules.phonecontrol.CopilotAccessibilityService { *; }
 -keep class org.pkuinfo.harness.phone.diagnostics.SelfCheckTargetActivity { *; }
