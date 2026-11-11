@@ -154,7 +154,14 @@ convention); sending is the button only.
   `documentDirectory/attachments/<id>.jpg`. Tray thumbnail 56 px, radius `md`, ✕ badge; tap
   opens a full-screen preview. Sent to the model as an image part (base64).
 - Files: document picker. Text-like (`txt md csv json log`, ≤ 200 KB) become `text`
-  attachments (content inline); anything else → toast "暂不支持这种文件" and not attached.
+  attachments (content inline). PDF / Word / Excel / PowerPoint (≤ 30 MB) and audio (≤ 50 MB)
+  become `document` attachments: the text is read **natively on the phone** by
+  `modules/doc-reader` (PDF: Android's PdfRenderer text API on Android 15+, PdfBox-Android
+  below; Office: `ZipFile` + `XmlPullParser`) or transcribed by the voice-input service, and
+  kept in `documentDirectory/documents/<id>.txt`. The first ~8,000 characters go inline; the
+  agent pages through the rest with the core `files` plugin (`files.list/read/search`).
+  Scanned PDFs (no text layer), password-protected and damaged files are refused with a
+  reason; other types → toast "暂不支持这种文件".
 - Max 8 attachments per message; over that the pickers say so.
 - Text attachments reach the model as `<attachment name="…">…</attachment>` appended to the
   user content; the chat shows only the chip. In sent bubbles, attachments render above the

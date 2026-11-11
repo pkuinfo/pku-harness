@@ -80,6 +80,17 @@ export function textStats(text: string, tr: Tr): string {
   return `${tr('chat.count.chars', { count: chars, n: formatCount(chars) })} · ${tr('chat.count.lines', { count: lines, n: formatCount(lines) })}`;
 }
 
+/** "PDF · 12 页 · 34,567 字" / "Audio · Transcript · 2,048 chars": what a document attachment holds. */
+export function documentStats(a: { docKind?: string; units?: number; chars?: number; text?: string }, tr: Tr): string {
+  const kind = a.docKind ?? '';
+  const parts = [kind === 'audio' ? tr('chat.attach.transcript') : kind.toUpperCase() || 'DOC'];
+  const unit = kind === 'pdf' ? 'pages' : kind === 'pptx' ? 'slides' : kind === 'xlsx' ? 'sheets' : null;
+  if (unit && a.units) parts.push(tr(`chat.attach.${unit}`, { count: a.units }));
+  const chars = a.chars ?? a.text?.length ?? 0;
+  parts.push(tr('chat.count.chars', { count: chars, n: formatCount(chars) }));
+  return parts.join(' · ');
+}
+
 /** Chip label: "粘贴的文本 · 3,214 字 · 86 行" / "Pasted text · 3,214 chars · 86 lines". */
 export function pasteLabel(text: string, tr: Tr): string {
   return tr('chat.attach.pastedLabel', { stats: textStats(text, tr) });

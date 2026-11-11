@@ -5,6 +5,8 @@
  * - Images: long side ≤ 1568 px, JPEG 0.8, kept in `documentDirectory/attachments/<id>.jpg`
  *   (the document directory survives restarts, so drafts, queued and sent messages keep them).
  * - Text-like files (txt md csv json log, ≤ 200 KB) become inline `text` attachments.
+ * - PDF / Word / Excel / PowerPoint (≤ 30 MB) and audio (≤ 50 MB) become `document` attachments:
+ *   the text is read on the phone (src/core/files/documents.ts) and kept in documentDirectory.
  * - Anything else is refused with a reason the composer shows as a toast.
  *
  * The model-visible form (base64 image parts, `<attachment>` blocks) is built in run.ts /
@@ -16,6 +18,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 
+import { documentAttachment } from '@/core/files/documents';
 import { registry } from '@/core/runtime/registry';
 import { t } from '@/i18n';
 
@@ -122,43 +125,59 @@ export async function pickImages(current: number, onProcessing?: OnProcessing): 
   return storeImages(res.assets, limit, onProcessing);
 }
 
-/** 文件: the document picker; text-like files up to 200 KB become text attachments. */
-export async function pickFiles(current: number): Promise<PickOutcome> {
+/**
+ * 文件: the document picker. Text-like files up to 200 KB become text attachments; PDF / Word /
+ * Excel / PowerPoint are read into text natively and audio is transcribed (src/core/files).
+ * `onProcessing` gets how many are being read, so the tray shows placeholders meanwhile.
+ */
+export async function pickFiles(current: number, onProcessing?: OnProcessing): Promise<PickOutcome> {
   const slots = remainingSlots(current);
   if (slots === 0) return { added: [], notice: limitNotice() };
   const res = await DocumentPicker.getDocumentAsync({ multiple: true, copyToCacheDirectory: true });
   if (res.canceled) return { added: [] };
+  const picked = res.assets.map((asset) => {
+    const cached = new File(asset.uri);
+    return { asset, cached, verdict: classifyFile(asset.name, asset.size ?? cached.size ?? undefined, asset.mimeType) };
+  });
+  const accepted = picked.filter((p) => p.verdict.kind === 'text' || p.verdict.kind === 'document').slice(0, slots);
+  const documents = accepted.filter((p) => p.verdict.kind === 'document').length;
+  if (documents) onProcessing?.(documents);
+
   const added: AttachmentPart[] = [];
   let unsupported = 0;
-  let tooLarge = 0;
+  let tooLarge: 'text' | 'document' | 'audio' | undefined;
   let unreadable = 0;
-  for (const asset of res.assets) {
-    const cached = new File(asset.uri);
-    const verdict = classifyFile(asset.name, asset.size ?? cached.size ?? undefined, asset.mimeType);
-    if (verdict.kind === 'text' && added.length < slots) {
-      try {
-        const text = await cached.text();
-        added.push(textAttachment(text, asset.name, verdict.mime));
-      } catch {
-        unreadable++;
-      }
-    } else if (verdict.kind === 'too-large') tooLarge++;
+  let failure: string | undefined;
+  for (const { asset, cached, verdict } of picked) {
+    if (verdict.kind === 'too-large') tooLarge ??= verdict.limit;
     else if (verdict.kind === 'unsupported') unsupported++;
-    // The picker's cache copy is no longer needed (text is inline now).
+    else if (accepted.some((p) => p.cached === cached)) {
+      try {
+        if (verdict.kind === 'text') added.push(textAttachment(await cached.text(), asset.name, verdict.mime));
+        else added.push(await documentAttachment(cached, asset.name, verdict.ext, asset.size ?? cached.size ?? 0));
+      } catch (e) {
+        unreadable++;
+        // The reader's message says why (scanned PDF, password, no file transcription…).
+        if (verdict.kind === 'document') failure ??= e instanceof Error ? e.message : String(e);
+      }
+    }
+    // The picker's cache copy is no longer needed (the text is inline or stored now).
     try {
       if (cached.exists) cached.delete();
     } catch {}
   }
-  const overflow = res.assets.length - unsupported - tooLarge - unreadable - added.length;
-  const notice = unsupported
-    ? t('chat.attach.unsupported')
-    : tooLarge
-      ? t('chat.attach.tooLarge')
-      : unreadable
-        ? t('chat.attach.unreadable')
-        : overflow > 0
-          ? limitNotice()
-          : undefined;
+  const overflow = picked.filter((p) => p.verdict.kind === 'text' || p.verdict.kind === 'document').length - accepted.length;
+  const notice = failure
+    ? failure
+    : unsupported
+      ? t('chat.attach.unsupported')
+      : tooLarge
+        ? t(tooLarge === 'text' ? 'chat.attach.tooLarge' : tooLarge === 'audio' ? 'chat.attach.audioTooLarge' : 'chat.attach.docTooLarge')
+        : unreadable
+          ? t('chat.attach.unreadable')
+          : overflow > 0
+            ? limitNotice()
+            : undefined;
   return { added, notice };
 }
 
@@ -167,9 +186,9 @@ export function textAttachment(text: string, name = t('chat.attach.pasted'), mim
   return { type: 'attachment', id: newId(), kind: 'text', name, mime, size: text.length, text };
 }
 
-/** Delete an image the user removed before sending (never one a sent message still shows). */
+/** Delete the image or document text the user removed before sending (never one a sent message still shows). */
 export function discardAttachmentFile(a: AttachmentPart) {
-  if (a.kind !== 'image' || !a.uri) return;
+  if ((a.kind !== 'image' && a.kind !== 'document') || !a.uri) return;
   try {
     const f = new File(a.uri);
     if (f.exists) f.delete();

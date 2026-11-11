@@ -20,9 +20,9 @@ import { useT } from '@/i18n';
 import { radius, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
-import { isPastedText } from './composer/attachment-tray';
+import { attachmentIcon, isPastedText } from './composer/attachment-tray';
 import { composerDraft } from './composer/draft';
-import { formatCount } from './composer/logic';
+import { documentStats, formatCount } from './composer/logic';
 import { messageMenu, useMessageMenuOpen } from './message-menu';
 
 import { ReplyActions } from './reply-actions';
@@ -290,12 +290,17 @@ function ImageGrid({ images }: { images: AttachmentPart[] }) {
 function AttachmentChip({ attachment: a }: { attachment: AttachmentPart }) {
   const c = useTheme();
   const t = useT();
-  const size = a.kind === 'text' ? t('chat.count.chars', { count: a.size, n: formatCount(a.size) }) : `${Math.max(1, Math.round(a.size / 1024))} KB`;
+  const size =
+    a.kind === 'text'
+      ? t('chat.count.chars', { count: a.size, n: formatCount(a.size) })
+      : a.kind === 'document'
+        ? documentStats(a, t)
+        : `${Math.max(1, Math.round(a.size / 1024))} KB`;
   // Pasted text is named in the language it was pasted in; show it in the current one.
   const name = a.kind === 'text' && isPastedText(a.name) ? t('chat.attach.pasted') : a.name;
   return (
     <View className="max-w-60 flex-row items-center gap-1.5 rounded-sm border-[0.5px] border-edge bg-surface-2 px-2 py-1" style={{ borderCurve: 'continuous' }}>
-      <Icon name={a.kind === 'text' ? 'book' : 'puzzle'} size={14} color={c.textMuted} />
+      <Icon name={a.kind === 'text' ? 'book' : a.kind === 'document' ? attachmentIcon(a) : 'puzzle'} size={14} color={c.textMuted} />
       <Text variant="caption" numberOfLines={1} className="shrink">
         {name}
       </Text>

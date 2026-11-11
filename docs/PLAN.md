@@ -228,3 +228,8 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
   Faint-text contrast across revised dark surfaces is 4.86:1 or higher. Host verification:
   1,660 passed, 3 skipped; release build succeeded. No phone-control logic changed.
   APK SHA-256: `503cab4e73e2f6f84ea0a84ea648484a3d8549ef8f14efddd8b5a7654c4cbb8e`.
+- [x] File reading (2026-11-11): PDF / Word / Excel / PowerPoint read into text natively by
+  `modules/doc-reader` (system PdfRenderer text on Android 15+, PdfBox-Android below; Office
+  via ZipFile + XmlPullParser, JUnit-tested); audio transcribed by the voice-input service.
+  Core `files` plugin (`files.list/read/search`) pages through long documents. Verified on
+  emulator-5554 (release build): CJK PDF, DOCX, XLSX, PPTX answered correctly; scanned PDF refused.

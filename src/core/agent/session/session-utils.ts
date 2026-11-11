@@ -140,9 +140,17 @@ export function cutBefore(
 
 /** Text the model sees for a user turn: what was typed plus text attachments inline (§4.2). */
 export function userText(text: string, attachments: AttachmentPart[] = []): string {
+  const name = (a: AttachmentPart) => a.name.replace(/"/g, "'");
   const inline = attachments
-    .filter((a) => a.kind === 'text' && a.text != null)
-    .map((a) => `<attachment name="${a.name.replace(/"/g, "'")}">\n${a.text}\n</attachment>`);
+    .filter((a) => (a.kind === 'text' || a.kind === 'document') && a.text != null)
+    .map((a) => {
+      if (a.kind === 'text') return `<attachment name="${name(a)}">\n${a.text}\n</attachment>`;
+      // Documents: the beginning inline; the agent reads the rest with files.read / files.search.
+      const shown = a.text!.length;
+      const more = a.chars != null && a.chars > shown ? `\n…（只显示了前 ${shown} 字，共 ${a.chars} 字；用 files.read id="${a.id}" offset=${shown} 继续读，或 files.search 查找）` : '';
+      const units = a.units != null ? ` units="${a.units}"` : '';
+      return `<attachment name="${name(a)}" kind="${a.docKind ?? 'document'}" id="${a.id}" chars="${a.chars ?? shown}"${units}>\n${a.text}${more}\n</attachment>`;
+    });
   return [text, ...inline].filter(Boolean).join('\n\n');
 }
 

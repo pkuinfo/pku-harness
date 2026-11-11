@@ -9,7 +9,7 @@ import type { AttachmentPart } from '@/core/agent/session/chat-store';
 import { t as translateNow, useT } from '@/i18n';
 import { radius, spacing, useTheme } from '@/theme';
 
-import { firstLine, pasteLabel, textStats, type Tr } from './logic';
+import { documentStats, firstLine, pasteLabel, textStats, type Tr } from './logic';
 import { transitions } from '@/theme/transitions';
 
 const CURVE = { borderCurve: 'continuous' } as const;
@@ -27,9 +27,18 @@ export const isPastedText = (name: string) => PASTE_NAMES.has(name);
 /** Title and subtitle of a text attachment chip (§4.3: "粘贴的文本 · 3,214 字 · 86 行"), plus its stats. */
 export function textChipLines(a: AttachmentPart, tr: Tr): { title: string; subtitle: string; name: string; stats: string } {
   const text = a.text ?? '';
+  if (a.kind === 'document') {
+    const stats = documentStats(a, tr);
+    return { title: a.name, subtitle: stats, name: a.name, stats };
+  }
   const stats = textStats(text, tr);
   if (isPastedText(a.name)) return { title: pasteLabel(text, tr), subtitle: firstLine(text) || tr('chat.attach.blank'), name: tr('chat.attach.pasted'), stats };
   return { title: a.name, subtitle: stats, name: a.name, stats };
+}
+
+/** Icon of a text or document chip: audio shows a mic, documents a file, text a page of text. */
+export function attachmentIcon(a: AttachmentPart) {
+  return a.kind !== 'document' ? 'fileText' : a.docKind === 'audio' ? 'mic' : 'file';
 }
 
 function RemoveBadge({ label, onPress }: { label: string; onPress: () => void }) {
@@ -111,7 +120,7 @@ function TextChip({ attachment, onPress }: { attachment: AttachmentPart; onPress
       className="h-14 w-48 flex-row items-center gap-2 rounded-md bg-surface-3 pl-2 pr-3"
       style={CURVE}>
       <View className="size-9 items-center justify-center rounded-sm bg-surface-2" style={CURVE}>
-        <Icon name="fileText" size={18} color={c.textMuted} />
+        <Icon name={attachmentIcon(attachment)} size={18} color={c.textMuted} />
       </View>
       <View className="flex-1 gap-0.5">
         <Text variant="caption" numberOfLines={1} style={{ fontVariant: ['tabular-nums'] }}>

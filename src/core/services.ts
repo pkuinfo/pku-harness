@@ -27,6 +27,7 @@ import { addTodo, deleteTodo, setTodoDone, todoStore, updateTodo } from '@/core/
 import { describeCatalog } from '@/genui/catalog';
 import { checkSpec } from '@/genui/check';
 import { t } from '@/i18n';
+import { documentsService } from '@/core/files/service';
 
 /**
  * The harness side of the plugin contract: every service a plugin may use, implemented on the
@@ -45,6 +46,8 @@ const host: HostServices = {
     },
   },
   files: {
+    // Documents attached in the chat (files.list / read / search).
+    ...documentsService,
     // System document picker (expo-document-picker, SDK 58). Copies go to the app cache so the
     // native uploader can stream them (modules/campus-http accepts file:// only inside the app's
     // own storage). Plugins get references, never file bytes.

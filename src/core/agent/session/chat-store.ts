@@ -46,15 +46,24 @@ export type ChatPart =
 export type AttachmentPart = {
   type: 'attachment';
   id: string;
-  kind: 'image' | 'file' | 'text';
+  kind: 'image' | 'file' | 'text' | 'document';
   name: string;
   mime: string;
   /** Bytes (files/images) or characters (text). */
   size: number;
   /** Local file:// URI (images, files) in the app's document directory. */
   uri?: string;
-  /** Inline content for 'text' attachments (long pastes, small text files). */
+  /**
+   * Inline content for 'text' attachments (long pastes, small text files); for 'document' the
+   * beginning of its extracted text (the full text is in `uri`, read with files.read).
+   */
   text?: string;
+  /** 'document': what it was read from (pdf, docx, xlsx, pptx, audio). */
+  docKind?: string;
+  /** 'document': characters of its full extracted text. */
+  chars?: number;
+  /** 'document': pages (PDF), slides (pptx) or sheets (xlsx). */
+  units?: number;
   width?: number;
   height?: number;
 };

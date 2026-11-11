@@ -10,7 +10,8 @@ import type { AttachmentPart } from '@/core/agent/session/chat-store';
 import { useT } from '@/i18n';
 import { spacing, useTheme } from '@/theme';
 
-import { textChipLines } from './attachment-tray';
+import { isPastedText, textChipLines } from './attachment-tray';
+import { formatCount } from './logic';
 import { transitions } from '@/theme/transitions';
 
 /** Full-screen layer over everything (edge to edge, back button closes). */
@@ -115,11 +116,16 @@ export function TextPreview({
           <Text variant="body" selectable>
             {item?.text ?? ''}
           </Text>
+          {item?.kind === 'document' && (item.chars ?? 0) > (item.text?.length ?? 0) ? (
+            <Text variant="caption" tone="faint" className="mt-4" style={{ fontVariant: ['tabular-nums'] }}>
+              {t('chat.attach.previewHead', { shown: formatCount(item.text?.length ?? 0), total: formatCount(item.chars ?? 0) })}
+            </Text>
+          ) : null}
         </ScrollView>
         {item ? (
           <View className="flex-row gap-2 border-t-[0.5px] border-edge px-4 pt-3" style={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
             <Button title={t('core.common.delete')} icon="trash" variant="danger" onPress={() => onRemove(item)} className="flex-1" />
-            {onRestore ? <Button title={t('chat.attach.restore')} icon="undo" onPress={() => onRestore(item)} className="flex-2" /> : null}
+            {onRestore && item.kind === 'text' && isPastedText(item.name) ? <Button title={t('chat.attach.restore')} icon="undo" onPress={() => onRestore(item)} className="flex-2" /> : null}
           </View>
         ) : null}
       </View>

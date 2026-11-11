@@ -1,6 +1,6 @@
 /**
  * Pure attachment rules (docs/AGENT-HARNESS.md §4.2): limits, image resize math, which picked
- * files become text attachments. No native imports, so it is unit-tested with `bun test`;
+ * files become text attachments or documents read into text. No native imports, so it is unit-tested with `bun test`;
  * `attachments.ts` does the picking and file work on top of it.
  */
 
@@ -14,6 +14,15 @@ export const IMAGE_QUALITY = 0.8;
 /** Text-like files up to this size are attached inline as text. */
 export const MAX_TEXT_FILE_BYTES = 200 * 1024;
 export const TEXT_FILE_EXTENSIONS = ['txt', 'md', 'csv', 'json', 'log'] as const;
+/** Documents read into text on the phone (the agent reads them with files.read / files.search). */
+export const DOCUMENT_EXTENSIONS = ['pdf', 'docx', 'xlsx', 'pptx'] as const;
+/** Audio transcribed by the speech service set up for voice input. */
+export const AUDIO_EXTENSIONS = ['m4a', 'mp3', 'wav', 'aac', 'ogg', 'opus', 'flac', 'amr', '3gp', 'webm'] as const;
+/** Largest document read (PDF/Office). */
+export const MAX_DOCUMENT_BYTES = 30 * 1024 * 1024;
+/** Largest audio file sent for transcription (SiliconFlow's limit is 50 MB / 1 h). */
+export const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
+export type DocumentKind = (typeof DOCUMENT_EXTENSIONS)[number] | 'audio';
 
 /** Free slots left in a message that already has `count` attachments. */
 export function remainingSlots(count: number): number {
@@ -46,7 +55,8 @@ export function extensionOf(name: string): string {
 
 export type FileVerdict =
   | { kind: 'text'; mime: string }
-  | { kind: 'too-large' }
+  | { kind: 'document'; ext: string }
+  | { kind: 'too-large'; limit: 'text' | 'document' | 'audio' }
   | { kind: 'unsupported' };
 
 const MIME_BY_EXT: Record<string, string> = {
@@ -57,11 +67,16 @@ const MIME_BY_EXT: Record<string, string> = {
   log: 'text/plain',
 };
 
-/** Decide what a picked document becomes: an inline text attachment, or a refusal. */
+/** Decide what a picked file becomes: inline text, a document read into text, or a refusal. */
 export function classifyFile(name: string, size: number | undefined, mime?: string): FileVerdict {
   const ext = extensionOf(name);
-  const textLike = (TEXT_FILE_EXTENSIONS as readonly string[]).includes(ext);
-  if (!textLike) return { kind: 'unsupported' };
-  if (size !== undefined && size > MAX_TEXT_FILE_BYTES) return { kind: 'too-large' };
+  const is = (list: readonly string[]) => list.includes(ext);
+  if (is(DOCUMENT_EXTENSIONS) || is(AUDIO_EXTENSIONS)) {
+    const audio = is(AUDIO_EXTENSIONS);
+    if (size !== undefined && size > (audio ? MAX_AUDIO_BYTES : MAX_DOCUMENT_BYTES)) return { kind: 'too-large', limit: audio ? 'audio' : 'document' };
+    return { kind: 'document', ext };
+  }
+  if (!is(TEXT_FILE_EXTENSIONS)) return { kind: 'unsupported' };
+  if (size !== undefined && size > MAX_TEXT_FILE_BYTES) return { kind: 'too-large', limit: 'text' };
   return { kind: 'text', mime: mime && mime !== 'application/octet-stream' ? mime : MIME_BY_EXT[ext] };
 }

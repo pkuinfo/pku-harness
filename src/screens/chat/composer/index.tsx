@@ -124,9 +124,9 @@ export function Composer() {
     async (action: Exclude<AttachAction, 'command'>) => {
       const count = composerDraft.get().attachments.length;
       try {
-        // Photos take a moment to resize; placeholder tiles hold their place in the tray.
+        // Photos take a moment to resize and documents to read; placeholder tiles hold their place.
         const outcome =
-          action === 'camera' ? await takePhoto(count, setPending) : action === 'library' ? await pickImages(count, setPending) : await pickFiles(count);
+          action === 'camera' ? await takePhoto(count, setPending) : action === 'library' ? await pickImages(count, setPending) : await pickFiles(count, setPending);
         addAttachments(outcome.added);
         if (outcome.added.length) haptics.select();
         if (outcome.notice) {

@@ -5,6 +5,8 @@ import {
   extensionOf,
   fitWithin,
   libraryPickLimit,
+  MAX_AUDIO_BYTES,
+  MAX_DOCUMENT_BYTES,
   MAX_TEXT_FILE_BYTES,
   remainingSlots,
 } from './attachment-rules';
@@ -50,8 +52,17 @@ describe('classifyFile', () => {
     expect(classifyFile('a.log', MAX_TEXT_FILE_BYTES).kind).toBe('text');
     expect(classifyFile('a.log', MAX_TEXT_FILE_BYTES + 1).kind).toBe('too-large');
   });
+  test('documents and audio are read into text', () => {
+    expect(classifyFile('Report.PDF', 10)).toEqual({ kind: 'document', ext: 'pdf' });
+    expect(classifyFile('课表.xlsx', 10)).toEqual({ kind: 'document', ext: 'xlsx' });
+    expect(classifyFile('lecture.m4a', 10)).toEqual({ kind: 'document', ext: 'm4a' });
+    expect(classifyFile('a.docx', MAX_DOCUMENT_BYTES + 1)).toEqual({ kind: 'too-large', limit: 'document' });
+    expect(classifyFile('a.mp3', MAX_DOCUMENT_BYTES + 1).kind).toBe('document');
+    expect(classifyFile('a.mp3', MAX_AUDIO_BYTES + 1)).toEqual({ kind: 'too-large', limit: 'audio' });
+  });
   test('everything else is unsupported', () => {
-    expect(classifyFile('report.pdf', 10).kind).toBe('unsupported');
+    expect(classifyFile('slides.key', 10).kind).toBe('unsupported');
+    expect(classifyFile('old.doc', 10).kind).toBe('unsupported');
     expect(classifyFile('noext', 10).kind).toBe('unsupported');
   });
 });
