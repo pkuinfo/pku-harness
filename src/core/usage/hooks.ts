@@ -5,6 +5,7 @@ import { chatStore, sessionStore } from '@/core/agent/session/chat-store';
 import { sessions } from '@/core/agent/session/sessions';
 import { useContextBudgetSetting } from '@/core/agent/context/compaction';
 import { contextBreakdown, type ContextBreakdown } from '@/core/agent/context/tokens';
+import { timed } from '@/core/perf/monitor';
 import { registry } from '@/core/runtime/registry';
 
 import { usageEvents } from './index';
@@ -40,7 +41,7 @@ export function useContextBreakdown(sessionId?: string): ContextBreakdown {
   const sig = useSyncExternalStore(subscribeAll, () => signature(sessionId));
   const userBudget = useContextBudgetSetting();
   // eslint-disable-next-line react-hooks/exhaustive-deps -- `sig` and `userBudget` fingerprint the inputs.
-  return useMemo(() => contextBreakdown(sessionId), [sig, sessionId, userBudget]);
+  return useMemo(() => timed('context estimate', () => contextBreakdown(sessionId)), [sig, sessionId, userBudget]);
 }
 
 export type UsageState =

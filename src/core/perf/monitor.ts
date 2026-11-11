@@ -47,3 +47,21 @@ export function startPerfMonitor(now: () => number = Date.now) {
 
 /** The last minute: median, p95 and worst lag in ms, and how many samples were stalls. */
 export const perfSnapshot = (): PerfSnapshot => summarize(lags);
+
+/** A synchronous step slower than this is logged by [timed]. */
+export const SLOW_STEP_MS = 50;
+
+/**
+ * Runs `fn` and logs `[perf] <label> N ms` when it held the JS thread for SLOW_STEP_MS or more, so
+ * a stall in the log comes with the step that caused it. Wrap only coarse steps (a request's
+ * prefix, the context estimate): the timing itself costs two clock reads.
+ */
+export function timed<T>(label: string, fn: () => T, now: () => number = Date.now): T {
+  const start = now();
+  try {
+    return fn();
+  } finally {
+    const ms = now() - start;
+    if (ms >= SLOW_STEP_MS) console.warn(`[perf] ${label} ${ms} ms`);
+  }
+}

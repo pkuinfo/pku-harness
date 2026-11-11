@@ -17,6 +17,7 @@ import { aiConfig, getModel } from '@/core/agent/provider';
 import type { ToolImages } from '@/core/agent/tool-images';
 import { buildToolSet } from '@/core/agent/tools';
 import { registry } from '@/core/runtime/registry';
+import { timed } from '@/core/perf/monitor';
 import type { TurnInfo } from '@/core/runtime/types';
 
 import { buildSystemPrompt } from './system-prompt';
@@ -81,7 +82,7 @@ export async function requestPrefix(
   opts: { signal?: AbortSignal; sideRequest?: boolean; turn?: TurnInfo; actor?: 'agent' | 'scheduler'; images?: ToolImages } = {},
 ): Promise<RequestPrefix> {
   // The same tool block for every actor (the cached prefix); who may run what is decided in invokeTool.
-  const tools = buildToolSet(opts.signal, opts.turn, opts.actor, opts.images);
+  const tools = timed('tool block', () => buildToolSet(opts.signal, opts.turn, opts.actor, opts.images));
   if (opts.sideRequest) for (const name of Object.keys(tools)) tools[name] = { ...tools[name], execute: undefined };
-  return { system: buildSystemPrompt(), tools, messages: await resolveImages(history) };
+  return { system: timed('system prompt', buildSystemPrompt), tools, messages: await resolveImages(history) };
 }
