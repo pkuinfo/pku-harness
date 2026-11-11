@@ -8,8 +8,6 @@ import android.os.Process
 import android.util.Base64
 import org.pkuinfo.harness.phone.core.*
 import org.pkuinfo.harness.phone.connection.DeveloperSettings
-import kotlinx.coroutines.launch
-import org.pkuinfo.harness.phone.connection.protocol.AccessibilityIdentity
 import org.pkuinfo.harness.phone.connection.protocol.BuiltinShellStatus
 import org.pkuinfo.harness.phone.connection.protocol.PairingDiscovery
 import org.pkuinfo.harness.phone.connection.protocol.PermissionCommands
@@ -41,53 +39,6 @@ object PhoneRuntime {
     private suspend fun requireAccessibility(context: Context? = appContext) {
         val ctx = context ?: return
         if (!AccessibilityParking.ensureOn(ctx)) throw PhoneException(PhoneFailure.ACCESSIBILITY_OFF, OFF_MESSAGE)
-    }
-
-    /** Apps that show their views only to screen readers: Copilot uses a screen-reader name in them. */
-    private val SCREEN_READER_APPS = setOf("com.tencent.mm")
-    /** A screen this sparse (labelled elements) this long after it first appeared means the app is hiding its views. */
-    private const val SPARSE_LABELS = 3
-    private const val SPARSE_MS = 12_000L
-    /** The app the session last showed, and since when it has looked hidden under TalkMan's name. */
-    @Volatile private var currentPackage: String? = null
-    @Volatile private var sparseSince = 0L
-    private val background = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
-
-    /**
-     * The accessibility name for a call that works in [pkg]: a screen-reader name in WeChat
-     * (TalkMan's, or TalkBack's once that proved necessary on this phone), the neutral one
-     * everywhere else, so the user's keyboard never sees a screen reader (AccessibilityIdentity).
-     */
-    private fun identityFor(context: Context, pkg: String?): AccessibilityIdentity =
-        if (pkg in SCREEN_READER_APPS) AccessibilityParking.screenReaderIdentity(context) else AccessibilityIdentity.Neutral
-
-    /** Remember which app a call left the session in (from its returned screen). */
-    @Suppress("UNCHECKED_CAST")
-    private fun track(result: Map<String, Any?>) {
-        val screen = (result["screen"] as? Map<String, Any?>) ?: result
-        (screen["packageName"] as? String)?.let { currentPackage = it }
-    }
-
-    /**
-     * Under TalkMan's name WeChat should show its views; when its screen stays nearly empty for
-     * [SPARSE_MS] (or the agent falls back to a screenshot of such a screen, [force]) it doesn't on
-     * this phone, so switch to TalkBack's for good and read again.
-     */
-    @Suppress("UNCHECKED_CAST")
-    private suspend fun escalateIfHidden(context: Context, id: String, result: Map<String, Any?>, force: Boolean = false): Map<String, Any?> {
-        val screen = (result["screen"] as? Map<String, Any?>) ?: result
-        val pkg = screen["packageName"] as? String
-        if (pkg !in SCREEN_READER_APPS || AccessibilityParking.desired != AccessibilityIdentity.TalkMan) { sparseSince = 0; return result }
-        val labelled = (screen["elements"] as? List<Map<String, Any?>>).orEmpty().count { !(it["text"] as? String).isNullOrBlank() }
-        if (labelled >= SPARSE_LABELS) { sparseSince = 0; return result }
-        val now = android.os.SystemClock.uptimeMillis()
-        if (sparseSince == 0L) sparseSince = now
-        if (!force && now - sparseSince < SPARSE_MS) return result
-        sparseSince = 0
-        AccessibilityParking.needTalkBack(context)
-        AccessibilityParking.desired = AccessibilityIdentity.TalkBack
-        requireAccessibility(context)
-        return if (force) result else wire(engine(context).observe(id))
     }
 
     fun initialize(context: Context) {
@@ -179,23 +130,20 @@ object PhoneRuntime {
      * system keeps the service bound. False when no helper is connected or a command fails;
      * the caller then sends the user to the system screen instead.
      */
-    fun enableAccessibility(context: Context, identity: AccessibilityIdentity = AccessibilityIdentity.Neutral): Boolean {
+    fun enableAccessibility(context: Context): Boolean {
         val shell = PhonePlatform.of(context).hub.shell.value ?: return false
         val pkg = context.packageName
         return runCatching {
             // Fails harmlessly on systems without the op; the settings write below is what counts.
             shell.runCommand("appops set $pkg ACCESS_RESTRICTED_SETTINGS allow")
             val current = shell.runCommand(PermissionCommands.READ_ACCESSIBILITY).getString("output")
-            PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(current, pkg, true, identity))
+            PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(current, pkg, true))
                 .all { shell.runCommand(it).getInt("exitCode", -1) == 0 }
         }.getOrDefault(false)
     }
 
     suspend fun begin(context: Context, packages: List<String>): Map<String, Any?> {
         require(packages.size <= 20) { "Choose up to 20 apps" }
-        AccessibilityParking.desired = AccessibilityIdentity.Neutral
-        currentPackage = null
-        sparseSince = 0
         requireAccessibility(context)
         val opened = engine(context).begin(packages.toSet())
         sessionIdentity = opened.id
@@ -234,18 +182,8 @@ object PhoneRuntime {
             "target" to mapOf("label" to assessment.label, "context" to (assessment.packageName ?: "")))
     }
 
-    suspend fun execute(context: Context, id: String, operation: String, args: Map<String, Any?>): Map<String, Any?> {
-        // The name this call needs: by the app it opens (launch) or the one the session is in.
-        val target = if (operation == "launch") args["packageName"] as? String else currentPackage
-        AccessibilityParking.desired = identityFor(context, target)
-        return trackOperation(id, operation) {
-            var result = executeOperation(context, id, operation, args)
-            track(result)
-            // The agent reaching for screenshots in WeChat means it saw too little: escalate now.
-            if (operation in setOf("observe", "wait", "launch", "look")) result = escalateIfHidden(context, id, result, force = operation == "look")
-            result
-        }
-    }
+    suspend fun execute(context: Context, id: String, operation: String, args: Map<String, Any?>): Map<String, Any?> =
+        trackOperation(id, operation) { executeOperation(context, id, operation, args) }
 
     private suspend fun trackOperation(id: String, operation: String, block: suspend () -> Map<String, Any?>): Map<String, Any?> {
         val ticket = PhoneOverlayBridge.startOperation(id, operation)
@@ -321,8 +259,6 @@ object PhoneRuntime {
         val target = id ?: sessionIdentity ?: return
         engine(context).end(target)
         if (sessionIdentity == target) sessionIdentity = null
-        AccessibilityParking.desired = AccessibilityIdentity.Neutral
-        currentPackage = null
         // Off between tasks, so keyboards don't switch to screen-reader typing (AccessibilityParking).
         if (control?.state() == null) AccessibilityParking.park(context)
     }
@@ -334,11 +270,6 @@ object PhoneRuntime {
     suspend fun takeover(context: Context, id: String, note: String? = null) {
         engine(context).handoff(id)
         handoffNote = note?.trim()?.take(200)?.ifEmpty { null }
-        // The user types now: back to the neutral name so their keyboard behaves normally. Off this
-        // call's coroutine, which may belong to the floating panel the switch rebinds.
-        AccessibilityParking.desired = AccessibilityIdentity.Neutral
-        val app = context.applicationContext
-        background.launch { AccessibilityParking.ensureOn(app) }
     }
     suspend fun handback(context: Context, id: String) {
         engine(context).resume(id)

@@ -227,15 +227,6 @@ WRITE_SECURE_SETTINGS grant, else the helper) and goes on; only when that fails 
 end with `ACCESSIBILITY_OFF`, which tells the user to turn it on, and the session stops. It is
 never reported as a protected screen. A stale stop request cannot close a newer session.
 
-The accessibility service has three names (`AccessibilityIdentity`), one enabled at a time. It
-normally runs under a neutral one (`expo.modules.phonecontrol.CopilotAccessibilityService`):
-under TalkBack's class name, keyboards such as Samsung Keyboard switch to screen-reader typing
-(two taps per key). WeChat 8.0.5x+ shows its views only to screen readers it recognises by class
-name (TalkBack, TalkMan, 点明, 保益, from WeChat 8.0.80's `AccReporter`), so while a call works in
-WeChat Copilot switches to TalkMan's name, and to TalkBack's once WeChat stays nearly empty for
-12 s under TalkMan (remembered per phone). A handoff to the user, leaving WeChat and the end of
-the task go back to the neutral name, so the user's own typing is never affected.
-
 Chat turns have no step limit, so a Copilot task runs until it is done or stopped; long tasks
 are compacted mid-turn as the context fills (AGENT-HARNESS.md §5.6). Scheduled tasks cannot access Copilot sessions.
 

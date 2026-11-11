@@ -12,20 +12,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
-import org.pkuinfo.harness.phone.connection.protocol.AccessibilityIdentity
 import org.pkuinfo.harness.phone.connection.protocol.AccessibilityList
 import org.pkuinfo.harness.phone.connection.protocol.PermissionCommands
 import org.pkuinfo.harness.phone.platform.PhonePlatform
 import org.pkuinfo.harness.phone.platform.accessibility.ScreenAccessibility
 
 /**
- * Copilot's accessibility service is enabled only while a task runs, under a neutral name; a
- * screen-reader name (WeChat exposes its views only to screen readers) makes keyboards such as
- * Samsung Keyboard switch to screen-reader typing, where every key needs a second tap, so that
- * name is used only while Copilot operates WeChat ([AccessibilityIdentity]). Between tasks the
+ * Copilot's accessibility service is enabled only while a task runs. Its TalkBack-compatible class
+ * name (WeChat exposes its views only to TalkBack) also makes keyboards such as Samsung Keyboard
+ * switch to screen-reader typing, where every key needs a second tap. So between tasks the
  * service is parked (taken out of the system list) and put back when the next task begins, and
  * checked again before every Copilot call (it may also have been switched off by the user or the
  * system meanwhile; [ensureOn]).
@@ -36,7 +32,6 @@ internal object AccessibilityParking {
     private const val TAG = "CopilotParking"
     private const val PREFS = "copilot_accessibility"
     private const val PARKED = "parked"
-    private const val TALKBACK_NEEDED = "wechat_needs_talkback"
     /** A service bound with no task (app start, enabled from Settings) parks after this. */
     private const val IDLE_MS = 20_000L
     private const val BIND_TIMEOUT_MS = 6_000L
@@ -83,45 +78,32 @@ internal object AccessibilityParking {
         return removed
     }
 
-    /** The name the next Copilot call needs (set per call by PhoneRuntime; see [AccessibilityIdentity]). */
-    @Volatile var desired: AccessibilityIdentity = AccessibilityIdentity.Neutral
-    private val switching = Mutex()
-
-    /** The screen-reader name WeChat responded to on this phone: TalkMan until it proved not enough. */
-    fun screenReaderIdentity(context: Context): AccessibilityIdentity =
-        if (prefs(context).getBoolean(TALKBACK_NEEDED, false)) AccessibilityIdentity.TalkBack else AccessibilityIdentity.TalkMan
-
-    /** TalkMan's name did not make WeChat show its views here: use TalkBack's from now on. */
-    fun needTalkBack(context: Context) = prefs(context).edit().putBoolean(TALKBACK_NEEDED, true).apply()
-
     /**
-     * Before a task and before every Copilot call: make sure the service is bound under [identity].
-     * When it is off, whether Copilot parked it, the user switched it off in Settings, or the
-     * system dropped it, turn it back on; when it runs under another name, switch (this app's own
-     * secure-settings permission, else the connected helper) and wait for Android to bind it.
-     * A service that can't be switched keeps working under its current name. False only when it
-     * is off and cannot be turned on without the user.
+     * Before a task and before every Copilot call: make sure the service is bound. When it is not,
+     * whether Copilot parked it, the user switched it off in Settings, or the system dropped it,
+     * turn it back on (this app's own secure-settings permission, else the connected helper) and
+     * wait for Android to bind it. False only when it is off and cannot be turned on without the
+     * user.
      */
-    suspend fun ensureOn(context: Context, identity: AccessibilityIdentity = desired): Boolean = switching.withLock {
-        val bound = ScreenAccessibility.instance.value
-        if (bound != null && AccessibilityIdentity.ofClass(bound.javaClass.name) == identity) return@withLock true
-        val written = runCatching { if (canWriteDirectly(context)) write(context, on = true, identity) else PhoneRuntime.enableAccessibility(context, identity) }
+    suspend fun ensureOn(context: Context): Boolean {
+        if (ScreenAccessibility.instance.value != null) return true
+        val written = runCatching { if (canWriteDirectly(context)) write(context, on = true) else PhoneRuntime.enableAccessibility(context) }
             .getOrDefault(false)
         if (!written) {
-            Log.i(TAG, if (bound != null) "can't switch to ${identity.name}; staying ${bound.javaClass.simpleName}" else "off and could not be turned on")
-            return@withLock bound != null
+            Log.i(TAG, "off and could not be turned on")
+            return false
         }
-        val ready = withTimeoutOrNull(BIND_TIMEOUT_MS) { ScreenAccessibility.instance.first { it != null && it.javaClass.name == identity.className } } != null
-        if (ready) setParked(context, false)
-        Log.i(TAG, if (ready) "on as ${identity.name}" else "written as ${identity.name} but not bound yet")
-        ready || ScreenAccessibility.instance.value != null
+        val bound = withTimeoutOrNull(BIND_TIMEOUT_MS) { ScreenAccessibility.instance.first { it != null } } != null
+        if (bound) setParked(context, false)
+        Log.i(TAG, if (bound) "back on for a task" else "written back but not bound yet")
+        return bound
     }
 
     /** This app's own secure-settings write; other services in the list stay as they are. */
-    private fun write(context: Context, on: Boolean, identity: AccessibilityIdentity = AccessibilityIdentity.Neutral): Boolean {
+    private fun write(context: Context, on: Boolean): Boolean {
         val cr = context.contentResolver
         val current = Settings.Secure.getString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-        val next = PermissionCommands.accessibilityList(current, context.packageName, on, identity)
+        val next = PermissionCommands.accessibilityList(current, context.packageName, on)
         if (next.isEmpty()) {
             Settings.Secure.putString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, "")
             Settings.Secure.putInt(cr, Settings.Secure.ACCESSIBILITY_ENABLED, 0)
@@ -129,8 +111,6 @@ internal object AccessibilityParking {
             Settings.Secure.putString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES, next)
             Settings.Secure.putInt(cr, Settings.Secure.ACCESSIBILITY_ENABLED, 1)
         }
-        val now = Settings.Secure.getString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
-        return if (on) AccessibilityList.contains(now, PermissionCommands.accessibilityService(context.packageName, identity))
-        else !AccessibilityList.containsAny(now, PermissionCommands.ownServices(context.packageName))
+        return AccessibilityList.contains(Settings.Secure.getString(cr, Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES), PermissionCommands.accessibilityService(context.packageName)) == on
     }
 }

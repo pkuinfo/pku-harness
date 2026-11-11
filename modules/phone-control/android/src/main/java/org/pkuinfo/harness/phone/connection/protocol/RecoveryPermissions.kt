@@ -67,31 +67,24 @@ sealed interface PermissionResult {
 
 /** 这几项能力对应的 shell 命令(原版 pm / cmd deviceidle / settings 的写法)。 */
 object PermissionCommands {
-    /** The default identity's class (Settings highlights it; restores after reboot use it). */
-    val ACCESSIBILITY_CLASS = AccessibilityIdentity.Neutral.className
+    const val ACCESSIBILITY_CLASS = "com.google.android.marvin.talkback.TalkBackService"
     private const val LEGACY_ACCESSIBILITY_CLASS = "org.pkuinfo.harness.phone.platform.accessibility.PhoneAccessibilityService"
     const val WRITE_SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"
     const val READ_ACCESSIBILITY = "settings get secure enabled_accessibility_services"
     const val EXIT_MARK = "__mika_exit="
 
-    fun accessibilityService(pkg: String, identity: AccessibilityIdentity = AccessibilityIdentity.Neutral): String {
-        // Installation IDs may have suffixes; the class names remain fixed.
-        val service = identity.className
+    fun accessibilityService(pkg: String): String {
+        // Installation IDs may have suffixes; the compatibility class name remains fixed.
+        val service = ACCESSIBILITY_CLASS
         return "$pkg/${if (service.startsWith("$pkg.")) service.removePrefix(pkg) else service}"
     }
     fun legacyAccessibilityService(pkg: String) = "$pkg/$LEGACY_ACCESSIBILITY_CLASS"
 
-    /** Every component this installation's service can be enabled under (one at a time). */
-    fun ownServices(pkg: String): List<String> =
-        AccessibilityIdentity.entries.map { accessibilityService(pkg, it) } + legacyAccessibilityService(pkg)
-
-    /**
-     * This installation's service on (under [identity]) or off. Its other identities and the legacy
-     * component are always removed, so at most one of them is enabled; every other service stays.
-     */
-    fun accessibilityList(raw: String?, pkg: String, on: Boolean, identity: AccessibilityIdentity = AccessibilityIdentity.Neutral): String {
-        val cleaned = ownServices(pkg).fold(raw?.let { AccessibilityList.entries(it).joinToString(":") } ?: "") { list, own -> AccessibilityList.without(list, own) }
-        return if (on) AccessibilityList.with(cleaned, accessibilityService(pkg, identity)) else cleaned
+    /** Replace only this installation's legacy component; preserve every other service. */
+    fun accessibilityList(raw: String?, pkg: String, on: Boolean): String {
+        val cleaned = AccessibilityList.without(raw, legacyAccessibilityService(pkg))
+        val current = accessibilityService(pkg)
+        return if (on) AccessibilityList.with(cleaned, current) else AccessibilityList.without(cleaned, current)
     }
     fun grantWriteSecureSettings(pkg: String) = "pm grant $pkg $WRITE_SECURE_SETTINGS"
     fun revokeWriteSecureSettings(pkg: String) = "pm revoke $pkg $WRITE_SECURE_SETTINGS"
@@ -121,8 +114,6 @@ object AccessibilityList {
     }
 
     fun contains(raw: String?, component: String): Boolean = entries(raw).any { same(it, component) }
-
-    fun containsAny(raw: String?, components: List<String>): Boolean = components.any { contains(raw, it) }
 
     fun with(raw: String?, component: String): String {
         val list = entries(raw)
@@ -239,20 +230,17 @@ class RecoveryPermissions(
      */
     suspend fun restartAccessibility(gapMs: Long): PermissionResult = lock.withLock {
         val shell = runner() ?: return@withLock PermissionResult.NoRunner
+        val me = PermissionCommands.accessibilityService(packageName)
         try {
             val current = shell.exec(PermissionCommands.READ_ACCESSIBILITY)
-            // Restart under whichever of Copilot's names is listed (it may be mid-task in WeChat).
-            val identity = AccessibilityIdentity.entries.firstOrNull { AccessibilityList.contains(current, PermissionCommands.accessibilityService(packageName, it)) }
-                ?: AccessibilityIdentity.Neutral
-            val me = PermissionCommands.accessibilityService(packageName, identity)
             // 不在列表里(被强行停止时系统会拿掉):直接加上;在列表里却没绑定:去掉再加回,系统才会重新绑定
-            if (!AccessibilityList.contains(current, me)) return@withLock runAll(shell, PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(current, packageName, true, identity)))
+            if (!AccessibilityList.contains(current, me)) return@withLock runAll(shell, PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(current, packageName, true)))
             val removed = runAll(shell, PermissionCommands.writeAccessibility(AccessibilityList.without(current, me)))
             if (removed != PermissionResult.Done) return@withLock removed
             withContext(NonCancellable) {
                 delay(gapMs)
                 val now = shell.exec(PermissionCommands.READ_ACCESSIBILITY)
-                val back = runAll(shell, PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(now, packageName, true, identity)))
+                val back = runAll(shell, PermissionCommands.writeAccessibility(PermissionCommands.accessibilityList(now, packageName, true)))
                 // 加回失败时把原来的列表(连同总开关)写回:宁可回到「有却没绑定」,也不让 Mika 从列表里消失;
                 // 写回只是兜底,这次仍按加回失败报
                 // (读到的原样带着换行;它本来就有 Mika,with 只把它整理成干净的列表,内容不变)
@@ -303,22 +291,5 @@ class RecoveryPermissions(
             if (PermissionCommands.exitCode(out) != 0) return PermissionResult.Failed("$cmd: ${out.trim()}")
         }
         return PermissionResult.Done
-    }
-}
-
-/**
- * The names Copilot's accessibility service runs under; only one is enabled at a time.
- * Some keyboards (Samsung Keyboard) switch to screen-reader typing, two taps per key, while a
- * service named TalkBack is on, so Copilot uses the neutral name and switches to a screen-reader
- * name only while it operates an app that shows its views to screen readers only (WeChat 8.0.5x+
- * checks for TalkBack, TalkMan, 点明 and 保益 by class name). TalkMan is tried before TalkBack.
- */
-enum class AccessibilityIdentity(val className: String) {
-    Neutral("expo.modules.phonecontrol.CopilotAccessibilityService"),
-    TalkMan("com.nirenr.talkman.TalkManAccessibilityService"),
-    TalkBack("com.google.android.marvin.talkback.TalkBackService");
-
-    companion object {
-        fun ofClass(name: String?): AccessibilityIdentity? = entries.firstOrNull { it.className == name }
     }
 }
