@@ -225,7 +225,7 @@ class PhoneEngineTest {
         device.readEntered = CompletableDeferred()
         device.readFinish = CompletableDeferred()
         val action = async(start = CoroutineStart.UNDISPATCHED) {
-            expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approved) }
+            engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approved)
         }
         device.readEntered!!.await()
         engine.pause(id, true)
@@ -233,11 +233,13 @@ class PhoneEngineTest {
         yield()
         assertEquals(0, device.calls)
         assertFalse(action.isCompleted)
-        // Not the same control any more: different text somewhere else.
+        // Not the same control any more: different text somewhere else. Re-checked after resume on
+        // the current screen, so the tap lands where the reviewed button was.
         device.frame = device.frame.copy(elements = listOf(device.frame.elements.single().copy(text = "Different target", bounds = listOf(0, 120, 50, 170))))
         engine.pause(id, false)
         withTimeout(1_000) { action.await() }
-        assertEquals(0, device.calls)
+        assertEquals(1, device.calls)
+        assertEquals(PhoneAction.TapAt(2, 5), device.performed)
     }
 
     @Test fun queuedPausedActionDoesNotBlockTakeoverOrStop() = runBlocking {
@@ -359,16 +361,20 @@ class PhoneEngineTest {
         device.frame = device.frame.copy(elements = device.frame.elements + DeviceElement("node-2", "button", "Delete", listOf(0, 60, 50, 110), clickable = true))
         engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval)
         assertEquals(1, device.calls)
-        // A tappable element slides on top of the reviewed one: a tap there could reach it instead.
+        // A tappable element slides on top of the reviewed one: not confirmed, so the tap lands at
+        // its last known centre, judged on what is there now (same effect: it goes through).
         snapshot = engine.observe(id)
         approval = engine.assess(id, snapshot.snapshotId, "e1")
         device.frame = device.frame.copy(elements = listOf(device.frame.elements[0], device.frame.elements[1].copy(bounds = listOf(0, 0, 50, 50))))
-        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval) }
-        // The reviewed element is gone.
+        engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval)
+        assertEquals(PhoneAction.TapAt(2, 5), device.performed)
+        // The reviewed element is gone: tapped where it was.
         snapshot = engine.observe(id)
         approval = engine.assess(id, snapshot.snapshotId, "e1")
         device.frame = device.frame.copy(elements = listOf(DeviceElement("node-4", "text", "Done", listOf(0, 0, 50, 50))))
-        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval) }
+        engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval)
+        assertEquals(PhoneAction.TapAt(2, 5), device.performed)
+        assertEquals(3, device.calls)
         // A Pay button took its place: judged as it is now, so payment goes to the user.
         device.effectFor = { if (it.text == "Pay") PhoneEffect.MONEY else null }
         device.frame = device.frame.copy(elements = listOf(DeviceElement("node-1", "button", "Open", listOf(0, 0, 50, 50), clickable = true)))
@@ -376,7 +382,7 @@ class PhoneEngineTest {
         approval = engine.assess(id, snapshot.snapshotId, "e1")
         device.frame = device.frame.copy(elements = listOf(DeviceElement("node-3", "button", "Pay", listOf(0, 0, 50, 50), clickable = true)))
         expectFailure(PhoneFailure.HANDOFF) { engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval) }
-        assertEquals(1, device.calls)
+        assertEquals(3, device.calls)
     }
 
     @Test fun aTapGoesThroughWhileABannerKeepsMovingAndAfterItsTargetScrolled() = runBlocking {
@@ -433,7 +439,8 @@ class PhoneEngineTest {
         expectFailure(PhoneFailure.HANDOFF) { engine.execute(id, PhoneAction.Type("text"), observation.snapshotId, "e1") }
         device.frame = device.frame.copy(protected = true)
         assertNull(engine.preview(id))
-        assertTrue(engine.observe(id).targets.isEmpty())
+        // Secure screens are not previewed, but their elements are readable (passwords stay redacted).
+        assertEquals("", engine.observe(id).targets.single().element.text)
     }
 
     @Test fun liveScreensArePreviewedButAnAppearingProtectedScreenIsNot() = runBlocking {
@@ -525,7 +532,7 @@ class PhoneEngineTest {
         assertEquals(1, device.closes)
     }
 
-    @Test fun successfulActionIssuesANewObservationAndConsumesItsOldReference() = runBlocking {
+    @Test fun successfulActionIssuesANewObservationAndOldReferencesExpireAfterAFew() = runBlocking {
         val device = FakeDevice()
         val engine = device.engine()
         val id = engine.begin(setOf("org.example.notes")).id
@@ -534,8 +541,13 @@ class PhoneEngineTest {
         val result = engine.execute(id, PhoneAction.Tap, observation.snapshotId, "e1", approval)
         assertTrue(result.outcome.ok)
         assertNotEquals(observation.snapshotId, result.observation.snapshotId)
-        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, observation.snapshotId, "e1", approval) }
-        assertEquals(1, device.calls)
+        // Still among the recent observations: the ref resolves (re-checked on the current screen).
+        engine.execute(id, PhoneAction.Tap, observation.snapshotId, "e1", approval)
+        assertEquals(2, device.calls)
+        repeat(4) { engine.observe(id) }
+        expectFailure(PhoneFailure.INVALID) { engine.execute(id, PhoneAction.Tap, observation.snapshotId, "e1", approval) }
+        expectFailure(PhoneFailure.INVALID) { engine.assess(id, observation.snapshotId, "e1") }
+        assertEquals(2, device.calls)
     }
 
     @Test fun wholeScreenScrollAndBackActOnTheCurrentScreenEvenWithAnOlderSnapshot() = runBlocking {
@@ -547,9 +559,10 @@ class PhoneEngineTest {
         engine.execute(id, PhoneAction.Scroll(true), old.snapshotId)
         engine.execute(id, PhoneAction.Back, old.snapshotId)
         assertEquals(2, device.calls)
-        // An element action still needs the current snapshot.
+        // An element action needs a recent snapshot: four newer ones have pushed this one out.
         val approval = engine.assess(id, engine.observe(id).snapshotId, "e1")
-        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, old.snapshotId, "e1", approval) }
+        expectFailure(PhoneFailure.INVALID) { engine.execute(id, PhoneAction.Tap, old.snapshotId, "e1", approval) }
+        assertEquals(2, device.calls)
     }
 
     @Test fun paymentsAndUserScreenPromptsRequireHandoff() = runBlocking {
@@ -630,7 +643,9 @@ class PhoneEngineTest {
         val device = FakeDevice().apply { frame = frame.copy(protected = true) }
         val engine = device.engine()
         val id = engine.begin(setOf("org.example.notes")).id
-        expectFailure(PhoneFailure.HANDOFF) { engine.look(id) }
+        // A secure screen is never captured, but it isn't handed over either: its elements work.
+        expectFailure(PhoneFailure.INVALID) { engine.look(id) }
+        assertTrue(engine.observe(id).targets.isNotEmpty())
         device.frame = device.frame.copy(protected = false, needsUser = true)
         expectFailure(PhoneFailure.HANDOFF) { engine.look(id) }
         device.frame = device.frame.copy(needsUser = false, windowPackages = setOf("org.example.notes", "org.example.other"))
@@ -724,33 +739,138 @@ class PhoneEngineTest {
         engine.end(id)
     }
 
-    @Test fun changedTextSomewhereElseIsNotTheSameControl() = runBlocking {
+    @Test fun anUnconfirmedControlIsTappedAtItsLastKnownCentre() = runBlocking {
         val device = FakeDevice().apply { frame = frame.copy(elements = listOf(searchBox, feed)) }
         val engine = device.engine()
         val id = engine.begin(setOf("org.example.notes")).id
+        // The search box's centre (50, 20 of 0–999) on the 100x200 display.
+        val centre = PhoneAction.TapAt(5, 4)
         var seen = engine.observe(id)
         var approval = engine.assess(id, seen.snapshotId, "e1")
         // Text changed and it moved far away.
         device.frame = device.frame.copy(elements = listOf(feed, searchBox.copy(text = "搜索：手机", bounds = listOf(0, 300, 100, 340))))
-        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval) }
+        engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval)
+        assertEquals(centre, device.performed)
         // In place but ambiguous: two such controls overlap the old spot.
         device.frame = device.frame.copy(elements = listOf(searchBox, feed))
         seen = engine.observe(id)
         approval = engine.assess(id, seen.snapshotId, "e1")
         device.frame = device.frame.copy(elements = listOf(searchBox.copy(text = "A"), searchBox.copy(key = "node-t", text = "B", bounds = listOf(0, 1, 100, 40)), feed))
-        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval) }
-        // In place, but its state changed (now disabled): not the reviewed control.
+        engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval)
+        assertEquals(centre, device.performed)
+        // In place, but its state changed (now disabled): not the reviewed control, tapped where it was.
         device.frame = device.frame.copy(elements = listOf(searchBox, feed))
         seen = engine.observe(id)
         approval = engine.assess(id, seen.snapshotId, "e1")
         device.frame = device.frame.copy(elements = listOf(searchBox.copy(text = "搜索：手机", enabled = false), feed))
-        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval) }
-        // In place, but a tappable element newly covers it.
+        engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval)
+        assertEquals(3, device.calls)
+        // In place, but a tappable element newly covers it and does something else: a new approval.
+        device.effectFor = { if (it.text == "Close ad") PhoneEffect.PUBLIC else null }
         device.frame = device.frame.copy(elements = listOf(searchBox, feed))
         seen = engine.observe(id)
         approval = engine.assess(id, seen.snapshotId, "e1")
-        device.frame = device.frame.copy(elements = listOf(searchBox.copy(text = "搜索：手机"), DeviceElement("node-x", "button", "Close ad", listOf(0, 0, 100, 40), clickable = true), feed))
+        device.frame = device.frame.copy(elements = listOf(searchBox.copy(text = "搜索：手机"), DeviceElement("node-x", "button", "Close ad", listOf(10, 5, 90, 35), clickable = true), feed))
         expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval) }
+        // Assessed now, the approval is for what the point does, and it goes through.
+        val again = engine.assess(id, seen.snapshotId, "e1")
+        assertEquals(PhoneEffect.PUBLIC, again.effect)
+        engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", again)
+        assertEquals(centre, device.performed)
+        assertEquals(4, device.calls)
+        engine.end(id)
+    }
+
+    // ---- Recent observations and acting where an unconfirmed element was
+
+    @Test fun aRefFromAnEarlierRecentObservationStillWorks() = runBlocking {
+        val device = FakeDevice()
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val first = engine.observe(id)
+        engine.observe(id) // a wait or a batched action published a newer one
+        val approval = engine.assess(id, first.snapshotId, "e1")
+        engine.execute(id, PhoneAction.Tap, first.snapshotId, "e1", approval)
+        assertEquals(PhoneAction.Tap, device.performed)
+        assertEquals("node-1", device.performedOn?.key)
+        expectFailure(PhoneFailure.INVALID) { engine.execute(id, PhoneAction.Tap, "$id:999", "e1", approval) }
+        assertEquals(1, device.calls)
+        engine.end(id)
+    }
+
+    @Test fun nothingObservedOrAfterTheUserHadControlNeedsAnObservation() = runBlocking {
+        val device = FakeDevice()
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        expectFailure(PhoneFailure.STALE) { engine.assess(id, "$id:1", "e1") }
+        val seen = engine.observe(id)
+        val approval = engine.assess(id, seen.snapshotId, "e1")
+        engine.handoff(id)
+        engine.resume(id)
+        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval) }
+        assertEquals(0, device.calls)
+        engine.end(id)
+    }
+
+    @Test fun aVanishedTargetIsTappedAtItsOldCentre() = runBlocking {
+        val device = FakeDevice()
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val seen = engine.observe(id)
+        device.frame = device.frame.copy(elements = listOf(DeviceElement("node-9", "text", "Loading", listOf(0, 600, 999, 700))))
+        // Approval and execution judge the same point.
+        val approval = engine.assess(id, seen.snapshotId, "e1")
+        assertEquals(PhoneEffect.WRITE, approval.effect)
+        assertEquals("Open", approval.label)
+        engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval)
+        // Bounds (0, 0, 50, 50) of 0–999 → centre (25, 25) → display pixel (2, 5) of 100x200.
+        assertEquals(PhoneAction.TapAt(2, 5), device.performed)
+        assertNull(device.performedOn)
+        engine.end(id)
+    }
+
+    @Test fun aVanishedTargetOverAPaymentSpotIsHandedToTheUser() = runBlocking {
+        val device = FakeDevice()
+        device.effectFor = { if (it.text == "Pay ¥99") PhoneEffect.MONEY else null }
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val seen = engine.observe(id)
+        val approval = engine.assess(id, seen.snapshotId, "e1")
+        device.frame = device.frame.copy(elements = listOf(DeviceElement("node-p", "button", "Pay ¥99", listOf(0, 0, 999, 100), clickable = true)))
+        expectFailure(PhoneFailure.HANDOFF) { engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval) }
+        expectFailure(PhoneFailure.HANDOFF) { engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", engine.assess(id, seen.snapshotId, "e1")) }
+        // A password field now under the old centre is the user's.
+        device.effectFor = null
+        device.frame = device.frame.copy(elements = listOf(DeviceElement("node-pw", "edit", "", listOf(0, 0, 999, 100), editable = true, secret = true)))
+        expectFailure(PhoneFailure.HANDOFF) { engine.assess(id, seen.snapshotId, "e1") }
+        expectFailure(PhoneFailure.HANDOFF) { engine.execute(id, PhoneAction.Tap, seen.snapshotId, "e1", approval) }
+        assertEquals(0, device.calls)
+        engine.end(id)
+    }
+
+    @Test fun typingIntoAMovedFieldTypesAtItsOldCentre() = runBlocking {
+        val field = DeviceElement("node-q", "edit", "Search", listOf(0, 0, 100, 40), resourceId = "q", editable = true)
+        val device = FakeDevice().apply { frame = frame.copy(elements = listOf(field)) }
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val seen = engine.observe(id)
+        device.frame = device.frame.copy(elements = listOf(field.copy(key = "node-q2", text = "Search again", bounds = listOf(0, 500, 100, 540))))
+        engine.execute(id, PhoneAction.Type("hello"), seen.snapshotId, "e1")
+        assertEquals(PhoneAction.TypeAt(5, 4, "hello"), device.performed)
+        // Submitting sends the field's contents and a slider needs its node: both still need a new observation.
+        expectFailure(PhoneFailure.STALE) { engine.assess(id, seen.snapshotId, "e1", submit = true) }
+        assertEquals(1, device.calls)
+        engine.end(id)
+    }
+
+    @Test fun aSliderThatCannotBeConfirmedIsNotMoved() = runBlocking {
+        val device = FakeDevice()
+        device.frame = device.frame.copy(elements = listOf(device.frame.elements.single().copy(rangeMin = 0f, rangeMax = 100f, rangeCurrent = 40f)))
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val seen = engine.observe(id)
+        device.frame = device.frame.copy(elements = emptyList())
+        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.SetProgress(60f), seen.snapshotId, "e1") }
         assertEquals(0, device.calls)
         engine.end(id)
     }

@@ -77,9 +77,17 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
             override suspend fun isLocked() = context.getSystemService(KeyguardManager::class.java).isKeyguardLocked
 
             private suspend fun scope(): Set<String?> {
-                val packages = screen.accessPackages().toSet()
-                if (packages.any { it == null || it !in allowed }) throw PhoneException(PhoneFailure.APP_SCOPE, "An app outside this session needs the user's attention")
-                return packages
+                // A window whose contents aren't readable yet (mid-transition) has no known owner;
+                // it is not another app. Ignore those, and give a real outsider one short moment
+                // to go away (a transition between two pages of the same app) before refusing.
+                fun outside(p: Set<String?>) = p.any { it != null && it !in allowed }
+                var packages = screen.accessPackages().toSet()
+                if (outside(packages)) {
+                    kotlinx.coroutines.delay(400)
+                    packages = screen.accessPackages().toSet()
+                }
+                if (outside(packages)) throw PhoneException(PhoneFailure.APP_SCOPE, "An app outside this session needs the user's attention")
+                return packages.filterNotNull().toSet()
             }
 
             override suspend fun read(): DeviceFrame {

@@ -2,6 +2,7 @@ package org.pkuinfo.harness.phone.core
 
 import java.util.UUID
 import java.util.concurrent.atomic.AtomicBoolean
+import kotlin.math.roundToInt
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
@@ -23,7 +24,14 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         val stop = CompletableDeferred<Unit>()
         @Volatile var handedOver = false
         @Volatile var pauseGate: CompletableDeferred<Unit>? = null
-        var observed: Pair<DeviceFrame, PhoneObservation>? = null
+        /**
+         * The last few published observations, oldest first: a ref from any of them still resolves,
+         * so an observation published by a batched action or a wait doesn't expire the model's refs.
+         */
+        val history = ArrayDeque<Pair<DeviceFrame, PhoneObservation>>()
+        val observed: Pair<DeviceFrame, PhoneObservation>? get() = history.lastOrNull()
+        /** Forget every observation: the next element action needs a new one. */
+        fun invalidate() = history.clear()
         /** The latest screenshot given to the model: point actions must name its snapshot. */
         var shot: Shot? = null
         var sequence = 0L
@@ -106,12 +114,13 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
             session.shot = null
             val observation = publish(session)
             val frame = checkNotNull(session.observed).first
-            if (frame.protected) fail(PhoneFailure.HANDOFF, "This protected screen requires the user; it is never captured")
+            // Never captured; the screen is still operable through its elements.
+            if (frame.protected) fail(PhoneFailure.INVALID, "This screen blocks screenshots; use observe and tap its elements")
             if (frame.needsUser) fail(PhoneFailure.HANDOFF, "The app needs attention on the user's screen")
             val image = session.device.lookImage() ?: fail(PhoneFailure.INVALID, "No screen image is available yet; wait, then look again")
             val after = checkedFrame(session)
             if (after.protected || after.needsUser || after.packageName != frame.packageName || after.windowPackages != frame.windowPackages) {
-                session.observed = null
+                session.invalidate()
                 fail(PhoneFailure.STALE, "The screen changed while it was captured; look again")
             }
             if (image.width <= 0 || image.height <= 0) fail(PhoneFailure.INVALID, "The screen image is empty; look again")
@@ -129,8 +138,16 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
 
     suspend fun assess(id: String, snapshotId: String, ref: String, submit: Boolean = false): PhoneAssessment = mutex.withLock {
         val session = active(id)
-        val (frame, observation, inPlace) = fresh(session, snapshotId, ref)
+        val (frame, observation, inPlace, lost) = fresh(session, snapshotId, ref)
         val reviewed = target(observation, ref)
+        if (lost != null) {
+            // Not confirmed on the current screen: judged like the tap at its last known centre
+            // that execute falls back to, so approval and execution agree.
+            if (submit) fail(PhoneFailure.STALE, STALE_TARGET)
+            if (reviewed.secret) fail(PhoneFailure.HANDOFF, "The user must enter passwords")
+            val (x, y) = lastKnownPoint(frame, lost)
+            return@withLock PhoneAssessment(policy.assessPoint(frame, x, y), label(reviewed), frame.packageName, snapshotId, ref)
+        }
         // A field's text is what Submit sends: a changed one needs a new observation.
         if (submit && inPlace != null) fail(PhoneFailure.STALE, STALE_TARGET)
         val target = inPlace ?: reviewed
@@ -178,33 +195,55 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                     // Found only by position (its text changed in place): act on, and judge, the
                     // element as it is now, dispatched by its key in the latest read.
                     val inPlace = checked?.inPlace
-                    if (ref != null) element = (inPlace ?: target(observation!!, ref)).also(::validateTarget)
-                    when (action) {
-                        PhoneAction.Tap, PhoneAction.Submit -> {
-                            val hit = element ?: fail(PhoneFailure.INVALID, "A target is required")
-                            val submit = action == PhoneAction.Submit
-                            // A field's text is what Submit sends: a changed one needs a new observation.
-                            if (submit && inPlace != null) fail(PhoneFailure.STALE, STALE_TARGET)
-                            if (submit && !hit.editable) fail(PhoneFailure.INVALID, "Choose an editable field")
-                            // Effect from the current element; label as reviewed, so an in-place text
-                            // change still matches the approval but any change of effect does not.
-                            val assessment = PhoneAssessment(if (submit) policy.submit(frame, hit) else policy.assess(frame, hit), label(target(observation!!, ref!!)), frame.packageName, observation.snapshotId, ref, submit)
-                            if (assessment.effect == PhoneEffect.MONEY) fail(PhoneFailure.HANDOFF, "Hand payment or purchase confirmation to the user")
-                            if (approved != assessment) fail(PhoneFailure.STALE, "The approved action no longer matches the target; assess it again on the current screen")
+                    val lost = checked?.lost
+                    if (lost != null) {
+                        // The reviewed element can't be confirmed on the current screen (it moved,
+                        // changed or vanished): act at its last known centre, judged like a
+                        // screenshot tap there on the screen as it is now.
+                        if (target(observation!!, ref!!).secret) fail(PhoneFailure.HANDOFF, "The user must enter passwords")
+                        when (action) {
+                            PhoneAction.Tap, is PhoneAction.Type -> {
+                                if (action is PhoneAction.Type && (!target(observation, ref).editable || action.text.length > 10_000))
+                                    fail(PhoneFailure.INVALID, "Choose an editable field and text within the input limit")
+                                val (x, y) = lastKnownPoint(frame, lost)
+                                val effect = policy.assessPoint(frame, x, y)
+                                if (effect == PhoneEffect.MONEY) fail(PhoneFailure.HANDOFF, "Hand payment or purchase confirmation to the user")
+                                // Only a change in what the tap does needs a new approval.
+                                if (action == PhoneAction.Tap && approved?.effect != effect) fail(PhoneFailure.STALE, "What this tap does changed; assess it again")
+                                dispatch = if (action is PhoneAction.Type) PhoneAction.TypeAt(x, y, action.text) else PhoneAction.TapAt(x, y)
+                            }
+                            // A slider, a field's contents or a scroll container needs its node.
+                            else -> fail(PhoneFailure.STALE, STALE_TARGET)
                         }
-                        is PhoneAction.SetProgress -> {
-                            val hit = element ?: fail(PhoneFailure.INVALID, "A slider is required")
-                            val minimum = hit.rangeMin ?: fail(PhoneFailure.INVALID, "This target is not a slider")
-                            val maximum = hit.rangeMax ?: fail(PhoneFailure.INVALID, "This target is not a slider")
-                            if (!action.value.isFinite() || action.value < minimum || action.value > maximum)
-                                fail(PhoneFailure.INVALID, "Choose a value within the observed slider range")
-                            if (policy.assess(frame, hit) != PhoneEffect.WRITE) fail(PhoneFailure.HANDOFF, "This slider needs user control")
+                    } else {
+                        if (ref != null) element = (inPlace ?: target(observation!!, ref)).also(::validateTarget)
+                        when (action) {
+                            PhoneAction.Tap, PhoneAction.Submit -> {
+                                val hit = element ?: fail(PhoneFailure.INVALID, "A target is required")
+                                val submit = action == PhoneAction.Submit
+                                // A field's text is what Submit sends: a changed one needs a new observation.
+                                if (submit && inPlace != null) fail(PhoneFailure.STALE, STALE_TARGET)
+                                if (submit && !hit.editable) fail(PhoneFailure.INVALID, "Choose an editable field")
+                                // Effect from the current element; label as reviewed, so an in-place text
+                                // change still matches the approval but any change of effect does not.
+                                val assessment = PhoneAssessment(if (submit) policy.submit(frame, hit) else policy.assess(frame, hit), label(target(observation!!, ref!!)), frame.packageName, observation.snapshotId, ref, submit)
+                                if (assessment.effect == PhoneEffect.MONEY) fail(PhoneFailure.HANDOFF, "Hand payment or purchase confirmation to the user")
+                                if (approved != assessment) fail(PhoneFailure.STALE, "The approved action no longer matches the target; assess it again on the current screen")
+                            }
+                            is PhoneAction.SetProgress -> {
+                                val hit = element ?: fail(PhoneFailure.INVALID, "A slider is required")
+                                val minimum = hit.rangeMin ?: fail(PhoneFailure.INVALID, "This target is not a slider")
+                                val maximum = hit.rangeMax ?: fail(PhoneFailure.INVALID, "This target is not a slider")
+                                if (!action.value.isFinite() || action.value < minimum || action.value > maximum)
+                                    fail(PhoneFailure.INVALID, "Choose a value within the observed slider range")
+                                if (policy.assess(frame, hit) != PhoneEffect.WRITE) fail(PhoneFailure.HANDOFF, "This slider needs user control")
+                            }
+                            is PhoneAction.Type -> {
+                                if (element?.editable != true || action.text.length > 10_000) fail(PhoneFailure.INVALID, "Choose an editable field and text within the input limit")
+                            }
+                            is PhoneAction.Scroll -> if (element != null && !element.scrollable) fail(PhoneFailure.INVALID, "This target is not scrollable")
+                            else -> Unit
                         }
-                        is PhoneAction.Type -> {
-                            if (element?.editable != true || action.text.length > 10_000) fail(PhoneFailure.INVALID, "Choose an editable field and text within the input limit")
-                        }
-                        is PhoneAction.Scroll -> if (element != null && !element.scrollable) fail(PhoneFailure.INVALID, "This target is not scrollable")
-                        else -> Unit
                     }
                 }
                 // A pause arriving during the freshness read must not dispatch with the earlier
@@ -212,9 +251,11 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                 // Once dispatch begins, that one operation may finish; subsequent work waits.
                 if (session.pauseGate != null) return@withLock null
                 live(session)
-                session.observed = null
                 // The last screenshot stays: it only gives the scale for the next screenshot tap.
-                val outcome = session.device.perform(dispatch, element)
+                // Earlier observations stay too (their refs are re-checked against the screen);
+                // an action whose outcome is unknown forgets them, so nothing repeats it blindly.
+                val outcome = try { session.device.perform(dispatch, element) }
+                catch (error: Throwable) { session.invalidate(); throw error }
                 live(session)
                 PhoneExecution(outcome, publish(session))
             }
@@ -245,7 +286,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                 currentCoroutineContext().ensureActive()
                 // Any Settings UI may change after a hardware setting. Require a fresh read
                 // before subsequent element actions, without reading unrelated main-screen apps.
-                if (invalidate) session.observed = null
+                if (invalidate) session.invalidate()
                 val value = operation(session.device)
                 live(session)
                 value
@@ -280,7 +321,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
     suspend fun handoff(id: String) = mutex.withLock {
         val session = active(id)
         if (!session.handedOver) {
-            session.observed = null
+            session.invalidate()
             session.device.handoff()
             session.handedOver = true
         }
@@ -292,7 +333,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         if (session.handedOver) {
             session.device.resume()
             session.handedOver = false
-            session.observed = null
+            session.invalidate()
         }
     }
 
@@ -320,7 +361,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         live(session)
         if (session.device.isLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to continue")
         if (frame.windowPackages.any { it == null || it !in session.packages } || frame.packageName?.let { it !in session.packages } == true) {
-            session.observed = null
+            session.invalidate()
             fail(PhoneFailure.APP_SCOPE, "An app outside this session needs the user's attention")
         }
         return frame.copy(elements = frame.elements.map { if (it.secret) it.copy(text = "") else it })
@@ -330,8 +371,10 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         val frame = checkedFrame(session)
         val observation = PhoneObservation(session.id, "${session.id}:${++session.sequence}", frame.packageName,
             frame.width, frame.height, frame.protected, frame.unstable,
-            if (frame.protected || frame.needsUser) emptyList() else frame.elements.mapIndexed { index, element -> PhoneTarget("e${index + 1}", element) }, frame.needsUser)
-        session.observed = frame to observation
+            // A secure (FLAG_SECURE) window only blocks screenshots: its elements are readable and usable.
+            if (frame.needsUser) emptyList() else frame.elements.mapIndexed { index, element -> PhoneTarget("e${index + 1}", element) }, frame.needsUser)
+        session.history.addLast(frame to observation)
+        while (session.history.size > HISTORY) session.history.removeFirst()
         return observation
     }
 
@@ -349,6 +392,8 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         val shot = session.shot ?: fail(PhoneFailure.STALE, "Look first; screenshot taps need a screenshot")
         if (x !in 0 until shot.width || y !in 0 until shot.height) fail(PhoneFailure.INVALID, "The point is outside the ${shot.width}x${shot.height} screenshot")
         val (frame, _) = current(session)
+        // Screenshot taps need a screenshot, which a secure screen never gives: use its elements.
+        if (frame.protected) fail(PhoneFailure.INVALID, "This screen blocks screenshots; use observe and tap its elements")
         val px = ((x + 0.5) * frame.width / shot.width).toInt().coerceIn(0, maxOf(0, frame.width - 1))
         val py = ((y + 0.5) * frame.height / shot.height).toInt().coerceIn(0, maxOf(0, frame.height - 1))
         if (elementAt(frame, px, py)?.secret == true) fail(PhoneFailure.HANDOFF, "The user must enter passwords")
@@ -361,35 +406,46 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
     /** The screen as it is now, for actions that don't depend on an observed element. */
     private suspend fun current(session: Session): Pair<DeviceFrame, PhoneObservation?> {
         val actual = checkedFrame(session)
-        if (actual.protected) fail(PhoneFailure.HANDOFF, "This protected screen requires the user")
         if (actual.needsUser) fail(PhoneFailure.HANDOFF, "The app needs attention on the user's screen")
         return actual to null
     }
 
     /**
-     * A fresh screen check's result: the current frame, the observation the model acted on, and,
-     * when the target was found only by position (same control in place, its text changed),
-     * [inPlace], the element as it is now. Every check then judges and dispatches that current
-     * element, never the reviewed text.
+     * A fresh screen check's result: the current frame and the observation the model acted on.
+     * When the target was found only by position (same control in place, its text changed),
+     * [inPlace] is the element as it is now; every check then judges and dispatches that current
+     * element, never the reviewed text. When the target can't be confirmed at all (moved, changed
+     * or gone), [lost] is the element as it was observed: the caller falls back to its last known
+     * position.
      */
-    private data class Fresh(val frame: DeviceFrame, val observation: PhoneObservation, val inPlace: DeviceElement? = null)
+    private data class Fresh(val frame: DeviceFrame, val observation: PhoneObservation, val inPlace: DeviceElement? = null, val lost: DeviceElement? = null)
 
-    private suspend fun fresh(session: Session, snapshotId: String?, ref: String? = null, point: Boolean = false): Fresh {
-        val saved = session.observed ?: fail(PhoneFailure.STALE, "Observe before acting")
-        if (saved.second.snapshotId != snapshotId) fail(PhoneFailure.STALE, "Observe again; the screen reference expired")
+    private suspend fun fresh(session: Session, snapshotId: String?, ref: String? = null): Fresh {
+        if (session.history.isEmpty()) fail(PhoneFailure.STALE, "Observe before acting")
+        val saved = session.history.lastOrNull { it.second.snapshotId == snapshotId }
+            ?: fail(PhoneFailure.INVALID, "Unknown snapshot; observe again and use its snapshotId")
         val actual = checkedFrame(session)
-        if (actual.protected) fail(PhoneFailure.HANDOFF, "This protected screen requires the user")
         if (actual.needsUser) fail(PhoneFailure.HANDOFF, "The app needs attention on the user's screen")
-        val targetIndex = ref?.let { r -> saved.second.targets.indexOfFirst { it.ref == r }.takeIf { it >= 0 } }
-        // A point has no element to pin, so the whole structure must match; text may still tick.
-        val same = actual == saved.first || if (point) sameStructure(saved.first, actual) else sameForTarget(saved.first, actual, targetIndex) || targetStillThere(saved.first, actual, targetIndex)
-        val inPlace = if (same || point) null else sameControlInPlace(saved.first, actual, targetIndex)
-        if (!same && inPlace == null || actual.unstable && targetIndex == null && !point) {
-            session.observed = null
-            fail(PhoneFailure.STALE, STALE_TARGET)
-        }
+        if (ref == null) return Fresh(actual, saved.second)
+        val targetIndex = saved.second.targets.indexOfFirst { it.ref == ref }.takeIf { it >= 0 } ?: fail(PhoneFailure.INVALID, "Unknown target")
+        val same = actual == saved.first || sameForTarget(saved.first, actual, targetIndex) || targetStillThere(saved.first, actual, targetIndex)
+        val inPlace = if (same) null else sameControlInPlace(saved.first, actual, targetIndex)
+        val lost = if (same || inPlace != null) null else saved.second.targets[targetIndex].element
         // The current frame, so the action's risk is judged on what the screen says now.
-        return Fresh(actual, saved.second, inPlace)
+        return Fresh(actual, saved.second, inPlace, lost)
+    }
+
+    /**
+     * An element's last known centre in display pixels of [frame] (bounds are normalized 0–999),
+     * for acting where it was when it can't be confirmed. A password field there is the user's.
+     */
+    private fun lastKnownPoint(frame: DeviceFrame, before: DeviceElement): Pair<Int, Int> {
+        if (before.bounds.size < 4) fail(PhoneFailure.STALE, STALE_TARGET)
+        fun px(n: Int, size: Int) = if (size <= 1) 0 else (n * (size - 1) / 999.0).roundToInt().coerceIn(0, size - 1)
+        val x = px((before.bounds[0] + before.bounds[2]) / 2, frame.width)
+        val y = px((before.bounds[1] + before.bounds[3]) / 2, frame.height)
+        if (elementAt(frame, x, y)?.secret == true) fail(PhoneFailure.HANDOFF, "The user must enter passwords")
+        return x to y
     }
 
     /**
@@ -402,7 +458,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
      */
     private fun sameControlInPlace(saved: DeviceFrame, actual: DeviceFrame, targetIndex: Int?): DeviceElement? {
         if (targetIndex == null) return null
-        if (actual.packageName != saved.packageName || actual.windowPackages != saved.windowPackages || actual.protected || actual.needsUser) return null
+        if (actual.packageName != saved.packageName || actual.windowPackages != saved.windowPackages || actual.needsUser) return null
         val before = saved.elements.getOrNull(targetIndex) ?: return null
         if (before.bounds.size < 4) return null
         if (actual.elements.any { identity(it) == identity(before) }) return null
@@ -446,7 +502,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
      */
     private fun targetStillThere(saved: DeviceFrame, actual: DeviceFrame, targetIndex: Int?): Boolean {
         if (targetIndex == null) return false
-        if (actual.packageName != saved.packageName || actual.windowPackages != saved.windowPackages || actual.protected || actual.needsUser) return false
+        if (actual.packageName != saved.packageName || actual.windowPackages != saved.windowPackages || actual.needsUser) return false
         val before = saved.elements.getOrNull(targetIndex) ?: return false
         val now = actual.elements.filter { identity(it) == identity(before) }.singleOrNull() ?: return false
         val coveredBefore = saved.elements.filter { it !== before && covers(it, before) }.map(::identity).toSet()
@@ -485,6 +541,8 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
     private companion object {
         val PACKAGE = Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")
         const val MAX_APPS = 20
+        /** Published observations whose refs still resolve. */
+        const val HISTORY = 4
         /** Minimum IoU for a control whose text changed to count as the reviewed one in place. */
         const val IN_PLACE_IOU = 0.8
         const val STALE_TARGET = "The target changed or is gone; observe again and choose it from the new screen (this ref will not work again)"
