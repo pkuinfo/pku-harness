@@ -129,11 +129,15 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
 
     suspend fun assess(id: String, snapshotId: String, ref: String, submit: Boolean = false): PhoneAssessment = mutex.withLock {
         val session = active(id)
-        val (frame, observation) = fresh(session, snapshotId, ref)
-        val target = target(observation, ref)
+        val (frame, observation, inPlace) = fresh(session, snapshotId, ref)
+        val reviewed = target(observation, ref)
+        // A field's text is what Submit sends: a changed one needs a new observation.
+        if (submit && inPlace != null) fail(PhoneFailure.STALE, STALE_TARGET)
+        val target = inPlace ?: reviewed
         validateTarget(target)
         if (submit && !target.editable) fail(PhoneFailure.INVALID, "Choose an editable field")
-        PhoneAssessment(if (submit) policy.submit(frame, target) else policy.assess(frame, target), label(target), frame.packageName, snapshotId, ref, submit)
+        // Judged on the element as it is now; labelled as the model saw it, so execute can match it.
+        PhoneAssessment(if (submit) policy.submit(frame, target) else policy.assess(frame, target), label(reviewed), frame.packageName, snapshotId, ref, submit)
     }
 
     suspend fun execute(
@@ -167,16 +171,25 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                     // protected), so an older snapshot from an action batched before it is no reason
                     // to fail. Element actions keep the strict check.
                     val untargeted = ref == null && (action is PhoneAction.Scroll || action == PhoneAction.Back)
-                    val (frame, observation) = if (untargeted) current(session) else fresh(session, snapshotId, ref)
-                    if (ref != null) element = target(observation!!, ref).also(::validateTarget)
+                    val checked = if (untargeted) null else fresh(session, snapshotId, ref)
+                    val frame = checked?.frame ?: current(session).first
+                    val observation = checked?.observation
+                    // Found only by position (its text changed in place): act on, and judge, the
+                    // element as it is now, dispatched by its key in the latest read.
+                    val inPlace = checked?.inPlace
+                    if (ref != null) element = (inPlace ?: target(observation!!, ref)).also(::validateTarget)
                     when (action) {
                         PhoneAction.Tap, PhoneAction.Submit -> {
                             val hit = element ?: fail(PhoneFailure.INVALID, "A target is required")
                             val submit = action == PhoneAction.Submit
+                            // A field's text is what Submit sends: a changed one needs a new observation.
+                            if (submit && inPlace != null) fail(PhoneFailure.STALE, STALE_TARGET)
                             if (submit && !hit.editable) fail(PhoneFailure.INVALID, "Choose an editable field")
-                            val assessment = PhoneAssessment(if (submit) policy.submit(frame, hit) else policy.assess(frame, hit), label(hit), frame.packageName, observation!!.snapshotId, ref!!, submit)
+                            // Effect from the current element; label as reviewed, so an in-place text
+                            // change still matches the approval but any change of effect does not.
+                            val assessment = PhoneAssessment(if (submit) policy.submit(frame, hit) else policy.assess(frame, hit), label(target(observation!!, ref!!)), frame.packageName, observation.snapshotId, ref, submit)
                             if (assessment.effect == PhoneEffect.MONEY) fail(PhoneFailure.HANDOFF, "Hand payment or purchase confirmation to the user")
-                            if (approved != assessment) fail(PhoneFailure.STALE, "The approved action no longer matches the observed target")
+                            if (approved != assessment) fail(PhoneFailure.STALE, "The approved action no longer matches the target; assess it again on the current screen")
                         }
                         is PhoneAction.SetProgress -> {
                             val hit = element ?: fail(PhoneFailure.INVALID, "A slider is required")
@@ -348,7 +361,15 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         return actual to null
     }
 
-    private suspend fun fresh(session: Session, snapshotId: String?, ref: String? = null, point: Boolean = false): Pair<DeviceFrame, PhoneObservation> {
+    /**
+     * A fresh screen check's result: the current frame, the observation the model acted on, and,
+     * when the target was found only by position (same control in place, its text changed),
+     * [inPlace], the element as it is now. Every check then judges and dispatches that current
+     * element, never the reviewed text.
+     */
+    private data class Fresh(val frame: DeviceFrame, val observation: PhoneObservation, val inPlace: DeviceElement? = null)
+
+    private suspend fun fresh(session: Session, snapshotId: String?, ref: String? = null, point: Boolean = false): Fresh {
         val saved = session.observed ?: fail(PhoneFailure.STALE, "Observe before acting")
         if (saved.second.snapshotId != snapshotId) fail(PhoneFailure.STALE, "Observe again; the screen reference expired")
         val actual = checkedFrame(session)
@@ -357,12 +378,46 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         val targetIndex = ref?.let { r -> saved.second.targets.indexOfFirst { it.ref == r }.takeIf { it >= 0 } }
         // A point has no element to pin, so the whole structure must match; text may still tick.
         val same = actual == saved.first || if (point) sameStructure(saved.first, actual) else sameForTarget(saved.first, actual, targetIndex) || targetStillThere(saved.first, actual, targetIndex)
-        if (!same || actual.unstable && targetIndex == null && !point) {
+        val inPlace = if (same || point) null else sameControlInPlace(saved.first, actual, targetIndex)
+        if (!same && inPlace == null || actual.unstable && targetIndex == null && !point) {
             session.observed = null
-            fail(PhoneFailure.STALE, "The screen changed; observe again")
+            fail(PhoneFailure.STALE, STALE_TARGET)
         }
         // The current frame, so the action's risk is judged on what the screen says now.
-        return actual to saved.second
+        return Fresh(actual, saved.second, inPlace)
+    }
+
+    /**
+     * The reviewed control is still there but its own text changed in place (a search box whose
+     * hint rotates, a countdown on a button, a ticking price): in the same app and windows, exactly
+     * one element has the target's role, id and state and sits where it was (bounds overlap ≥ 80%
+     * IoU), the old text no longer exists anywhere (otherwise the target moved, and a different
+     * element took its slot), and nothing tappable newly covers it. Returns that current element;
+     * the caller must re-judge the action on it, since its text is not what was reviewed.
+     */
+    private fun sameControlInPlace(saved: DeviceFrame, actual: DeviceFrame, targetIndex: Int?): DeviceElement? {
+        if (targetIndex == null) return null
+        if (actual.packageName != saved.packageName || actual.windowPackages != saved.windowPackages || actual.protected || actual.needsUser) return null
+        val before = saved.elements.getOrNull(targetIndex) ?: return null
+        if (before.bounds.size < 4) return null
+        if (actual.elements.any { identity(it) == identity(before) }) return null
+        val now = actual.elements.filter { control(it) == control(before) && overlap(it.bounds, before.bounds) >= IN_PLACE_IOU }.singleOrNull() ?: return null
+        val coveredBefore = saved.elements.filter { it !== before && covers(it, before) }.map(::identity).toSet()
+        return now.takeIf { actual.elements.none { it !== now && covers(it, now) && identity(it) !in coveredBefore } }
+    }
+
+    /** An element's kind and state without its text, place or read-order key. */
+    private fun control(e: DeviceElement) = e.copy(key = "", text = "", bounds = emptyList(), rangeCurrent = null)
+
+    /** Intersection over union of two [l, t, r, b] rectangles (0 when either is malformed or empty). */
+    private fun overlap(a: List<Int>, b: List<Int>): Double {
+        if (a.size < 4 || b.size < 4) return 0.0
+        val area = { r: List<Int> -> maxOf(0L, (r[2] - r[0]).toLong()) * maxOf(0L, (r[3] - r[1]).toLong()) }
+        val w = minOf(a[2], b[2]) - maxOf(a[0], b[0])
+        val h = minOf(a[3], b[3]) - maxOf(a[1], b[1])
+        val inter = if (w > 0 && h > 0) w.toLong() * h else 0L
+        val union = area(a) + area(b) - inter
+        return if (union <= 0L) 0.0 else inter.toDouble() / union
     }
 
     /**
@@ -376,7 +431,6 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         return sameStructure(saved, actual) && actual.elements[targetIndex] == saved.elements[targetIndex]
     }
 
-    /** Same windows and the same elements in the same places and states; only text and slider values may differ. */
     /**
      * A tap needs the element the user reviewed, not the screen it was on: pages that never hold
      * still (an auto-rotating banner, a countdown, a live feed) or that scrolled change on every
@@ -405,6 +459,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         return l < tr && tl < r && t < tb && tt < b
     }
 
+    /** Same windows and the same elements in the same places and states; only text and slider values may differ. */
     private fun sameStructure(saved: DeviceFrame, actual: DeviceFrame): Boolean {
         if (actual.elements.size != saved.elements.size) return false
         if (actual.copy(elements = emptyList(), unstable = false) != saved.copy(elements = emptyList(), unstable = false)) return false
@@ -425,5 +480,8 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
     private companion object {
         val PACKAGE = Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z][A-Za-z0-9_]*)+")
         const val MAX_APPS = 20
+        /** Minimum IoU for a control whose text changed to count as the reviewed one in place. */
+        const val IN_PLACE_IOU = 0.8
+        const val STALE_TARGET = "The target changed or is gone; observe again and choose it from the new screen (this ref will not work again)"
     }
 }

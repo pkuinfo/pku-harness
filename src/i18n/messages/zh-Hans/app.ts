@@ -99,7 +99,7 @@ export const app = {
     terms: '用户协议',
     privacy: '隐私政策',
     legalUpdatedTitle: '隐私政策已更新',
-    legalUpdatedBody: '变化：新增可选的语音输入。设置后，你的录音会从手机直接发送给你选择的语音识别服务，转成文字后即从手机上删除。Copilot 的「允许 AI 查看截图」开关仍默认关闭。',
+    legalUpdatedBody: '变化：Copilot 的「允许 AI 查看截图」现在默认开启，以便 Copilot 操作淘宝、微信等隐藏内容的应用。你可以在 Copilot 设置中关闭它。',
     legalNoticeTitle: '用户协议和隐私政策',
     legalNoticeBody: 'PKU Harness 发布了《用户协议》和《隐私政策》，说明应用为你做什么、你的数据去向何处：密码只留在这台手机上，没有广告和追踪。你可以随时在 设置 → 关于 中查看。',
     legalNoticeRead: '查看',
@@ -260,7 +260,7 @@ export const app = {
     testPrompt: '只回复：好的',
     testOk: '连接成功：{reply}',
     budget: '上下文预算',
-    budgetHint: '对话超过预算（或模型上下文的 80%）时，会自动把较早的内容压缩成摘要。预算越小回复越快、越省。',
+    budgetHint: '“模型上限”（默认）使用模型的完整上下文，用到 90% 时把较早的内容压缩成摘要（DeepSeek 100 万中约 90 万）。预算越小回复越快、越省。',
     balance: {
       title: '账户余额',
       updated: '更新于 {time}',

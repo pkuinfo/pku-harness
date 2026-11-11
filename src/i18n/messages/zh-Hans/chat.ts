@@ -238,7 +238,7 @@ export const chat = {
     compact: '压缩上下文',
     afterReply: '回复结束后可用',
     nothingToCompact: '还没有可以压缩的内容',
-    unlimited: '不限',
+    unlimited: '模型上限',
   },
   commands: {
     menu: '命令',

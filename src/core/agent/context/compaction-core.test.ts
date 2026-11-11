@@ -70,12 +70,12 @@ const deps = (over: Partial<CompactionDeps> = {}): CompactionDeps => ({
 // ---------------------------------------------------------------- budget
 
 describe('budget math', () => {
-  test('min of 80 % of the window and the user budget', () => {
+  test('min of 80 % of the window and the user budget; 90 % of the window with Model maximum', () => {
     expect(computeBudget(128_000, 64_000)).toBe(64_000);
     expect(computeBudget(64_000, 64_000)).toBe(51_200);
     expect(computeBudget(1_000_000, 256_000)).toBe(256_000);
-    expect(computeBudget(1_000_000, null)).toBe(800_000);
-    expect(computeBudget(32_768, null)).toBe(26_214);
+    expect(computeBudget(1_000_000, null)).toBe(900_000);
+    expect(computeBudget(32_768, null)).toBe(29_491);
   });
   test('tail is 25 % of the budget', () => {
     expect(tailBudgetOf(64_000)).toBe(16_000);

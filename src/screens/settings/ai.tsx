@@ -261,7 +261,7 @@ function ContextBudget() {
   const t = useT();
   const budget = useContextBudgetSetting();
   const options = CONTEXT_BUDGET_OPTIONS.map((o) => ({ label: o.label, value: o.label }));
-  const current = CONTEXT_BUDGET_OPTIONS.find((o) => o.value === budget)?.label ?? '128k';
+  const current = (CONTEXT_BUDGET_OPTIONS.find((o) => o.value === budget) ?? CONTEXT_BUDGET_OPTIONS.at(-1)!).label;
   return (
     <View className="gap-2">
       <Text variant="callout" tone="muted">

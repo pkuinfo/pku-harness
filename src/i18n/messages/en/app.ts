@@ -98,7 +98,7 @@ export const app: Messages['app'] = {
     terms: 'Terms of Service',
     privacy: 'Privacy Policy',
     legalUpdatedTitle: 'Privacy Policy updated',
-    legalUpdatedBody: 'What changed: voice input (optional). If you set it up, your recordings go from your phone straight to the speech-to-text service you choose, and are deleted from the phone once transcribed. Copilot\'s “Let the AI see screenshots” switch stays off unless you turn it on.',
+    legalUpdatedBody: 'What changed: Copilot’s “Let the AI see screenshots” is now on by default, so Copilot can operate apps like Taobao and WeChat that hide their contents. You can turn it off in Copilot settings.',
     legalNoticeTitle: 'Terms of Service and Privacy Policy',
     legalNoticeBody: 'PKU Harness now has a Terms of Service and a Privacy Policy. They describe what the app does for you and where your data goes: your password stays on this phone, and there are no ads or tracking. You can read them any time in Settings → About.',
     legalNoticeRead: 'Read',
@@ -259,7 +259,7 @@ export const app: Messages['app'] = {
     testPrompt: 'Reply with just: OK',
     testOk: 'Connected: {reply}',
     budget: 'Context budget',
-    budgetHint: 'When a chat goes over the budget (or 80% of the model’s context), older messages are summarized. A smaller budget means faster, cheaper replies.',
+    budgetHint: 'Model maximum (default) uses the model’s whole context and summarizes older messages at 90% of it (about 900k on DeepSeek’s 1M). A smaller budget means faster, cheaper replies.',
     balance: {
       title: 'Account balance',
       updated: 'Updated {time}',

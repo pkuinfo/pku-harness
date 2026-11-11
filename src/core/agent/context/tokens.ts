@@ -7,7 +7,7 @@ import { lastReport } from '@/core/usage';
 import { estimateTokens, estimateTools, PART_OVERHEAD, splitHistory } from '@/core/usage/estimate';
 
 import { chatStore, sessionStore } from '@/core/agent/session/chat-store';
-import { contextBudget, contextWindowOf } from './budget';
+import { contextBudget, contextWindowOf, getContextBudgetSetting } from './budget';
 import { aiConfig } from '@/core/agent/provider';
 import { sessions } from '@/core/agent/session/sessions';
 import { buildSystemPrompt } from './system-prompt';
@@ -20,8 +20,13 @@ export { contextWindowOf, DEFAULT_CONTEXT_WINDOW } from './budget';
 /** What fills a session's context right now, for the meter and the context sheet. */
 export type ContextBreakdown = {
   window: number;
-  /** Auto-compaction triggers here (min of 80 % window and the user's budget). */
+  /**
+   * What the meter measures against: the model's window with "Model maximum" (the default), else
+   * the user's budget. Compaction itself triggers at `compactAt`.
+   */
   budget: number;
+  /** Auto-compaction threshold (compaction.ts). */
+  compactAt: number;
   systemTokens: number;
   toolsTokens: number;
   /** Plugin request context (<context> blocks: memory, time). */
@@ -44,8 +49,9 @@ export function contextBreakdown(sessionId?: string): ContextBreakdown {
   const providerId = meta?.providerId ?? active.providerId;
   const model = meta?.model ?? active.model;
   const window = contextWindowOf(providerId, model);
-  // min(0.8 × window, the user's 上下文预算), owned by compaction.ts.
-  const budget = contextBudget(sid);
+  // Compaction threshold (budget.ts); the meter shows the whole window when no budget is set.
+  const compactAt = contextBudget(sid);
+  const budget = getContextBudgetSetting() == null ? window : compactAt;
 
   // Any loaded session's model-visible history; the active one is always available.
   const state = sessionStore.get(sid) ?? (sid === sessions.activeId() ? chatStore.get() : undefined);
@@ -97,6 +103,7 @@ export function contextBreakdown(sessionId?: string): ContextBreakdown {
   return {
     window,
     budget,
+    compactAt,
     ...parts,
     // Always the real cost of the next request: system prompt + tools are sent even on turn one.
     total,

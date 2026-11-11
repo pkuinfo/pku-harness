@@ -235,7 +235,7 @@ export const chat: Messages['chat'] = {
     compact: 'Compact context',
     afterReply: 'Available when the reply finishes',
     nothingToCompact: 'Nothing to compact yet',
-    unlimited: 'No limit',
+    unlimited: 'Model maximum',
   },
   commands: {
     menu: 'Commands',

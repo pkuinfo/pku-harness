@@ -13,8 +13,10 @@ import type { ModelMessage, ToolResultPart } from 'ai';
 import type { ChatMessage, ChatPart } from '@/core/agent/session/chat-store';
 
 export const LIMITS = {
-  /** Auto-compaction threshold as a share of the model window. */
+  /** Auto-compaction threshold as a share of the model window, under a budget the user chose. */
   thresholdShare: 0.8,
+  /** …and with "Model maximum" (the default): use nearly the whole window, keeping a margin so a request never overflows. */
+  maxThresholdShare: 0.9,
   /** Recent history kept verbatim, as a share of the budget. */
   tailShare: 0.25,
   /**
@@ -74,10 +76,10 @@ export type CompactionMode = 'auto' | 'manual' | 'overflow' | 'turn';
 
 // ---------------------------------------------------------------- budget (§5.3)
 
-/** Auto-compaction threshold: min(80 % of the window, the user's budget; null = 不限). */
+/** Auto-compaction threshold: 90 % of the window with "Model maximum" (null), else min(80 % of the window, the user's budget). */
 export function computeBudget(window: number, userBudget: number | null): number {
-  const share = Math.floor(window * LIMITS.thresholdShare);
-  return userBudget == null ? share : Math.min(share, userBudget);
+  if (userBudget == null) return Math.floor(window * LIMITS.maxThresholdShare);
+  return Math.min(Math.floor(window * LIMITS.thresholdShare), userBudget);
 }
 
 /** Tokens of recent history kept verbatim when compacting. */
