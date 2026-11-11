@@ -220,8 +220,12 @@ in either state.
 Stop invalidates the session immediately, then serializes cleanup after an in-flight action.
 The current agent run cannot silently start a replacement after the user stops it. Cleanup
 preserves ordinary app tasks where the Android mechanism supports it, restores the clipboard,
-releases the display, and stops the foreground service. Helper or accessibility loss also
-requests cleanup. A stale stop request cannot close a newer session.
+releases the display, and stops the foreground service. Helper loss also requests cleanup.
+Accessibility is checked before every call and whenever Android drops the service mid-task
+(switched off in Settings or stopped by the system): Copilot turns it back on (its own
+WRITE_SECURE_SETTINGS grant, else the helper) and goes on; only when that fails does the call
+end with `ACCESSIBILITY_OFF`, which tells the user to turn it on, and the session stops. It is
+never reported as a protected screen. A stale stop request cannot close a newer session.
 
 Chat turns have no step limit, so a Copilot task runs until it is done or stopped; long tasks
 are compacted mid-turn as the context fills (AGENT-HARNESS.md §5.6). Scheduled tasks cannot access Copilot sessions.

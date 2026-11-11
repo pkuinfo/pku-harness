@@ -12,8 +12,10 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.pkuinfo.harness.phone.platform.PhonePlatform
 import org.pkuinfo.harness.phone.platform.accessibility.ScreenAccessibility
 
@@ -63,16 +65,28 @@ class CopilotService : Service() {
         monitor?.cancel()
         monitor = scope.launch {
             combine(PhonePlatform.of(applicationContext).hub.shell, ScreenAccessibility.instance) { helper, accessibility ->
-                helper != null && accessibility != null
-            }.collect { available ->
-                if (!available) {
-                    PhoneRuntime.requestStop(started)
-                    PhoneOverlayBridge.onControlStopped?.invoke(started)
-                    PhoneRuntime.end(applicationContext, started)
+                helper to accessibility
+            }.collectLatest { (helper, accessibility) ->
+                when {
+                    helper == null -> stopControl(started)
+                    // Switched off by the user or the system mid-task: turn it back on first, and
+                    // stop only when that is not possible (AccessibilityParking.ensureOn).
+                    accessibility == null -> if (!AccessibilityParking.ensureOn(applicationContext)) stopControl(started)
+                    // Back on as a new service instance: the floating panel belongs to the old one.
+                    overlay?.belongsTo(accessibility) == false -> withContext(Dispatchers.Main) {
+                        overlay?.close()
+                        overlay = CopilotOverlay(accessibility, started).also { it.show() }
+                    }
                 }
             }
         }
         return START_NOT_STICKY
+    }
+
+    private suspend fun stopControl(started: String) {
+        PhoneRuntime.requestStop(started)
+        PhoneOverlayBridge.onControlStopped?.invoke(started)
+        PhoneRuntime.end(applicationContext, started)
     }
 
     override fun onDestroy() {

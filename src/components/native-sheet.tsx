@@ -1,7 +1,7 @@
 import { BottomSheet } from '@expo/ui';
 import { Column, Host, ModalBottomSheet, type ModalBottomSheetRef } from '@expo/ui/jetpack-compose';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { Platform } from 'react-native';
+import { Keyboard, Platform } from 'react-native';
 
 /**
  * A native modal bottom sheet that opens fully, at its content's height. On Android the universal
@@ -14,6 +14,10 @@ export function NativeSheet({ open, onDismiss, color, children }: { open: boolea
   // Stay mounted while the sheet animates away.
   const [mounted, setMounted] = useState(open);
   if (open && !mounted) setMounted(true);
+  // A modal sheet never opens under the keyboard.
+  useEffect(() => {
+    if (open) Keyboard.dismiss();
+  }, [open]);
   useEffect(() => {
     if (open || !mounted) return;
     let live = true;

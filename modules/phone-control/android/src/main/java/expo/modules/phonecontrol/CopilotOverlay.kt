@@ -43,6 +43,9 @@ private const val PREVIEW_SHARE_KEY = "previewShare"
  */
 class CopilotOverlay(private val service: ScreenAccessibility, private val sessionId: String) {
     private val manager = service.getSystemService(WindowManager::class.java)
+
+    /** False once Android has rebound the accessibility service: this panel's window is gone with the old one. */
+    fun belongsTo(current: ScreenAccessibility) = current === service
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private fun overlayTheme() = if (
         service.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK ==

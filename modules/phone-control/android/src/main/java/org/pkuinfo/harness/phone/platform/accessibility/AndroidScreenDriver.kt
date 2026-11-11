@@ -92,7 +92,8 @@ import kotlin.math.roundToInt
  * 屏建好不等于打开过 App:只跑系统命令的任务屏上是空的。
  */
 class AndroidScreenDriver(
-    private val a11y: ScreenAccessibility,
+    /** The bound service, looked up on every use: it is a new instance after Android rebinds it. */
+    private val service: () -> ScreenAccessibility,
     private val shell: IPhoneController,
     private val display: LazyAgentDisplay,
     /** 剪贴板暂时换成 Mika 的文字时为 true,还原后为 false;任务服务据此记下,进程意外结束后下次启动还原。 */
@@ -149,6 +150,8 @@ class AndroidScreenDriver(
 
     private val _target = MutableStateFlow<TargetApp?>(null)
     val target: StateFlow<TargetApp?> = _target.asStateFlow()
+
+    private val a11y: ScreenAccessibility get() = service()
 
     private val systemPickers: Set<String> by lazy { SystemPickers.resolve(a11y.packageManager) }
 

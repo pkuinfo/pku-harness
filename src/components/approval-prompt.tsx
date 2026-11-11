@@ -1,6 +1,7 @@
 import { useOverlayActivity } from '@/core/phone/use-overlay-activity';
 import { useOverlayApprovals } from '@/core/phone/use-overlay-approvals';
-import { View } from 'react-native';
+import { useEffect } from 'react';
+import { Keyboard, View } from 'react-native';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -39,6 +40,11 @@ export function ApprovalPrompt() {
   const t = useT();
   const insets = useSafeAreaInsets();
   const req = useApproval();
+  // The keyboard would cover the prompt's buttons (the chat input was focused when it came up).
+  const asking = req?.id;
+  useEffect(() => {
+    if (asking) Keyboard.dismiss();
+  }, [asking]);
   if (!req) return null;
   const plugin = registry.get(req.entry.pluginId);
   const effect = EFFECT[req.entry.def.effect as keyof typeof EFFECT];

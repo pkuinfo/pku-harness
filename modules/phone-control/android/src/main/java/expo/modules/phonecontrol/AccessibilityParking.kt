@@ -22,7 +22,9 @@ import org.pkuinfo.harness.phone.platform.accessibility.ScreenAccessibility
  * Copilot's accessibility service is enabled only while a task runs. Its TalkBack-compatible class
  * name (WeChat exposes its views only to TalkBack) also makes keyboards such as Samsung Keyboard
  * switch to screen-reader typing, where every key needs a second tap. So between tasks the
- * service is parked (taken out of the system list) and put back when the next task begins.
+ * service is parked (taken out of the system list) and put back when the next task begins, and
+ * checked again before every Copilot call (it may also have been switched off by the user or the
+ * system meanwhile; [ensureOn]).
  * It parks only when that can be undone without the user: this app holds WRITE_SECURE_SETTINGS,
  * or the helper is connected. Otherwise it stays on, as before.
  */
@@ -49,8 +51,6 @@ internal object AccessibilityParking {
     fun canRestore(context: Context): Boolean =
         canWriteDirectly(context) || PhonePlatform.of(context).hub.shell.value != null
 
-    /** Parked and able to come back: readiness counts the service as available. */
-    fun ready(context: Context): Boolean = parked(context) && canRestore(context)
 
     /** Park whenever the service sits bound without a task for a while. Idempotent. */
     fun watch(context: Context, busy: () -> Boolean) {
@@ -79,15 +79,20 @@ internal object AccessibilityParking {
     }
 
     /**
-     * Before a task: put a parked service back and wait for Android to bind it. True when the
-     * service is running; false when it was not parked or could not be restored.
+     * Before a task and before every Copilot call: make sure the service is bound. When it is not,
+     * whether Copilot parked it, the user switched it off in Settings, or the system dropped it,
+     * turn it back on (this app's own secure-settings permission, else the connected helper) and
+     * wait for Android to bind it. False only when it is off and cannot be turned on without the
+     * user.
      */
-    suspend fun unpark(context: Context): Boolean {
+    suspend fun ensureOn(context: Context): Boolean {
         if (ScreenAccessibility.instance.value != null) return true
-        if (!parked(context)) return false
         val written = runCatching { if (canWriteDirectly(context)) write(context, on = true) else PhoneRuntime.enableAccessibility(context) }
             .getOrDefault(false)
-        if (!written) return false
+        if (!written) {
+            Log.i(TAG, "off and could not be turned on")
+            return false
+        }
         val bound = withTimeoutOrNull(BIND_TIMEOUT_MS) { ScreenAccessibility.instance.first { it != null } } != null
         if (bound) setParked(context, false)
         Log.i(TAG, if (bound) "back on for a task" else "written back but not bound yet")

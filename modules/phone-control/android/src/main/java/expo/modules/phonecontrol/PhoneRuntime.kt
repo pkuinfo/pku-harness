@@ -12,6 +12,8 @@ import org.pkuinfo.harness.phone.connection.protocol.BuiltinShellStatus
 import org.pkuinfo.harness.phone.connection.protocol.PairingDiscovery
 import org.pkuinfo.harness.phone.connection.protocol.PermissionCommands
 import org.pkuinfo.harness.phone.platform.AndroidDevicePort
+import org.pkuinfo.harness.phone.core.PhoneException
+import org.pkuinfo.harness.phone.core.PhoneFailure
 import org.pkuinfo.harness.phone.platform.PhonePlatform
 import org.pkuinfo.harness.phone.platform.accessibility.ScreenAccessibility
 import org.pkuinfo.harness.phone.platform.text.ResourceTexts
@@ -22,8 +24,25 @@ import org.pkuinfo.harness.phone.policy.PhoneActionPolicy
 object PhoneRuntime {
     @Volatile private var control: PhoneEngine? = null
     @Volatile private var sessionIdentity: String? = null
+    @Volatile private var appContext: Context? = null
+
+    /** Shown to the model when the service is off and can't be turned on: never "protected". */
+    private const val OFF_MESSAGE = "Copilot's accessibility service is off (switched off in system settings or stopped by the system) " +
+        "and could not be turned back on, so Copilot can neither read the screen nor type. This is not a protected screen. " +
+        "Ask the user to turn on PKU Harness in Settings > Accessibility (or reconnect the phone helper in Copilot settings), then try again."
+
+    /**
+     * Every Copilot call first checks that the accessibility service is bound and turns it back on
+     * when it is not (AccessibilityParking.ensureOn); the user or the system may have switched it
+     * off since the last call.
+     */
+    private suspend fun requireAccessibility(context: Context? = appContext) {
+        val ctx = context ?: return
+        if (!AccessibilityParking.ensureOn(ctx)) throw PhoneException(PhoneFailure.ACCESSIBILITY_OFF, OFF_MESSAGE)
+    }
 
     fun initialize(context: Context) {
+        appContext = context.applicationContext
         UiText.source = ResourceTexts { context.applicationContext.resources }
         AccessibilityParking.watch(context) { sessionIdentity != null || control?.state() != null }
     }
@@ -46,8 +65,9 @@ object PhoneRuntime {
         val resolver = context.contentResolver
         return mapOf(
             "supported" to (Build.VERSION.SDK_INT >= 31),
-            // Parked between tasks counts as on: the next begin turns it back on (AccessibilityParking).
-            "accessibility" to (ScreenAccessibility.instance.value != null || AccessibilityParking.ready(context)),
+            // Off but able to come back (parked between tasks, or switched off while this app can
+            // write the setting or the helper is connected) counts as on: every call turns it back on.
+            "accessibility" to (ScreenAccessibility.instance.value != null || AccessibilityParking.canRestore(context)),
             "helper" to (platform.hub.shell.value != null),
             "helperStatus" to when (helper) {
                 BuiltinShellStatus.NotPaired -> "not-paired"
@@ -124,7 +144,7 @@ object PhoneRuntime {
 
     suspend fun begin(context: Context, packages: List<String>): Map<String, Any?> {
         require(packages.size <= 20) { "Choose up to 20 apps" }
-        AccessibilityParking.unpark(context)
+        requireAccessibility(context)
         val opened = engine(context).begin(packages.toSet())
         sessionIdentity = opened.id
         try { CopilotService.start(context, opened.id) }
@@ -168,6 +188,7 @@ object PhoneRuntime {
     private suspend fun trackOperation(id: String, operation: String, block: suspend () -> Map<String, Any?>): Map<String, Any?> {
         val ticket = PhoneOverlayBridge.startOperation(id, operation)
         try {
+            requireAccessibility()
             val result = block()
             PhoneOverlayBridge.finishOperation(ticket, result["ok"] == false)
             return result

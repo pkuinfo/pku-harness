@@ -1,7 +1,7 @@
 package org.pkuinfo.harness.phone.core
 
 enum class PhoneEffect { WRITE, PUBLIC, MONEY }
-enum class PhoneFailure { ENDED, BUSY, APP_SCOPE, LOCKED, STALE, INVALID, HANDOFF }
+enum class PhoneFailure { ENDED, BUSY, APP_SCOPE, LOCKED, STALE, INVALID, HANDOFF, ACCESSIBILITY_OFF }
 
 class PhoneException(val code: PhoneFailure, message: String) : IllegalStateException(message)
 

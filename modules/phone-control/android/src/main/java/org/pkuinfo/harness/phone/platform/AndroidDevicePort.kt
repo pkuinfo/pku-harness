@@ -29,7 +29,9 @@ private const val LOOK_MAX_PX = 1000.0
 class AndroidDevicePort(private val context: Context, private val onClosed: () -> Unit = {}) : DevicePort {
     override suspend fun open(allowedPackages: Set<String>): DeviceSession {
         check(Build.VERSION.SDK_INT >= 31) { "Phone control requires Android 12 or newer" }
-        val accessibility = checkNotNull(ScreenAccessibility.instance.value) { "Enable Copilot accessibility first" }
+        checkNotNull(ScreenAccessibility.instance.value) { "Enable Copilot accessibility first" }
+        // Looked up per use: a rebind (turned off and on again) gives a new service instance.
+        val accessibility = { checkNotNull(ScreenAccessibility.instance.value) { "Copilot's accessibility service is off; it is turned back on before the next call" } }
         val helper = checkNotNull(PhonePlatform.of(context).hub.shell.value) { "Connect the phone helper first" }
         for (name in allowedPackages) check(runCatching { context.packageManager.getApplicationInfo(name, 0) }.isSuccess) { "App is not installed: $name" }
         val metrics = context.resources.displayMetrics
