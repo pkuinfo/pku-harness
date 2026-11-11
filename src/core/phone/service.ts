@@ -120,9 +120,18 @@ export const phoneService: PhoneService = {
     if (typeof module.handoff !== 'function' || typeof module.awaitHandback !== 'function') throw new Error('This app version cannot wait for a handoff. Use handoff without wait, and tell the user to update PKU Harness.');
     await module.handoff(id, note);
     signal?.throwIfAborted();
-    // The wait stops with the run: Stop in chat or the panel cancels it.
-    const abort = new Promise<never>((_, reject) => signal?.addEventListener('abort', () => reject(signal.reason), { once: true }));
-    return Promise.race([module.awaitHandback(id, timeoutMs), abort]);
+    // The wait stops with the run: Stop in chat or the panel cancels it (the session then ends,
+    // which also ends the native wait).
+    let onAbort: (() => void) | undefined;
+    const abort = new Promise<never>((_, reject) => {
+      onAbort = () => reject(signal?.reason);
+      signal?.addEventListener('abort', onAbort, { once: true });
+    });
+    try {
+      return await Promise.race([module.awaitHandback(id, timeoutMs), abort]);
+    } finally {
+      if (onAbort) signal?.removeEventListener('abort', onAbort);
+    }
   },
   handback: (id) => native().handback(id),
 };

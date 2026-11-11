@@ -32,7 +32,7 @@ export function useVoiceInput(onText: (text: string) => void) {
   const [durationMs, setDurationMs] = useState(0);
   const [live, setLive] = useState('');
   const state = useRef<VoicePhase>('idle');
-  const session = useRef<{ dictation: Dictation | null; queue: { data: string; level: number }[]; sub: EventSubscription | null; timer: ReturnType<typeof setInterval> | null } | null>(null);
+  const session = useRef<{ dictation: Dictation | null; queue: { data: string; level: number }[]; sub: EventSubscription | null; errorSub: EventSubscription | null; timer: ReturnType<typeof setInterval> | null } | null>(null);
 
   const enter = useCallback((next: VoicePhase) => {
     state.current = next;
@@ -46,6 +46,8 @@ export function useVoiceInput(onText: (text: string) => void) {
     s.timer = null;
     s.sub?.remove();
     s.sub = null;
+    s.errorSub?.remove();
+    s.errorSub = null;
     await VoiceCapture?.stop().catch(() => {});
   }, []);
 
@@ -97,7 +99,7 @@ export function useVoiceInput(onText: (text: string) => void) {
       composerToast.show(t('chat.voice.micDenied'), 'warn');
       return;
     }
-    const s: NonNullable<typeof session.current> = { dictation: null, queue: [], sub: null, timer: null };
+    const s: NonNullable<typeof session.current> = { dictation: null, queue: [], sub: null, errorSub: null, timer: null };
     session.current = s;
     setLive('');
     setLevels(pushLevel([], SILENT));
@@ -109,6 +111,10 @@ export function useVoiceInput(onText: (text: string) => void) {
       setLevels((l) => pushLevel(l, SILENT + (1 - SILENT) * level));
       if (s.dictation) s.dictation.push(data, level);
       else s.queue.push({ data, level });
+    });
+    // The microphone failing (taken by a call, say) ends the dictation with its reason.
+    s.errorSub = VoiceCapture.addListener('onError', ({ message }) => {
+      if (session.current === s) fail(new Error(message));
     });
     const began = Date.now();
     s.timer = setInterval(() => {
@@ -146,6 +152,7 @@ export function useVoiceInput(onText: (text: string) => void) {
       session.current = null;
       if (s?.timer) clearInterval(s.timer);
       s?.sub?.remove();
+      s?.errorSub?.remove();
       s?.dictation?.cancel();
       void VoiceCapture?.stop().catch(() => {});
     },

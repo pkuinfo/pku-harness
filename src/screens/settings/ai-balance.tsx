@@ -93,6 +93,7 @@ export function AccountBalance({ providerId }: { providerId: string }) {
         accessibilityLabel={t('app.ai.balance.refresh')}
         accessibilityState={{ busy }}
         disabled={busy}
+        dimmed={false}
         onPress={onPress}
         scaleTo={0.98}>
         <View className="gap-3 border-t border-edge py-3">

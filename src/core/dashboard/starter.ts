@@ -1,5 +1,5 @@
 import { kv } from '@/core/store/kv';
-import { t } from '@/i18n';
+import { getLocale, LOCALES, subscribeLocale, translate, type Locale } from '@/i18n';
 
 import { widgetStore } from './store';
 import type { Widget } from '@pku-harness/sdk';
@@ -10,11 +10,13 @@ const n = null;
  * First-run widgets that work without a campus login; the agent replaces them freely. Written
  * once, in the app language at first launch (the agent rewrites them in whatever language later).
  */
-const starters = (): Omit<Widget, 'position' | 'createdAt' | 'updatedAt'>[] => [
+const starters = (locale: Locale = getLocale()): Omit<Widget, 'position' | 'createdAt' | 'updatedAt'>[] => {
+  const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
+  return [
   {
     id: 'today',
     title: t('app.starter.today'),
-    size: 'lg',
+    size: 'md',
     spec: {
       root: 'col',
       elements: {
@@ -64,12 +66,56 @@ const starters = (): Omit<Widget, 'position' | 'createdAt' | 'updatedAt'>[] => [
     },
     bindings: { '/week': { tool: 'calendar.today', path: 'semester.week', ttlMinutes: 30 } },
   },
-];
+  ];
+};
+
+type Starter = ReturnType<typeof starters>[number];
+const fingerprint = (w: Pick<Widget, 'title' | 'size' | 'spec' | 'bindings'>) => JSON.stringify([w.title, w.size, w.spec, w.bindings]);
+
+/**
+ * Every form a starter card had when nobody edited it: each language, and the first "Today"
+ * card (a tall card that showed the raw ISO date in English).
+ */
+function pristineForms(): Map<string, Set<string>> {
+  const forms = new Map<string, Set<string>>();
+  for (const locale of LOCALES) {
+    for (const w of starters(locale)) {
+      const set = forms.get(w.id) ?? new Set<string>();
+      set.add(fingerprint(w));
+      if (w.id === 'today') {
+        const spec = structuredClone(w.spec) as { elements: { date: { props: { text: { $template: string } } } } };
+        if (locale === 'en') spec.elements.date.props.text.$template = '${/today/date}';
+        set.add(fingerprint({ ...w, size: 'lg', spec: spec as Starter['spec'] }));
+      }
+      forms.set(w.id, set);
+    }
+  }
+  return forms;
+}
+
+/**
+ * Starter cards nobody edited follow the app: the current language and the current design.
+ * A card the user or the agent changed is left exactly as it is.
+ */
+async function refreshStarters() {
+  const forms = pristineForms();
+  for (const fresh of starters()) {
+    const w = widgetStore.get(fresh.id);
+    if (!w || !forms.get(fresh.id)?.has(fingerprint(w)) || fingerprint(w) === fingerprint(fresh)) continue;
+    await widgetStore.put({ ...w, title: fresh.title, size: fresh.size, spec: fresh.spec, bindings: fresh.bindings });
+  }
+}
+
+let following = false;
 
 /** Seed starter widgets once per install. */
 export async function seedStarterWidgets() {
   const prefs = kv('prefs');
-  if (await prefs.get<boolean>('dashboard.seeded')) return;
+  if (!following) {
+    following = true;
+    subscribeLocale(() => void refreshStarters());
+  }
+  if (await prefs.get<boolean>('dashboard.seeded')) return refreshStarters();
   const now = Date.now();
   for (const [i, w] of starters().entries()) {
     await widgetStore.put({ ...w, position: i, createdAt: now, updatedAt: now });

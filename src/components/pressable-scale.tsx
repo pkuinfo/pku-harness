@@ -14,15 +14,23 @@ export type PressableScaleProps = Omit<PressableProps, 'style' | 'children'> & {
   scaleTo?: number;
   /** Fire a light haptic on press. */
   haptic?: boolean;
+  /** Look disabled (dimmed). Defaults to `disabled`; false for controls that are only briefly inert (loading, running). */
+  dimmed?: boolean;
 };
 
 /** Opacity while pressed: a quick, native-style dim (no shrink, no spring). */
 const PRESSED = 0.55;
+/**
+ * Opacity of a disabled pressable. Applied here because the animated opacity is an inline style,
+ * which overrides `opacity-*` classes callers used to dim disabled controls with.
+ */
+const DISABLED = 0.4;
 
 /** Pressable with timed press feedback on the UI thread. Base of every tappable element. */
-export function PressableScale({ style, children, scaleTo: _scaleTo, haptic = true, onPressIn, onPressOut, onPress, disabled, ...rest }: PressableScaleProps) {
+export function PressableScale({ style, children, scaleTo: _scaleTo, haptic = true, dimmed, onPressIn, onPressOut, onPress, disabled, ...rest }: PressableScaleProps) {
   const opacity = useSharedValue(1);
-  const animated = useAnimatedStyle(() => ({ opacity: opacity.get() }));
+  const dim = (dimmed ?? !!disabled) ? DISABLED : 1;
+  const animated = useAnimatedStyle(() => ({ opacity: opacity.get() * dim }), [dim]);
 
   return (
     <AnimatedPressable

@@ -132,7 +132,7 @@ function reportedTotal(sessionId: string): number | undefined {
 
 const inflight = new Map<string, Promise<CompactionOutcome | null>>();
 
-async function compact(sessionId: string, mode: CompactionMode, opts: { force?: boolean } = {}): Promise<CompactionResult | null> {
+async function compact(sessionId: string, mode: CompactionMode, opts: { force?: boolean; overflowed?: boolean } = {}): Promise<CompactionResult | null> {
   const running = inflight.get(sessionId);
   if (running) return (await running.catch(() => null))?.result ?? null;
   const before = readData(sessionId);
@@ -142,7 +142,8 @@ async function compact(sessionId: string, mode: CompactionMode, opts: { force?: 
     estimate: estimateMessages,
     overhead: overheadTokens(sessionId),
     budget: contextBudget(sessionId),
-    reportedTotal: opts.force ? Infinity : mode === 'auto' || mode === 'turn' ? reportedTotal(sessionId) : undefined,
+    reportedTotal: opts.force || opts.overflowed ? Infinity : mode === 'auto' || mode === 'turn' ? reportedTotal(sessionId) : undefined,
+    overflowed: opts.overflowed,
     summarize: (messages) => summarize(sessionId, messages),
     newId,
   });
@@ -190,10 +191,11 @@ export async function maybeCompact(sessionId: string): Promise<CompactionResult 
 /**
  * Between the steps of a running turn, when the last step's prompt passed the budget: summarise
  * the older history, the running turn's earlier steps included, keeping its newest steps verbatim.
- * `force` compacts even when the estimate looks under budget (after an overflow error).
+ * `force` compacts even when the estimate looks under budget; `overflowed` (after a "too long"
+ * error) also summarises the pruned copy, since the stored history no longer fits.
  * Never throws.
  */
-export async function compactInTurn(sessionId: string, opts: { force?: boolean } = {}): Promise<CompactionResult | null> {
+export async function compactInTurn(sessionId: string, opts: { force?: boolean; overflowed?: boolean } = {}): Promise<CompactionResult | null> {
   try {
     return await compact(sessionId, 'turn', opts);
   } catch {

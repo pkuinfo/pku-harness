@@ -58,6 +58,7 @@ export function ToolGroup({ parts }: { parts: ToolPart[] }) {
     <Animated.View layout={transitions.layout} className="max-w-full self-start gap-1.5">
       <PressableScale
         disabled={!!running}
+        dimmed={false}
         onPress={() => setOpen((o) => !o)}
         accessibilityRole="button"
         accessibilityState={{ expanded: open }}

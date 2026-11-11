@@ -16,8 +16,9 @@ import kotlin.math.sqrt
  * level 0…1, for voice input that is transcribed while the user talks.
  */
 class VoiceCaptureModule : Module() {
+  /** The capture now running; a capture's thread stops as soon as this is no longer its own. */
+  @Volatile private var current: Any? = null
   @Volatile private var record: AudioRecord? = null
-  @Volatile private var running = false
 
   override fun definition() = ModuleDefinition {
     Name("VoiceCapture")
@@ -39,23 +40,27 @@ class VoiceCaptureModule : Module() {
       rec.release()
       throw IllegalStateException("The microphone is not available")
     }
+    // Each capture has its own token: a quick stop-then-start can't leave the old thread running
+    // alongside the new one (it sees the token change and ends).
+    val token = Any()
+    current = token
     record = rec
-    running = true
     rec.startRecording()
     thread(name = "voice-capture") {
       val buf = ByteArray(CHUNK_BYTES)
-      while (running) {
+      var failed = false
+      while (current === token && !failed) {
         var filled = 0
-        while (running && filled < CHUNK_BYTES) {
+        while (current === token && filled < CHUNK_BYTES) {
           val n = rec.read(buf, filled, CHUNK_BYTES - filled)
           if (n < 0) {
-            sendEvent("onError", mapOf("message" to "Microphone read failed ($n)"))
-            running = false
+            if (current === token) sendEvent("onError", mapOf("message" to "Microphone read failed ($n)"))
+            failed = true
             break
           }
           filled += n
         }
-        if (filled == 0) continue
+        if (filled == 0 || current !== token) break
         sendEvent("onChunk", mapOf("data" to Base64.encodeToString(buf, 0, filled, Base64.NO_WRAP), "level" to level(buf, filled)))
       }
       runCatching { rec.stop() }
@@ -64,7 +69,9 @@ class VoiceCaptureModule : Module() {
   }
 
   private fun stop() {
-    running = false
+    current = null
+    // Stopping the recorder makes a read that is waiting for audio return at once.
+    record?.let { runCatching { it.stop() } }
     record = null
   }
 

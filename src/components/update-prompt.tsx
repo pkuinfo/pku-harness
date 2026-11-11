@@ -127,7 +127,12 @@ function UpdateSheet() {
   const width = Math.min(screenW, SHEET_MAX_WIDTH);
   const update = useOffered();
   const install = useInstallState();
-  const open = !!update || install.phase !== 'idle';
+  // Swiped away during a download: the download goes on, the sheet stays closed (Material removes
+  // its window on dismiss, so it must not stay "open" behind the scenes). A new offer or a
+  // failure shows it again.
+  const downloadKey = install.phase === 'downloading' ? `download:${install.version}` : null;
+  const [hiddenFor, setHiddenFor] = useState<string | null>(null);
+  const open = (!!update || install.phase !== 'idle') && (downloadKey === null || hiddenFor !== downloadKey);
   // Keep the last offer on screen while the sheet slides away.
   const [shown, setShown] = useState(update);
   if (update && update !== shown) setShown(update);
@@ -144,8 +149,9 @@ function UpdateSheet() {
   const dismiss = useCallback(() => {
     if (install.phase === 'failed') cancelInstall();
     else if (install.phase === 'idle' && update) void snooze(update);
+    else if (downloadKey) setHiddenFor(downloadKey);
     setOffered(null);
-  }, [install.phase, update]);
+  }, [install.phase, update, downloadKey]);
 
   return (
     <NativeSheet open={open} onDismiss={dismiss} color={c.elevated}>

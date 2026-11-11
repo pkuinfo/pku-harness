@@ -55,7 +55,7 @@ export function VoiceSettings() {
   // Re-read on plugin and language changes: names and model blurbs come localized from the registry.
   useLocale();
   usePlugins();
-  const { providerId, keys } = useSpeechConfig();
+  const { providerId, keys, loaded } = useSpeechConfig();
   // The default service first, a custom endpoint last.
   const services = registry
     .speechProviders()
@@ -83,6 +83,15 @@ export function VoiceSettings() {
       live = false;
     };
   }, [entryId]);
+  // Opened before the saved settings were read (right after launch): show them once they are.
+  const [synced, setSynced] = useState(loaded);
+  if (loaded && !synced) {
+    setSynced(true);
+    const saved = speechConfig.settingsFor(providerId);
+    setSelectedId(providerId);
+    setBaseURL(saved.baseURL);
+    setModel(saved.model);
+  }
   if (!entry) return null;
 
   const select = (id: string) => {

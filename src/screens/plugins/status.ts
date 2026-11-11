@@ -12,6 +12,7 @@ export type PluginLike = {
   core?: boolean;
   requires?: readonly string[];
   providers?: Record<string, unknown>;
+  speech?: Record<string, unknown>;
   remote?: unknown;
 };
 
@@ -59,7 +60,8 @@ export const GROUPS: { id: GroupId; title: MessageKey; footer?: MessageKey }[] =
 export function groupOf(p: PluginLike): GroupId {
   if (p.remote) return 'remote';
   if (p.core) return 'system';
-  if (p.providers) return 'ai';
+  // Model and speech-to-text services (voice input) both connect AI services, not campus ones.
+  if (p.providers || p.speech) return 'ai';
   // Copilot drives other apps on the phone; it is not a campus service.
   if (p.requires?.includes('phone-control')) return 'phone';
   return 'services';

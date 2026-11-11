@@ -8,6 +8,7 @@ import { pluginSettings } from './plugin-settings';
 import { registry, type ToolEntry } from './registry';
 import { assertToolPermission, authorizeTool, ToolPermissionDenied, type ApprovalAnswer } from './tool-authorization';
 import type { Actor, HostServices, TurnInfo, ToolAssessment } from './types';
+import { nativeReason } from '@/utils/native-error';
 
 export class ToolError extends Error {
   constructor(
@@ -133,7 +134,7 @@ async function invokeNow(
         case 'declined': throw new ToolError(t('app.plugins.runtime.declined', { title }), 'declined');
       }
     }
-    throw new ToolError(scrubShareLinks(error instanceof Error ? error.message : String(error)), 'failed');
+    throw new ToolError(scrubShareLinks(nativeReason(error instanceof Error ? error.message : String(error))), 'failed');
   }
 
   const turn = opts.turn ? { sessionId: opts.turn.sessionId, tainted: opts.turn.tainted, userAsked: opts.turn.userAsked, acceptsImages: opts.turn.acceptsImages } : undefined;
@@ -158,6 +159,6 @@ async function invokeNow(
     return scrubOutput(out, { keepLinks: opts.actor === 'user' });
   } catch (e) {
     if (e instanceof ToolError) throw e;
-    throw new ToolError(scrubShareLinks(e instanceof Error ? e.message : String(e)), 'failed');
+    throw new ToolError(scrubShareLinks(nativeReason(e instanceof Error ? e.message : String(e))), 'failed');
   }
 }

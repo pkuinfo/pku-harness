@@ -58,6 +58,7 @@ export function Button({
       accessibilityLabel={title}
       accessibilityState={{ disabled: !!(disabled || loading), busy: !!loading }}
       disabled={disabled || loading}
+      dimmed={!!disabled}
       onPress={onPress}
       hitSlop={s.slop}
       className={cx('items-center justify-center rounded-md dark:rounded-lg', SURFACE[variant], s.box, disabled && 'opacity-40', className)}

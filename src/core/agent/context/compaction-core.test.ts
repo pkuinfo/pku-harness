@@ -467,6 +467,24 @@ describe('turn mode', () => {
     expect(isCheckpoint(out.data.history[0])).toBe(true);
   });
 
+  test('turn: a long turn compacts again after its first checkpoint', async () => {
+    const first = (await runCompaction(longTurn(20), 'turn', deps({ budget: 1_000 })))!;
+    const grown: SessionData = { messages: first.data.messages, history: [...first.data.history] };
+    for (let i = 20; i < 40; i++) grown.history.push(call(`s${i}`, `第 ${i} 步`), result(`s${i}`, 'z'.repeat(400)));
+    const second = (await runCompaction(grown, 'turn', deps({ budget: 1_000 })))!;
+    expect(second).not.toBeNull();
+    expect(isCheckpoint(second.data.history[0])).toBe(true);
+    expect(second.data.history.length).toBeLessThan(grown.history.length);
+  });
+
+  test('turn after an overflow summarises the pruned copy', async () => {
+    const data = longTurn(12);
+    data.history[2] = result('s0', 'q'.repeat(20_000));
+    let request: ModelMessage[] = [];
+    await runCompaction(data, 'turn', deps({ budget: 1_000, reportedTotal: Infinity, overflowed: true, summarize: async (m) => ((request = m), '## 当前进展\n- 第 11 步') }));
+    expect(JSON.stringify(request)).not.toContain('q'.repeat(10_000));
+  });
+
   test('turn: nothing below the budget', async () => {
     expect(await runCompaction(longTurn(2), 'turn', deps({ budget: 100_000 }))).toBeNull();
   });

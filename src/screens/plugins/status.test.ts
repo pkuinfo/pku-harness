@@ -27,6 +27,7 @@ describe('grouping', () => {
     expect(groupOf({ id: 'x', remote: {} , core: true })).toBe('remote');
     expect(groupOf({ id: 'x', core: true })).toBe('system');
     expect(groupOf({ id: 'x', providers: {} })).toBe('ai');
+    expect(groupOf({ id: 'x', speech: {} })).toBe('ai');
     expect(groupOf({ id: 'wallet', requires: ['campus-session'] })).toBe('services');
     expect(groupOf({ id: 'copilot', requires: ['phone-control'] })).toBe('phone');
   });

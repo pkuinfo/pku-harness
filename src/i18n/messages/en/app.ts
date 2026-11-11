@@ -413,7 +413,7 @@ export const app: Messages['app'] = {
     phone: 'On this phone',
     phoneFooter: 'Copilot can operate other apps on this phone for you.',
     ai: 'AI providers',
-    aiFooter: 'Model providers are plugins too. Switch between them in Settings → AI provider.',
+    aiFooter: 'Model and speech services are plugins too. Choose them in Settings → AI provider and Settings → Voice input.',
     core: 'System',
     coreFooter: 'System plugins are part of the app and always on.',
     remote: 'Remote plugins',
@@ -616,7 +616,7 @@ export const app: Messages['app'] = {
   },
   starter: {
     today: 'Today',
-    date: '${/today/date}',
+    date: '${/today/weekdayEn}, ${/today/monthEn} ${/today/day}',
     weekLine: 'Week ${/today/semester/week} · ${/today/semester/daysLeft} days left',
     hint: 'Tell the AI when the semester starts to see the teaching week here',
     reminders: 'Reminders',

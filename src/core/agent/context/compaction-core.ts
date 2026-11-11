@@ -217,7 +217,9 @@ const userTurns = (history: ModelMessage[]) => history.flatMap((m, i) => (m.role
  */
 export function selectCut(history: ModelMessage[], opts: { estimate: Estimate; tailBudget?: number; keepTurns?: number; inTurn?: boolean }): number | null {
   const turns = userTurns(history);
-  if (!turns.length) return null;
+  // A running turn compacted before has no user message left (it is in the checkpoint); its
+  // steps can still be summarised again. Elsewhere a turn is needed to cut at.
+  if (!turns.length && !opts.inTurn) return null;
   let cut: number;
   if (opts.inTurn) {
     // Mid-turn: the tail grows back from the newest step, past the turn's start if it fits.
@@ -328,6 +330,8 @@ export type CompactionDeps = {
   now?: () => number;
   /** A more accurate current size (provider-reported), used only for the auto threshold check. */
   reportedTotal?: number;
+  /** The provider just rejected the request as too long: summarise the pruned copy, not the stored history. */
+  overflowed?: boolean;
 };
 
 /**
@@ -363,7 +367,7 @@ export async function runCompaction(data: SessionData, mode: CompactionMode, dep
   const replaced = pruned.slice(0, cut);
   // The summary request reuses the conversation's cached prefix byte for byte (§5.1), so it reads
   // the stored history, not the pruned copy. After an overflow the full history no longer fits.
-  const summaryInput = mode === 'overflow' ? replaced : data.history.slice(0, cut);
+  const summaryInput = mode === 'overflow' || deps.overflowed ? replaced : data.history.slice(0, cut);
   const summary = cleanSummary(await deps.summarize(buildSummaryMessages(summaryInput)));
   if (!summary) throw new CompactionRejected('empty', '模型没有返回摘要');
   const checkpoint = checkpointMessage(summary);

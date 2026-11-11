@@ -133,7 +133,9 @@ export function cutBefore(
     seen++;
     if (seen === fromEnd) return { messages: messages.slice(0, at), history: history.slice(0, i), exact: true };
   }
-  return { messages: messages.slice(0, at), history: [], exact: false };
+  // The turn was folded into a compaction summary: keep the summary of what came before rather
+  // than dropping all earlier context.
+  return { messages: messages.slice(0, at), history: isCheckpoint(history[0]) ? [history[0]] : [], exact: false };
 }
 
 /** Text the model sees for a user turn: what was typed plus text attachments inline (§4.2). */

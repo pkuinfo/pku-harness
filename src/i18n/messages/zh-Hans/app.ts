@@ -417,7 +417,7 @@ export const app = {
     phone: '手机操作',
     phoneFooter: 'Copilot 可以在这台手机上替你操作其他 App。',
     ai: 'AI 服务',
-    aiFooter: '模型服务也是插件，可在 设置 → AI 服务 中切换。',
+    aiFooter: '模型和语音识别服务也是插件，可在 设置 → AI 服务 和 设置 → 语音输入 中选择。',
     core: '系统能力',
     coreFooter: '系统能力是应用本身的一部分，始终开启。',
     remote: '远程插件',

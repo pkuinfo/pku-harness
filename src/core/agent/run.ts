@@ -156,10 +156,10 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
   // acceptsImages: a tool may show this model an image (Copilot's opt-in screenshots, tool-images.ts).
   const taint = { sessionId: sid, tainted: false, userAsked: asksToRemember(text), acceptsImages: acceptsImages(providerId, modelName) };
 
-  // Tool calls of the turn's earlier segments (a mid-turn compaction starts a new one), so the
-  // step budget spans the whole turn.
-  const earlierTools: string[] = [];
-  let earlierSteps = 0;
+  // Finished steps of the whole turn and their tools, counted as each step ends, so the step
+  // budget spans every segment (a mid-turn compaction or an overflow retry starts a new one).
+  const turnTools: string[] = [];
+  let turnSteps = 0;
   // Over the context budget after a step that called tools: stop, compact, continue (§5.3).
   let overBudget = false;
   let lastSize = 0;
@@ -171,6 +171,9 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     partial = '';
     overBudget = false;
     const budget = contextBudget(sid);
+    // What earlier segments of this turn already used.
+    const earlierSteps = turnSteps;
+    const earlierTools = [...turnTools];
     let startedSteps = 0;
     let finishedSteps = 0;
     const toolStart = new Map<string, number>();
@@ -194,8 +197,6 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
         if (last?.toolCalls.length && size > Math.max(budget, retryAbove)) {
           lastSize = size;
           overBudget = true;
-          earlierTools.push(...tools);
-          earlierSteps += steps.length;
           return true;
         }
         return false;
@@ -207,6 +208,8 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
       },
       onStepEnd: (step) => {
         finishedSteps++;
+        turnSteps++;
+        turnTools.push(...step.toolCalls.map((call) => call.toolName));
         produced.push(...capMessages(step.response.messages));
         const u = step.usage;
         const input = u.inputTokens ?? 0;
@@ -315,7 +318,7 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
         // Overflow (§5.4 step 4): keep the finished steps, compact (inside this turn if it is the
         // big part), and continue once from there.
         commitProduced(sid);
-        if (!(await compactInTurn(sid, { force: true })) && !(await compactForOverflow(sid))) throw e;
+        if (!(await compactInTurn(sid, { overflowed: true })) && !(await compactForOverflow(sid))) throw e;
         continue;
       }
       if (!overBudget || signal.aborted) break;
@@ -364,6 +367,9 @@ function finishTurn(
     queuePaused: t.ended && after.queue?.length ? true : after.queuePaused,
   });
   sessionStore.touch(sid);
+  // A turn that ended over the budget (a long task stopped at its step limit, say) is compacted
+  // now, not when the next message is sent.
+  void compactIfIdle(sid);
 
   if (t.ended === 'stopped') return;
   const meta = sessionStore.meta(sid);
@@ -383,6 +389,19 @@ function finishTurn(
     void autoTitle(sid, t.model, { providerId: t.providerId, model: t.modelName });
   }
   kick(sid);
+}
+
+/**
+ * Compact an idle session that is over its context budget, in the background: on opening an
+ * older chat and at the end of a turn, so the meter never sits over the budget. Under the budget
+ * it costs nothing (the threshold check runs first); a reply starting meanwhile shares the job.
+ */
+export async function compactIfIdle(sid: string) {
+  await sessionStore.ensure(sid);
+  const s = sessionStore.get(sid);
+  if (!s || s.status === 'streaming' || controllers.has(sid)) return;
+  // `turn` mode may cut inside the last turn: the chat's bulk is often one long finished task.
+  await compactInTurn(sid);
 }
 
 /** Send the next queued message of an idle session, unless its queue is paused. */

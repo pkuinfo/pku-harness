@@ -13,7 +13,7 @@ import { AgentOrbit } from '@/components/agent-orbit';
 import { PressableScale } from '@/components/pressable-scale';
 import { chatStore, useChat, useChatSelector } from '@/core/agent/session/chat-store';
 import { useAIConfig } from '@/core/agent/provider';
-import { interruptedTurn, regenerateLast, retryLast, sendMessage } from '@/core/agent/run';
+import { compactIfIdle, interruptedTurn, regenerateLast, retryLast, sendMessage } from '@/core/agent/run';
 import { sessions, useActiveSessionId, useEditing, useRenameRequest, useSessionMeta, useSessions } from '@/core/agent/session/sessions';
 import { t as translateNow, useT } from '@/i18n';
 import { spacing, typography, useTheme } from '@/theme';
@@ -138,6 +138,10 @@ export function Chat() {
 
   // Another session opened (sheet, notification): land at its end.
   const sessionId = useActiveSessionId();
+  // An older chat that is over its context budget is compacted as soon as it is opened.
+  useEffect(() => {
+    void compactIfIdle(sessionId);
+  }, [sessionId]);
   const seenSession = useRef(sessionId);
   useEffect(() => {
     if (seenSession.current === sessionId) return;
@@ -409,7 +413,7 @@ function ChatTitle({ connected }: { connected: boolean }) {
           style={[typography.bodyStrong, { color: c.text }]}
         />
       ) : (
-        <PressableScale haptic={false} disabled={!canRename} onPress={start} accessibilityRole="button" accessibilityLabel={t('chat.header.titleA11y', { title })}>
+        <PressableScale haptic={false} disabled={!canRename} dimmed={false} onPress={start} accessibilityRole="button" accessibilityLabel={t('chat.header.titleA11y', { title })}>
           <Text variant="bodyStrong" numberOfLines={1} align="center">
             {title}
           </Text>
