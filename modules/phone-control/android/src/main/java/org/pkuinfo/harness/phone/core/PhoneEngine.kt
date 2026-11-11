@@ -356,7 +356,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         if (actual.needsUser) fail(PhoneFailure.HANDOFF, "The app needs attention on the user's screen")
         val targetIndex = ref?.let { r -> saved.second.targets.indexOfFirst { it.ref == r }.takeIf { it >= 0 } }
         // A point has no element to pin, so the whole structure must match; text may still tick.
-        val same = actual == saved.first || if (point) sameStructure(saved.first, actual) else sameForTarget(saved.first, actual, targetIndex)
+        val same = actual == saved.first || if (point) sameStructure(saved.first, actual) else sameForTarget(saved.first, actual, targetIndex) || targetStillThere(saved.first, actual, targetIndex)
         if (!same || actual.unstable && targetIndex == null && !point) {
             session.observed = null
             fail(PhoneFailure.STALE, "The screen changed; observe again")
@@ -377,6 +377,34 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
     }
 
     /** Same windows and the same elements in the same places and states; only text and slider values may differ. */
+    /**
+     * A tap needs the element the user reviewed, not the screen it was on: pages that never hold
+     * still (an auto-rotating banner, a countdown, a live feed) or that scrolled change on every
+     * read. The tap goes through when, in the same app and windows, exactly one element still has
+     * the target's role, text, id and state (wherever it is now; its index may shift too, and the
+     * driver re-locates it by these features), and nothing tappable newly covers it. Refused when the
+     * target is gone, ambiguous, or something like a Delete button slid on top of it.
+     */
+    private fun targetStillThere(saved: DeviceFrame, actual: DeviceFrame, targetIndex: Int?): Boolean {
+        if (targetIndex == null) return false
+        if (actual.packageName != saved.packageName || actual.windowPackages != saved.windowPackages || actual.protected || actual.needsUser) return false
+        val before = saved.elements.getOrNull(targetIndex) ?: return false
+        val now = actual.elements.filter { identity(it) == identity(before) }.singleOrNull() ?: return false
+        val coveredBefore = saved.elements.filter { it !== before && covers(it, before) }.map(::identity).toSet()
+        return actual.elements.none { it !== now && covers(it, now) && identity(it) !in coveredBefore }
+    }
+
+    /** An element as the user sees it, without where it sits or its place in the read order. */
+    private fun identity(e: DeviceElement) = e.copy(key = "", bounds = emptyList(), rangeCurrent = null)
+
+    /** A tappable element overlapping [target]: a tap there could reach it instead. */
+    private fun covers(other: DeviceElement, target: DeviceElement): Boolean {
+        if (!(other.clickable || other.editable) || other.bounds.size < 4 || target.bounds.size < 4) return false
+        val (l, t, r, b) = other.bounds
+        val (tl, tt, tr, tb) = target.bounds
+        return l < tr && tl < r && t < tb && tt < b
+    }
+
     private fun sameStructure(saved: DeviceFrame, actual: DeviceFrame): Boolean {
         if (actual.elements.size != saved.elements.size) return false
         if (actual.copy(elements = emptyList(), unstable = false) != saved.copy(elements = emptyList(), unstable = false)) return false

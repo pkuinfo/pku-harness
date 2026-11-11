@@ -342,19 +342,50 @@ class PhoneEngineTest {
         assertEquals(1, device.calls)
     }
 
-    @Test fun movedOrNewElementsStillMakeTheScreenStale() = runBlocking {
+    @Test fun aTapNeedsItsTargetNotTheSameScreen() = runBlocking {
         val device = FakeDevice()
         val engine = device.engine()
         val id = engine.begin(setOf("org.example.notes")).id
         var snapshot = engine.observe(id)
         var approval = engine.assess(id, snapshot.snapshotId, "e1")
+        // Something new elsewhere on the page: the reviewed button is untouched, so the tap goes through.
         device.frame = device.frame.copy(elements = device.frame.elements + DeviceElement("node-2", "button", "Delete", listOf(0, 60, 50, 110), clickable = true))
-        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval) }
+        engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval)
+        assertEquals(1, device.calls)
+        // A tappable element slides on top of the reviewed one: a tap there could reach it instead.
         snapshot = engine.observe(id)
         approval = engine.assess(id, snapshot.snapshotId, "e1")
         device.frame = device.frame.copy(elements = listOf(device.frame.elements[0], device.frame.elements[1].copy(bounds = listOf(0, 0, 50, 50))))
         expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval) }
-        assertEquals(0, device.calls)
+        // The reviewed element is gone.
+        snapshot = engine.observe(id)
+        approval = engine.assess(id, snapshot.snapshotId, "e1")
+        device.frame = device.frame.copy(elements = listOf(DeviceElement("node-3", "button", "Pay", listOf(0, 0, 50, 50), clickable = true)))
+        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, snapshot.snapshotId, "e1", approval) }
+        assertEquals(1, device.calls)
+    }
+
+    @Test fun aTapGoesThroughWhileABannerKeepsMovingAndAfterItsTargetScrolled() = runBlocking {
+        val device = FakeDevice()
+        val target = device.frame.elements[0]
+        val banner = { n: Int -> DeviceElement("node-b", "image", "Banner $n", listOf(0, 60, 100, 120)) }
+        device.frame = device.frame.copy(elements = listOf(banner(1), target))
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val seen = engine.observe(id)
+        val ref = seen.targets.first { it.element.text == "Open" }.ref
+        val approval = engine.assess(id, seen.snapshotId, ref)
+        // The carousel advanced and a countdown appeared above the button: the button is unchanged.
+        device.frame = device.frame.copy(elements = listOf(DeviceElement("node-c", "text", "00:59", listOf(0, 50, 100, 60)), banner(2), target))
+        engine.execute(id, PhoneAction.Tap, seen.snapshotId, ref, approval)
+        assertEquals(1, device.calls)
+        // The button scrolled to another spot while the banner kept moving: still the same button.
+        val again = engine.observe(id)
+        val ref2 = again.targets.first { it.element.text == "Open" }.ref
+        val approval2 = engine.assess(id, again.snapshotId, ref2)
+        device.frame = device.frame.copy(elements = listOf(banner(3), target.copy(bounds = listOf(0, 130, 50, 180))))
+        engine.execute(id, PhoneAction.Tap, again.snapshotId, ref2, approval2)
+        assertEquals(2, device.calls)
     }
 
     @Test fun changedPolicyCannotReuseAnEarlierApproval() = runBlocking {
