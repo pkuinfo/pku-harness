@@ -74,11 +74,12 @@ export const MessageView = memo(function MessageView({
     if (start < 0) start = i;
     groups.set(start, [...(groups.get(start) ?? []), p]);
   });
-  // Once the answer starts after the last tool call, the work before it folds into one line
-  // (generated UI stays out of the fold: the user still has to see and use it).
-  const lastTool = message.parts.findLastIndex((p) => p.type === 'tool');
-  const answered = lastTool >= 0 && message.parts.some((p, i) => i > lastTool && p.type === 'text' && !!p.text.trim());
-  const folded = answered ? message.parts.slice(0, lastTool + 1) : [];
+  // Generated UI stays out of the fold: the user still has to see and use it.
+  // As soon as main text appears, every step before the latest text (tool calls, thinking, notes
+  // between them) folds into one line; what comes after that text (a step still running) shows.
+  const lastText = message.parts.findLastIndex((p) => p.type === 'text' && !!p.text.trim());
+  const answered = lastText > 0 && message.parts.slice(0, lastText).some((p) => p.type === 'tool');
+  const folded = answered ? message.parts.slice(0, lastText) : [];
   const renderPart = (part: ChatPart, i: number) => {
         switch (part.type) {
           case 'text':
