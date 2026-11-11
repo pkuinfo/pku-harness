@@ -227,6 +227,16 @@ WRITE_SECURE_SETTINGS grant, else the helper) and goes on; only when that fails 
 end with `ACCESSIBILITY_OFF`, which tells the user to turn it on, and the session stops. It is
 never reported as a protected screen. A stale stop request cannot close a newer session.
 
+WeChat (8.0.80 checked) has a server-controlled anti-automation module (`AccExptService`,
+config from `getMulitExpt`). When it counts an enabled accessibility service as hostile (not on
+the server's `whiteServiceList`, not a white user, or `isForceStrike`; a real screen reader with
+touch exploration on is exempt), it hides its node tree, intercepts accessibility actions and
+injected touches by a server-set percentage, and sets FLAG_SECURE on the screens in
+`disableScreenshotUIList` (screenshots go black, its Recents card is blank). Copilot's
+TalkBack class name passed the whitelist until the server config changed (2026-11-11). Copilot
+does not try to get around it (no fake touch exploration): it tells the user WeChat is blocking
+automation and stops, since WeChat counts strikes against the account.
+
 Chat turns have no step limit, so a Copilot task runs until it is done or stopped; long tasks
 are compacted mid-turn as the context fills (AGENT-HARNESS.md §5.6). Scheduled tasks cannot access Copilot sessions.
 
