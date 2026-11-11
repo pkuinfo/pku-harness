@@ -298,11 +298,13 @@ after that step's tool results, for that one model call only. It is never in
 
 ### 5.6 Steps
 
-`stopWhen` defaults to 10 steps. A plugin can request `maxAgentSteps` (10–60); its allowance
-applies only after a tool from that plugin is used in the current run. The host caps all
-requests at 60. Copilot requests 40 steps for observe/action sequences. Hitting the limit adds
-a notice "已达到单次回复的步骤上限" with 继续. Run-owned host resources are released on success,
-error, cancellation, and exhaustion of the step budget.
+A chat turn has **no step limit** (since 1.0.16): it runs until the model answers, the user
+stops it, or a call fails. Context stays bounded instead: when a step that called tools leaves
+the request over the context budget, the run stops, compacts the turn's older steps (§5.3) and
+continues; a provider overflow error is compacted and retried once per segment (§5.4).
+`maxAgentSteps` in a plugin manifest is accepted but ignored. Run-owned host resources are
+released on success, error and cancellation. Scheduled agent jobs keep their own small step cap
+(`AGENT_MAX_STEPS`), since nobody is watching them.
 
 ### 5.7 Memory
 

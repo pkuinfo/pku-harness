@@ -223,9 +223,8 @@ preserves ordinary app tasks where the Android mechanism supports it, restores t
 releases the display, and stops the foreground service. Helper or accessibility loss also
 requests cleanup. A stale stop request cannot close a newer session.
 
-The plugin requests 40 model steps through the shared `maxAgentSteps` contract (default 10,
-host maximum 60). Only a plugin actually used in a run can extend that run's allowance.
-Scheduled tasks cannot access Copilot sessions.
+Chat turns have no step limit, so a Copilot task runs until it is done or stopped; long tasks
+are compacted mid-turn as the context fills (AGENT-HARNESS.md §5.6). Scheduled tasks cannot access Copilot sessions.
 
 ## Attribution and platform references
 

@@ -27,17 +27,6 @@ function inputSchema(input: object): Schema<unknown> {
 export const toModelName = (id: string) => id.replace('.', '__');
 export const fromModelName = (name: string) => name.replace('__', '.');
 
-/** Limits for this request's offered tools, frozen before streaming starts. */
-export function agentToolStepLimits(names: Iterable<string>): Map<string, number> {
-  const limits = new Map<string, number>();
-  for (const name of names) {
-    const entry = registry.tool(fromModelName(name));
-    const requested = entry && registry.get(entry.pluginId)?.maxAgentSteps;
-    if (requested !== undefined) limits.set(name, requested);
-  }
-  return limits;
-}
-
 /**
  * Every enabled plugin tool, sorted by id; execution goes through `invokeTool`. The block is the
  * same for every request until the user changes plugins in Settings: DeepSeek renders it right

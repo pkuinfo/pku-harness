@@ -300,7 +300,6 @@ export const chat = {
     mdAttachment: '附件：{name}',
   },
   agent: {
-    stepLimit: '已达到单次回复的步骤上限，可以说“继续”接着做',
     notifyDone: '{title} · 回复好了',
     notifyError: '{title} · 回复出错了',
     untitled: '对话',

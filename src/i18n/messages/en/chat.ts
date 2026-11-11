@@ -296,7 +296,6 @@ export const chat: Messages['chat'] = {
     mdAttachment: 'Attachment: {name}',
   },
   agent: {
-    stepLimit: 'Reached the step limit for one reply. Say “continue” to keep going.',
     notifyDone: '{title} · Reply ready',
     notifyError: '{title} · Reply failed',
     untitled: 'Chat',
