@@ -4,7 +4,8 @@
  * `src/core/agent/tokens.ts` re-exports it. Pricing idea from deepseek-harness
  * packages/llm/token-meter/src/estimate.ts (fixed density + structural overhead per block).
  */
-import type { ModelMessage } from 'ai';
+import type { ModelMessage, ToolSet } from 'ai';
+import { z } from 'zod';
 
 /** Framing overhead per message and per content part (role tags, JSON structure). */
 export const PART_OVERHEAD = 4;
@@ -129,4 +130,34 @@ export function splitHistory(messages: readonly ModelMessage[]): HistorySplit {
     }
   }
   return out;
+}
+
+/** Per-tool estimate cache: schema → JSON Schema conversion is the expensive part. */
+const toolCache = new Map<string, number>();
+
+function schemaTokens(schema: unknown): number {
+  try {
+    // buildToolSet hands the SDK's cached wrapper (tools.ts); its JSON Schema is already computed.
+    const json = (schema as { jsonSchema?: unknown } | undefined)?.jsonSchema;
+    if (json && typeof json === 'object' && !('then' in json)) return estimateTokens(JSON.stringify(json));
+    return estimateTokens(JSON.stringify(z.toJSONSchema(schema as z.ZodType)));
+  } catch {
+    return 0;
+  }
+}
+
+/** Tool definitions as the provider sees them: name + description + JSON schema per tool. */
+export function estimateTools(tools: ToolSet): number {
+  let total = 0;
+  for (const [name, t] of Object.entries(tools)) {
+    const description = (t as { description?: string }).description ?? '';
+    const key = `${name}\u0000${description}`;
+    let tokens = toolCache.get(key);
+    if (tokens === undefined) {
+      tokens = PART_OVERHEAD + estimateTokens(name) + estimateTokens(description) + schemaTokens((t as { inputSchema?: unknown }).inputSchema);
+      toolCache.set(key, tokens);
+    }
+    total += tokens;
+  }
+  return total;
 }

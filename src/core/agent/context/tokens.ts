@@ -3,11 +3,8 @@
  * windows and the context breakdown behind the composer's ring and the context sheet.
  * The pure estimators live in `src/core/usage/estimate.ts` (unit-tested without React Native).
  */
-import type { ToolSet } from 'ai';
-import { z } from 'zod';
-
 import { lastReport } from '@/core/usage';
-import { estimateTokens, PART_OVERHEAD, splitHistory } from '@/core/usage/estimate';
+import { estimateTokens, estimateTools, PART_OVERHEAD, splitHistory } from '@/core/usage/estimate';
 
 import { chatStore, sessionStore } from '@/core/agent/session/chat-store';
 import { contextBudget, contextWindowOf } from './budget';
@@ -16,7 +13,7 @@ import { sessions } from '@/core/agent/session/sessions';
 import { buildSystemPrompt } from './system-prompt';
 import { buildToolSet } from '@/core/agent/tools';
 
-export { estimateMessages, estimateTokens } from '@/core/usage/estimate';
+export { estimateMessages, estimateTokens, estimateTools } from '@/core/usage/estimate';
 
 export { contextWindowOf, DEFAULT_CONTEXT_WINDOW } from './budget';
 
@@ -39,32 +36,6 @@ export type ContextBreakdown = {
   empty: boolean;
 };
 
-/** Per-tool estimate cache: schema → JSON Schema conversion is the expensive part. */
-const toolCache = new Map<string, number>();
-
-function schemaTokens(schema: unknown): number {
-  try {
-    return estimateTokens(JSON.stringify(z.toJSONSchema(schema as z.ZodType)));
-  } catch {
-    return 0;
-  }
-}
-
-/** Tool definitions as the provider sees them: name + description + JSON schema per tool. */
-export function estimateTools(tools: ToolSet): number {
-  let total = 0;
-  for (const [name, t] of Object.entries(tools)) {
-    const description = (t as { description?: string }).description ?? '';
-    const key = `${name}\u0000${description}`;
-    let tokens = toolCache.get(key);
-    if (tokens === undefined) {
-      tokens = PART_OVERHEAD + estimateTokens(name) + estimateTokens(description) + schemaTokens((t as { inputSchema?: unknown }).inputSchema);
-      toolCache.set(key, tokens);
-    }
-    total += tokens;
-  }
-  return total;
-}
 
 export function contextBreakdown(sessionId?: string): ContextBreakdown {
   const sid = sessionId ?? sessions.activeId();
