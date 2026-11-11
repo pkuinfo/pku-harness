@@ -331,7 +331,7 @@ export function Composer() {
         {attachments.length || pending ? <AttachmentTray items={attachments} pending={pending} onOpen={setPreview} onRemove={removeAttachment} /> : null}
 
         {dictating ? (
-          <VoiceBar phase={voice.phase as 'recording' | 'transcribing'} levels={voice.levels} durationMs={voice.durationMs} onCancel={() => void voice.cancel()} onDone={() => void voice.finish()} />
+          <VoiceBar phase={voice.phase as 'recording' | 'transcribing'} levels={voice.levels} durationMs={voice.durationMs} live={voice.live} onCancel={() => void voice.cancel()} onDone={() => void voice.finish()} />
         ) : (
         <>
         <View className="pl-3 pr-2 pt-1">

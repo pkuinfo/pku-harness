@@ -1,15 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 
-import { appendDictation, clock, levelOf, pushLevel, WAVE_BARS } from './voice-logic';
+import { appendDictation, clock, pushLevel, WAVE_BARS } from './voice-logic';
 
 describe('voice input helpers', () => {
-  test('metering maps to a bar share with a floor', () => {
-    expect(levelOf(undefined)).toBeCloseTo(0.08);
-    expect(levelOf(-160)).toBeCloseTo(0.08);
-    expect(levelOf(0)).toBeCloseTo(1);
-    expect(levelOf(-20)).toBeGreaterThan(levelOf(-40));
-  });
-
   test('the waveform keeps the newest bars, padded on the left', () => {
     const one = pushLevel([], 0.5);
     expect(one).toHaveLength(WAVE_BARS);

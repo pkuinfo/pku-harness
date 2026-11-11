@@ -137,6 +137,9 @@ export const chat: Messages['chat'] = {
     pasteFull: 'Attachments are full, so the pasted text stays in the message',
   },
   voice: {
+    listening: 'Listening…',
+    finishing: 'Finishing…',
+    needsUpdate: 'Voice input needs the latest PKU Harness. Update the app to use it.',
     start: 'Voice input',
     discard: 'Discard recording',
     cancel: 'Cancel',

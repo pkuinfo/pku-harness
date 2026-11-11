@@ -33,7 +33,7 @@ The assistant works by sending a conversation to the AI provider you configured 
 
 Your campus password and authenticator secret are never sent to the AI. The provider processes this data under its own terms and privacy policy, so choose one you trust. We don't receive this data.
 
-**Voice input (optional).** If you set up voice input, a recording you make with the microphone button is sent from your phone to the speech-to-text service you chose (for example SiliconFlow), with your own API key, to be turned into text. The service processes it under its own terms. The recording is deleted from your phone once it has been transcribed, and we never receive it. The microphone is used only while you are recording.
+**Voice input (optional).** If you set up voice input, a recording you make with the microphone button is sent from your phone to the speech-to-text service you chose (for example SiliconFlow or Alibaba Cloud Bailian), with your own API key, to be turned into text. The service processes it under its own terms. The recording is deleted from your phone once it has been transcribed, and we never receive it. The microphone is used only while you are recording.
 
 ## 4. Plugins
 

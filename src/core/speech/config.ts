@@ -1,9 +1,9 @@
 import { fetch as expoFetch } from 'expo/fetch';
-import { File } from 'expo-file-system';
 import { useSyncExternalStore } from 'react';
 
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry, type SpeechProviderEntry } from '@/core/runtime/registry';
+import type { SpeechConfig } from '@/core/runtime/types';
 import { kv } from '@/core/store/kv';
 import { secrets, type SecretKey } from '@/core/store/secrets';
 import { subscribeLocale, t } from '@/i18n';
@@ -14,7 +14,7 @@ import { subscribeLocale, t } from '@/i18n';
  * key lives in SecureStore. A recording goes from the phone straight to the service.
  */
 
-export const DEFAULT_SPEECH_PROVIDER = 'speech.siliconflow';
+export const DEFAULT_SPEECH_PROVIDER = 'aliyun-bailian.realtime';
 
 export type SpeechSettings = { baseURL: string; model: string };
 type Saved = { active: string; providers: Record<string, SpeechSettings> };
@@ -89,19 +89,19 @@ export function useSpeechConfig() {
   return useSyncExternalStore(speechConfig.subscribe, speechConfig.snapshot);
 }
 
-/** Transcribe a recording with the active service. Throws with a readable reason. */
-export async function transcribe(audio: { uri: string; durationMs?: number }, signal?: AbortSignal): Promise<string> {
+/** The active service with its settings and key, ready to use. Throws with a readable reason. */
+export async function activeSpeech() {
   if (!loaded) await speechConfig.load();
   const { provider, settings, providerId } = snapshot;
   if (!provider) throw new Error(t('chat.voice.notSetUp'));
   const credential = (await secrets.get(keyOf(providerId))) ?? undefined;
   if (!credential && !provider.def.editableBaseURL) throw new Error(t('chat.voice.noKey'));
-  const name = audio.uri.split('/').pop() || 'voice.m4a';
-  // expo/fetch uploads an expo-file-system File (a Blob) in a FormData; RN's { uri } parts it rejects.
-  const file = new File(audio.uri) as unknown as Blob;
-  return provider.def.transcribe(
-    { ...settings, credential, fetch: expoFetch as unknown as typeof fetch },
-    { file, uri: audio.uri, name, mimeType: name.endsWith('.3gp') ? 'audio/3gpp' : name.endsWith('.wav') ? 'audio/wav' : 'audio/mp4', durationMs: audio.durationMs },
-    signal,
-  );
+  const config: SpeechConfig = {
+    ...settings,
+    credential,
+    fetch: expoFetch as unknown as typeof fetch,
+    // React Native's WebSocket takes request headers as a third argument.
+    webSocket: (url, headers) => new (WebSocket as unknown as new (u: string, p: undefined, o: { headers: Record<string, string> }) => WebSocket)(url, undefined, { headers }),
+  };
+  return { provider, config };
 }

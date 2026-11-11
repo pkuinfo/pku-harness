@@ -140,6 +140,9 @@ export const chat = {
     pasteFull: '附件已满，粘贴的文本留在输入框里',
   },
   voice: {
+    listening: '正在听…',
+    finishing: '正在完成…',
+    needsUpdate: '语音输入需要最新版 PKU Harness，请先更新应用。',
     start: '语音输入',
     discard: '放弃录音',
     cancel: '取消',

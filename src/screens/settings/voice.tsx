@@ -12,7 +12,7 @@ import { dismiss, SheetScreen } from '@/components/sheet-screen';
 import { Text } from '@/components/text';
 import { usePlugins } from '@/core/runtime/hooks';
 import { registry } from '@/core/runtime/registry';
-import { speechConfig, useSpeechConfig } from '@/core/speech/config';
+import { DEFAULT_SPEECH_PROVIDER, speechConfig, useSpeechConfig } from '@/core/speech/config';
 import { useLocale, useT } from '@/i18n';
 import { useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
@@ -56,9 +56,13 @@ export function VoiceSettings() {
   useLocale();
   usePlugins();
   const { providerId, keys } = useSpeechConfig();
-  const services = registry.speechProviders();
+  // The default service first, a custom endpoint last.
+  const services = registry
+    .speechProviders()
+    .sort((a, b) => Number(b.id === DEFAULT_SPEECH_PROVIDER) - Number(a.id === DEFAULT_SPEECH_PROVIDER) || Number(!!a.def.editableBaseURL) - Number(!!b.def.editableBaseURL));
   const [selectedId, setSelectedId] = useState(providerId);
-  const entry = services.find((s) => s.id === selectedId) ?? services[0];
+  // A saved choice whose plugin is gone falls back to the default.
+  const entry = services.find((s) => s.id === selectedId) ?? services.find((s) => s.id === DEFAULT_SPEECH_PROVIDER) ?? services[0];
   const initial = speechConfig.settingsFor(entry?.id ?? '');
   const [baseURL, setBaseURL] = useState(initial.baseURL);
   const [model, setModel] = useState(initial.model);
