@@ -1,6 +1,6 @@
 import type { TabTriggerSlotProps } from 'expo-router/ui';
 import { useEffect } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable } from 'react-native';
 import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 
 import { spacing, springs, typography, useTheme } from '@/theme';
@@ -13,10 +13,8 @@ export type TabButtonProps = TabTriggerSlotProps & {
   label: string;
 };
 
-/** Icon well size; the sliding indicator matches it. */
-export const TAB_WELL = { width: 60, height: 32 } as const;
-/** Bar paddings the indicator needs to line up with the wells. */
-export const TAB_BAR_PAD = { top: spacing.xs, side: spacing.sm, well: spacing.sm } as const;
+/** Inner padding of the floating pill; the selected-tab highlight is inset by it. */
+export const TAB_BAR_PAD = spacing.xs + 2;
 
 /**
  * One tab. Selecting it brightens the icon and label; the
@@ -45,31 +43,31 @@ export function TabButton({ icon, label, isFocused, onPress, ref: _ref, style: _
         onPress?.(e);
       }}
       className="flex-1 items-center justify-center gap-0.5 py-2">
-      <View className="h-8 w-[60px] items-center justify-center">
-        <Animated.View style={iconStyle}>
-          <Icon name={icon} size={22} color={isFocused ? c.text : c.textMuted} />
-        </Animated.View>
-      </View>
-      <Animated.Text style={[typography.micro, labelStyle]}>{label}</Animated.Text>
+      <Animated.View style={iconStyle}>
+        <Icon name={icon} size={22} color={isFocused ? c.text : c.textMuted} />
+      </Animated.View>
+      <Animated.Text style={[typography.micro, labelStyle]} numberOfLines={1}>
+        {label}
+      </Animated.Text>
     </Pressable>
   );
 }
 
-/** The neutral highlight behind the active tab icon. */
-export function TabIndicator({ index, count, width }: { index: number; count: number; width: number }) {
-  const tabW = (width - TAB_BAR_PAD.side * 2) / count;
-  const x = useSharedValue(TAB_BAR_PAD.side + index * tabW + (tabW - TAB_WELL.width) / 2);
+/** The lighter pill behind the active tab, filling its cell inside the floating bar; it slides between tabs. */
+export function TabIndicator({ index, count, width, height }: { index: number; count: number; width: number; height: number }) {
+  const tabW = (width - TAB_BAR_PAD * 2) / count;
+  const x = useSharedValue(TAB_BAR_PAD + index * tabW);
   useEffect(() => {
     if (width <= 0 || index < 0) return;
-    x.set(withSpring(TAB_BAR_PAD.side + index * tabW + (tabW - TAB_WELL.width) / 2, springs.smooth));
+    x.set(withSpring(TAB_BAR_PAD + index * tabW, springs.smooth));
   }, [index, tabW, width, x]);
   const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
-  if (width <= 0 || index < 0) return null;
+  if (width <= 0 || height <= 0 || index < 0) return null;
   return (
     <Animated.View
       pointerEvents="none"
-      className="absolute left-0 h-8 w-[60px] rounded-md bg-surface-2"
-      style={[{ borderCurve: 'continuous', top: TAB_BAR_PAD.top + TAB_BAR_PAD.well }, style]}
+      className="absolute left-0 rounded-full bg-surface-3"
+      style={[{ top: TAB_BAR_PAD, width: tabW, height: height - TAB_BAR_PAD * 2 }, style]}
     />
   );
 }

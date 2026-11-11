@@ -27,6 +27,7 @@ import { messageMenu, useMessageMenuOpen } from './message-menu';
 
 import { ReplyActions } from './reply-actions';
 import { ToolGroup } from './tool-chip';
+import { WorkLog } from './work-log';
 import { ThinkingPill } from './thinking-pill';
 
 /** The spec's top (through single-child wrappers) is a Card: it brings its own surface, don't nest two. */
@@ -73,9 +74,12 @@ export const MessageView = memo(function MessageView({
     if (start < 0) start = i;
     groups.set(start, [...(groups.get(start) ?? []), p]);
   });
-  return (
-    <View className="gap-3">
-      {message.parts.map((part, i) => {
+  // Once the answer starts after the last tool call, the work before it folds into one line
+  // (generated UI stays out of the fold: the user still has to see and use it).
+  const lastTool = message.parts.findLastIndex((p) => p.type === 'tool');
+  const answered = lastTool >= 0 && message.parts.some((p, i) => i > lastTool && p.type === 'text' && !!p.text.trim());
+  const folded = answered ? message.parts.slice(0, lastTool + 1) : [];
+  const renderPart = (part: ChatPart, i: number) => {
         switch (part.type) {
           case 'text':
             return part.text.trim() ? (
@@ -103,7 +107,11 @@ export const MessageView = memo(function MessageView({
             return <FadeIn key={i}>{hasOwnCard(spec) ? view : <Surface level={1}>{view}</Surface>}</FadeIn>;
           }
         }
-      })}
+  };
+  return (
+    <View className="gap-3">
+      {answered ? <WorkLog parts={folded} render={renderPart} /> : null}
+      {message.parts.map((part, i) => (i < folded.length && part.type !== 'ui' ? null : renderPart(part, i)))}
       {!streaming && (message.parts.length > 0 || message.meta?.ended === 'stopped' || message.meta?.ended === 'error') ? <ReplyActions message={message} last={last} onRegenerate={onRegenerate} /> : null}
     </View>
   );

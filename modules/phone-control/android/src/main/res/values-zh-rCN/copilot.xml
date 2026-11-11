@@ -59,4 +59,6 @@
 <string name="copilot_pairing_problem_text">打开 Harness 查看处理方法。</string>
 <string name="copilot_resize">调整预览大小</string>
 <string name="copilot_open_panel">打开 Copilot 控制面板</string>
+<string name="copilot_handoff_hint">请在应用中完成这一步，然后点「完成」。</string>
+<string name="copilot_handback_done">完成 · 继续</string>
 </resources>

@@ -163,14 +163,18 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                     if (session.handedOver) fail(PhoneFailure.HANDOFF, "The user has control")
                     if (session.device.isLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to continue")
                 } else {
-                    val (frame, observation) = fresh(session, snapshotId, ref)
-                    if (ref != null) element = target(observation, ref).also(::validateTarget)
+                    // A whole-screen scroll or back acts on whatever is showing (still in scope, not
+                    // protected), so an older snapshot from an action batched before it is no reason
+                    // to fail. Element actions keep the strict check.
+                    val untargeted = ref == null && (action is PhoneAction.Scroll || action == PhoneAction.Back)
+                    val (frame, observation) = if (untargeted) current(session) else fresh(session, snapshotId, ref)
+                    if (ref != null) element = target(observation!!, ref).also(::validateTarget)
                     when (action) {
                         PhoneAction.Tap, PhoneAction.Submit -> {
                             val hit = element ?: fail(PhoneFailure.INVALID, "A target is required")
                             val submit = action == PhoneAction.Submit
                             if (submit && !hit.editable) fail(PhoneFailure.INVALID, "Choose an editable field")
-                            val assessment = PhoneAssessment(if (submit) policy.submit(frame, hit) else policy.assess(frame, hit), label(hit), frame.packageName, observation.snapshotId, ref!!, submit)
+                            val assessment = PhoneAssessment(if (submit) policy.submit(frame, hit) else policy.assess(frame, hit), label(hit), frame.packageName, observation!!.snapshotId, ref!!, submit)
                             if (assessment.effect == PhoneEffect.MONEY) fail(PhoneFailure.HANDOFF, "Hand payment or purchase confirmation to the user")
                             if (approved != assessment) fail(PhoneFailure.STALE, "The approved action no longer matches the observed target")
                         }
@@ -336,6 +340,14 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
     private fun pointAssessment(frame: DeviceFrame, snapshotId: String, x: Int, y: Int, at: Pair<Int, Int>) =
         PhoneAssessment(policy.assessPoint(frame, at.first, at.second), "($x, $y)", frame.packageName, snapshotId, "point:$x,$y")
 
+    /** The screen as it is now, for actions that don't depend on an observed element. */
+    private suspend fun current(session: Session): Pair<DeviceFrame, PhoneObservation?> {
+        val actual = checkedFrame(session)
+        if (actual.protected) fail(PhoneFailure.HANDOFF, "This protected screen requires the user")
+        if (actual.needsUser) fail(PhoneFailure.HANDOFF, "The app needs attention on the user's screen")
+        return actual to null
+    }
+
     private suspend fun fresh(session: Session, snapshotId: String?, ref: String? = null, point: Boolean = false): Pair<DeviceFrame, PhoneObservation> {
         val saved = session.observed ?: fail(PhoneFailure.STALE, "Observe before acting")
         if (saved.second.snapshotId != snapshotId) fail(PhoneFailure.STALE, "Observe again; the screen reference expired")
@@ -378,7 +390,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         ?: fail(PhoneFailure.INVALID, "Unknown target")
     private fun validateTarget(element: DeviceElement) {
         if (element.secret) fail(PhoneFailure.HANDOFF, "The user must enter passwords")
-        if (!element.enabled) fail(PhoneFailure.INVALID, "This target is disabled")
+        if (!element.enabled) fail(PhoneFailure.INVALID, "This target is disabled. It usually depends on a switch or option nearby (often above it, or the page's main switch): turn that on first. Do not retry it or scroll to it again.")
     }
     private fun label(element: DeviceElement) = element.text.ifBlank { element.resourceId ?: element.role.ifBlank { element.key } }
     private fun fail(code: PhoneFailure, message: String): Nothing = throw PhoneException(code, message)

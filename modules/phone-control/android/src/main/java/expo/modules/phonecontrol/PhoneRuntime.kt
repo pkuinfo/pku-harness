@@ -25,6 +25,7 @@ object PhoneRuntime {
 
     fun initialize(context: Context) {
         UiText.source = ResourceTexts { context.applicationContext.resources }
+        AccessibilityParking.watch(context) { sessionIdentity != null || control?.state() != null }
     }
 
     private fun engine(context: Context): PhoneEngine = control ?: synchronized(this) {
@@ -45,7 +46,8 @@ object PhoneRuntime {
         val resolver = context.contentResolver
         return mapOf(
             "supported" to (Build.VERSION.SDK_INT >= 31),
-            "accessibility" to (ScreenAccessibility.instance.value != null),
+            // Parked between tasks counts as on: the next begin turns it back on (AccessibilityParking).
+            "accessibility" to (ScreenAccessibility.instance.value != null || AccessibilityParking.ready(context)),
             "helper" to (platform.hub.shell.value != null),
             "helperStatus" to when (helper) {
                 BuiltinShellStatus.NotPaired -> "not-paired"
@@ -82,7 +84,7 @@ object PhoneRuntime {
      * sets it back to allowed. Unknown on older systems or if the op can't be read: not restricted.
      */
     private fun restricted(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < 33 || ScreenAccessibility.instance.value != null) return false
+        if (Build.VERSION.SDK_INT < 33 || ScreenAccessibility.instance.value != null || AccessibilityParking.parked(context)) return false
         val mode = runCatching {
             context.getSystemService(AppOpsManager::class.java)
                 .unsafeCheckOpNoThrow("android:access_restricted_settings", Process.myUid(), context.packageName)
@@ -122,6 +124,7 @@ object PhoneRuntime {
 
     suspend fun begin(context: Context, packages: List<String>): Map<String, Any?> {
         require(packages.size <= 20) { "Choose up to 20 apps" }
+        AccessibilityParking.unpark(context)
         val opened = engine(context).begin(packages.toSet())
         sessionIdentity = opened.id
         try { CopilotService.start(context, opened.id) }
@@ -235,10 +238,36 @@ object PhoneRuntime {
         val target = id ?: sessionIdentity ?: return
         engine(context).end(target)
         if (sessionIdentity == target) sessionIdentity = null
+        // Off between tasks, so keyboards don't switch to screen-reader typing (AccessibilityParking).
+        if (control?.state() == null) AccessibilityParking.park(context)
     }
 
-    suspend fun takeover(context: Context, id: String) = engine(context).handoff(id)
-    suspend fun handback(context: Context, id: String) = engine(context).resume(id)
+    /** Why the user has control (shown on the floating panel with a Done button); null after handback. */
+    @Volatile var handoffNote: String? = null
+        private set
+
+    suspend fun takeover(context: Context, id: String, note: String? = null) {
+        engine(context).handoff(id)
+        handoffNote = note?.trim()?.take(200)?.ifEmpty { null }
+    }
+    suspend fun handback(context: Context, id: String) {
+        engine(context).resume(id)
+        handoffNote = null
+    }
+
+    /**
+     * Wait until the user hands a handed-over session back (the panel's Done), it ends, or
+     * [timeoutMs] passes. Lets the agent continue a task right after a payment or a login.
+     */
+    suspend fun awaitHandback(id: String, timeoutMs: Long): Map<String, Any?> {
+        val deadline = System.currentTimeMillis() + timeoutMs.coerceIn(0, 30 * 60_000L)
+        while (true) {
+            val state = control?.state()?.takeIf { it.id == id } ?: return mapOf("handedBack" to false, "ended" to true)
+            if (!state.handedOver) return mapOf("handedBack" to true, "ended" to false)
+            if (System.currentTimeMillis() >= deadline) return mapOf("handedBack" to false, "ended" to false, "timedOut" to true)
+            kotlinx.coroutines.delay(400)
+        }
+    }
 
     private fun coordinate(value: Any?): Int {
         val number = requireNotNull(value as? Number) { "Coordinates are required" }.toDouble()

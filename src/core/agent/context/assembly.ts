@@ -121,8 +121,8 @@ export const LANGUAGE_PREFIX = '回复语言：';
 
 export function languageLine(locale: 'en' | 'zh-Hans'): string {
   return locale === 'en'
-    ? `${LANGUAGE_PREFIX}English（应用界面是英文；用户用其他语言写时跟随用户。校园名称如树洞、教学网保留原名，必要时加英文注释）`
-    : `${LANGUAGE_PREFIX}中文（用户用其他语言写时跟随用户）`;
+    ? `${LANGUAGE_PREFIX}默认 English（应用界面语言，只在无法判断用户语言时使用；用户用中文、法语等写就用那种语言回答。用英文回答时，校园名称如树洞、教学网保留原名，必要时加英文注释）`
+    : `${LANGUAGE_PREFIX}默认中文（应用界面语言，只在无法判断用户语言时使用；用户用英文、法语等写就用那种语言回答）`;
 }
 
 /**

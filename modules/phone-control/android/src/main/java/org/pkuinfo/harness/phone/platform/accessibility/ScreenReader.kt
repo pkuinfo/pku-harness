@@ -235,7 +235,9 @@ internal object ScreenReader {
     private fun uiStates(n: AccessibilityNodeInfo): Set<String> = buildSet {
         if (n.isChecked) add(UiStates.CHECKED)
         if (n.isSelected) add(UiStates.SELECTED)
-        if (!n.isEnabled) add(UiStates.DISABLED)
+        // A disabled label inside an enabled, clickable row (Samsung settings) is tappable: the driver
+        // taps the nearest clickable ancestor. Walk up only for disabled, non-clickable nodes.
+        if (!n.isEnabled && (n.isClickable || generateSequence(n.parent) { it.parent }.take(MAX_DEPTH).firstOrNull { it.isClickable }?.isEnabled != true)) add(UiStates.DISABLED)
     }
 
     // isChecked 在 API 36 起被三态的 checked 取代;minSdk 30 仍需用它

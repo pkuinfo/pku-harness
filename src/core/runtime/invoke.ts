@@ -55,6 +55,31 @@ export async function invokeTool(
   opts: { actor: Actor; signal?: AbortSignal; turn?: TurnInfo },
 ): Promise<unknown> {
   const entry = registry.tool(id);
+  // `serial` tools of one plugin queue behind each other, approval included (ToolDef.serial).
+  if (entry?.def.serial) return serially(entry.pluginId, () => invokeNow(id, rawInput, opts));
+  return invokeNow(id, rawInput, opts);
+}
+
+/** Tail of each plugin's queue of serial calls. */
+const serialTails = new Map<string, Promise<unknown>>();
+
+function serially<T>(pluginId: string, run: () => Promise<T>): Promise<T> {
+  const tail = serialTails.get(pluginId) ?? Promise.resolve();
+  const next = tail.then(run, run);
+  const settled = next.catch(() => undefined);
+  serialTails.set(pluginId, settled);
+  void settled.then(() => {
+    if (serialTails.get(pluginId) === settled) serialTails.delete(pluginId);
+  });
+  return next;
+}
+
+async function invokeNow(
+  id: string,
+  rawInput: unknown,
+  opts: { actor: Actor; signal?: AbortSignal; turn?: TurnInfo },
+): Promise<unknown> {
+  const entry = registry.tool(id);
   if (!entry) throw new ToolError(t('app.plugins.runtime.noTool', { id }), 'not_found');
 
   const why = registry.unavailable(entry.pluginId);

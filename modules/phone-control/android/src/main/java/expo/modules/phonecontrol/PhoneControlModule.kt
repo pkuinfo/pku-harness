@@ -171,6 +171,8 @@ class PhoneControlModule : Module() {
         }
         AsyncFunction("end") Coroutine { sessionId: String -> PhoneRuntime.end(context, sessionId) }
         AsyncFunction("takeover") Coroutine { sessionId: String -> PhoneRuntime.takeover(context, sessionId) }
+        AsyncFunction("handoff") Coroutine { sessionId: String, note: String? -> PhoneRuntime.takeover(context, sessionId, note) }
+        AsyncFunction("awaitHandback") Coroutine { sessionId: String, timeoutMs: Double -> PhoneRuntime.awaitHandback(sessionId, timeoutMs.toLong()) }
         AsyncFunction("handback") Coroutine { sessionId: String -> PhoneRuntime.handback(context, sessionId) }
     }
 }

@@ -12,11 +12,9 @@ import { Text } from '@/components/text';
 import { AgentOrbit } from '@/components/agent-orbit';
 import { PressableScale } from '@/components/pressable-scale';
 import { chatStore, useChat, useChatSelector } from '@/core/agent/session/chat-store';
-import { modelInfo } from '@/core/agent/attachments/attachments';
-import { aiConfig, useAIConfig } from '@/core/agent/provider';
+import { useAIConfig } from '@/core/agent/provider';
 import { interruptedTurn, regenerateLast, retryLast, sendMessage } from '@/core/agent/run';
 import { sessions, useActiveSessionId, useEditing, useRenameRequest, useSessionMeta, useSessions } from '@/core/agent/session/sessions';
-import { registry } from '@/core/runtime/registry';
 import { t as translateNow, useT } from '@/i18n';
 import { spacing, typography, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
@@ -58,7 +56,7 @@ export function Chat() {
   // Only what the frame needs; the streaming conversation itself re-renders inside <Messages>.
   const busy = useChatSelector((s) => s.status === 'streaming');
   const empty = useChatSelector((s) => s.messages.length === 0);
-  const { hasKey, config } = useAIConfig();
+  const { hasKey } = useAIConfig();
   const scroll = useRef<ComponentRef<typeof ScrollView>>(null);
 
   // Follow the end only while the reader is there (Claude / ChatGPT behaviour). Dragging away
@@ -196,9 +194,12 @@ export function Chat() {
     // Any touch on the screen (another message, the empty area, the composer) closes an open
     // 编辑 / 复制 row; touches inside the row mark themselves first (message-menu.ts).
     <View className="flex-1" onTouchStart={messageMenu.dismiss}>
-      <View className="flex-row items-center gap-2 border-b border-edge px-3 pb-2" style={{ paddingTop: insets.top + spacing.sm }}>
+      {/* Claude's mobile bar: sessions on the left, the chat's title centred, new chat on the right. */}
+      <View className="h-14 flex-row items-center justify-between px-2" style={{ marginTop: insets.top }}>
+        <View pointerEvents="box-none" className="absolute inset-y-0 left-16 right-16 justify-center">
+          <ChatTitle connected={hasKey} />
+        </View>
         <SessionsButton />
-        <ChatTitle fallbackName={config.name} fallbackModel={config.model} connected={hasKey} />
         {!empty ? <IconButton icon="plus" label={t('chat.header.newChat')} variant="ghost" onPress={() => void sessions.create()} /> : null}
       </View>
 
@@ -362,18 +363,14 @@ function SessionsButton() {
   );
 }
 
-/** Session title (tap to rename inline) over `provider · model`. */
-function ChatTitle({ fallbackName, fallbackModel, connected }: { fallbackName: string; fallbackModel: string; connected: boolean }) {
+/** Session title, centred (tap to rename inline); the model lives in the composer's picker. */
+function ChatTitle({ connected }: { connected: boolean }) {
   const c = useTheme();
   const t = useT();
   const meta = useSessionMeta();
   const [renaming, setRenaming] = useState(false);
   const [draft, setDraft] = useState('');
   const title = meta?.title || t('chat.header.newChat');
-  const providerName = meta?.providerId ? (registry.provider(meta.providerId)?.def.name ?? meta.providerId) : fallbackName;
-  const modelId = meta?.model ?? fallbackModel;
-  // The model's display name (DeepSeek-V4.1-Flash), not its API id.
-  const model = modelInfo(meta?.providerId ?? aiConfig.get().providerId, modelId)?.name ?? modelId;
   const canRename = !!meta && meta.messageCount > 0;
   const start = useCallback(() => {
     if (!meta) return;
@@ -394,7 +391,7 @@ function ChatTitle({ fallbackName, fallbackModel, connected }: { fallbackName: s
     setRenaming(false);
   };
   return (
-    <View className="flex-1">
+    <View className="items-center">
       {renaming ? (
         <TextInput
           value={draft}
@@ -408,19 +405,21 @@ function ChatTitle({ fallbackName, fallbackModel, connected }: { fallbackName: s
           placeholderTextColor={c.textFaint}
           selectionColor={c.accent}
           accessibilityLabel={t('chat.header.rename')}
-          className="border-b-[0.5px] border-accent p-0"
+          className="min-w-40 border-b-[0.5px] border-accent p-0 text-center"
           style={[typography.bodyStrong, { color: c.text }]}
         />
       ) : (
         <PressableScale haptic={false} disabled={!canRename} onPress={start} accessibilityRole="button" accessibilityLabel={t('chat.header.titleA11y', { title })}>
-          <Text variant="bodyStrong" numberOfLines={1}>
+          <Text variant="bodyStrong" numberOfLines={1} align="center">
             {title}
           </Text>
         </PressableScale>
       )}
-      <Text variant="caption" tone="faint" numberOfLines={1}>
-        {connected || meta?.providerId ? `${providerName} · ${model}` : t('chat.header.notConnected')}
-      </Text>
+      {connected || meta?.providerId ? null : (
+        <Text variant="caption" tone="faint" numberOfLines={1}>
+          {t('chat.header.notConnected')}
+        </Text>
+      )}
     </View>
   );
 }

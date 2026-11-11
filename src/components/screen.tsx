@@ -92,7 +92,7 @@ export function Screen({
   const scrimStyle = useAnimatedStyle(() => ({ opacity: interpolate(y.get(), [0, 24], [0, 0.95], Extrapolation.CLAMP) }));
   const compactTitle = useAnimatedStyle(() => ({ transform: [{ translateY: interpolate(y.get(), [COLLAPSE * 0.6, COLLAPSE], [6, 0], Extrapolation.CLAMP) }] }));
 
-  const backButton = back ? <IconButton icon="back" label={t('app.ui.back')} variant="ghost" onPress={() => router.back()} className="-ml-2 mb-0.5" /> : null;
+  const backButton = back ? <IconButton icon="back" label={t('app.ui.back')} variant="ghost" onPress={() => router.back()} className={appearance === 'plain' ? undefined : '-ml-2 mb-0.5'} /> : null;
   // Only one header is ever announced: an invisible (opacity 0) view is still read by TalkBack /
   // VoiceOver, so the large header hides from them once collapsed and the compact bar until then.
   const a11yHidden = (hidden: boolean) =>
@@ -118,11 +118,23 @@ export function Screen({
 
   if (appearance === 'plain') {
     return (
-      <View className="flex-1 bg-bg" style={{ paddingTop: insets.top, paddingBottom: bar }}>
-        <View className="w-full flex-row items-center gap-2 self-center border-b border-edge px-4 py-2" style={CONTENT}>
-          {backButton}
-          <View className="flex-1 gap-0.5"><Text variant="bodyStrong" accessibilityRole="header">{title}</Text>{subtitle ? <Text variant="caption" tone="muted">{subtitle}</Text> : null}</View>
-          {trailing}
+      // Scrolling content runs under the floating tab bar (its padding is inside the scroll view).
+      <View className="flex-1 bg-bg" style={{ paddingTop: insets.top, paddingBottom: scroll ? 0 : bar }}>
+        {/* Centred title between the leading and trailing actions, no divider (Claude's mobile bar). */}
+        <View className="h-14 w-full flex-row items-center self-center px-2" style={CONTENT}>
+          <View pointerEvents="box-none" className="absolute inset-y-0 left-16 right-16 items-center justify-center">
+            <Text variant="headline" numberOfLines={1} accessibilityRole="header">
+              {title}
+            </Text>
+            {subtitle ? (
+              <Text variant="caption" tone="muted" numberOfLines={1}>
+                {subtitle}
+              </Text>
+            ) : null}
+          </View>
+          <View className="flex-row items-center">{backButton}</View>
+          <View className="flex-1" />
+          <View className="flex-row items-center">{trailing}</View>
         </View>
         {scroll ? <Animated.View className="flex-1" style={enter}><KeyboardAwareScrollView
           ref={nativeScroll}
@@ -131,9 +143,10 @@ export function Screen({
           style={FILL}
           // A tap on a button while typing should press it, not just close the keyboard.
           keyboardShouldPersistTaps="handled"
-          contentContainerStyle={[{ paddingBottom: spacing.xxxl }, contentContainerStyle]}
+          contentContainerStyle={[{ paddingBottom: spacing.xxxl + bar }, contentContainerStyle]}
+          scrollIndicatorInsets={{ bottom: bar }}
           {...scrollProps}>
-          <View className="w-full gap-6 self-center px-4 pt-4" style={CONTENT}>{children}</View>
+          <View className="w-full gap-6 self-center px-4 pt-2" style={CONTENT}>{children}</View>
         </KeyboardAwareScrollView></Animated.View> : children}
         {overlay ? <View pointerEvents="box-none" className="absolute inset-0" style={{ top: insets.top + spacing.xxxl }}>{overlay}</View> : null}
       </View>

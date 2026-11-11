@@ -17,6 +17,12 @@ export const LIMITS = {
   thresholdShare: 0.8,
   /** Recent history kept verbatim, as a share of the budget. */
   tailShare: 0.25,
+  /**
+   * ...and at most this share of the room the fixed prefix leaves (budget − system prompt − tool
+   * definitions): with 46k of tools in a 64k budget, a 16k tail would leave almost nothing to
+   * summarise.
+   */
+  roomTailShare: 0.4,
   /** §5.4 step 1: tool results outside the tail longer than this are pruned to head + tail. */
   pruneOver: 6_000,
   pruneHead: 3_000,
@@ -60,7 +66,11 @@ export const SUMMARY_INSTRUCTION = `现在请暂停对话，把以上全部对�
 
 export type SessionData = { messages: ChatMessage[]; history: ModelMessage[] };
 export type Estimate = (messages: ModelMessage[]) => number;
-export type CompactionMode = 'auto' | 'manual' | 'overflow';
+/**
+ * auto: before a turn; manual: /compact; overflow: after a "too long" error; turn: between the
+ * steps of a running turn, which may cut inside that turn (a long Copilot task is one turn).
+ */
+export type CompactionMode = 'auto' | 'manual' | 'overflow' | 'turn';
 
 // ---------------------------------------------------------------- budget (§5.3)
 
@@ -205,11 +215,22 @@ const userTurns = (history: ModelMessage[]) => history.flatMap((m, i) => (m.role
  * kept whole. With `keepTurns` the cut lands on the start of that many final turns; otherwise the
  * tail grows backwards (over balanced cut points) while it fits `tailBudget`.
  */
-export function selectCut(history: ModelMessage[], opts: { estimate: Estimate; tailBudget?: number; keepTurns?: number }): number | null {
+export function selectCut(history: ModelMessage[], opts: { estimate: Estimate; tailBudget?: number; keepTurns?: number; inTurn?: boolean }): number | null {
   const turns = userTurns(history);
   if (!turns.length) return null;
   let cut: number;
-  if (opts.keepTurns != null) {
+  if (opts.inTurn) {
+    // Mid-turn: the tail grows back from the newest step, past the turn's start if it fits.
+    const budget = opts.tailBudget ?? 0;
+    cut = history.length;
+    let tail = 0;
+    for (let j = history.length - 1; j >= 1; j--) {
+      tail += opts.estimate([history[j]]);
+      if (tail > budget && cut < history.length) break;
+      if (isBalancedCut(history, j)) cut = j;
+    }
+    if (cut >= history.length) return null;
+  } else if (opts.keepTurns != null) {
     cut = turns[Math.max(0, turns.length - opts.keepTurns)];
   } else {
     cut = turns[turns.length - 1];
@@ -259,6 +280,8 @@ export function uiCutIndex(messages: ChatMessage[], history: ModelMessage[], cut
   const keptTurns = history.slice(cut).filter((m) => m.role === 'user' && !isCheckpoint(m)).length;
   const users = messages.flatMap((m, i) => (m.role === 'user' ? [i] : []));
   if (!users.length) return messages.length;
+  // Cut inside the last turn: the marker goes right after its user message, above the reply.
+  if (keptTurns === 0) return users[users.length - 1] + 1;
   return users[Math.max(0, users.length - keptTurns)];
 }
 
@@ -315,16 +338,18 @@ export type CompactionDeps = {
  * - manual (/compact): always summarises; keeps the last 2 turns.
  * - overflow: keeps only the last turn, and prunes tool results everywhere (the last turn too),
  *   since the request already failed for size.
+ * - turn: like auto, but the kept tail may start inside the running turn (its newest steps).
  */
 export async function runCompaction(data: SessionData, mode: CompactionMode, deps: CompactionDeps): Promise<CompactionOutcome | null> {
   const { estimate, overhead, budget } = deps;
   const tokensBefore = overhead + estimate(data.history);
-  if (mode === 'auto' && Math.max(tokensBefore, deps.reportedTotal ?? 0) <= budget) return null;
+  const auto = mode === 'auto' || mode === 'turn';
+  if (auto && Math.max(tokensBefore, deps.reportedTotal ?? 0) <= budget) return null;
 
   const cut = selectCut(
     data.history,
-    mode === 'auto'
-      ? { estimate, tailBudget: tailBudgetOf(budget) }
+    auto
+      ? { estimate, tailBudget: Math.min(tailBudgetOf(budget), Math.floor(Math.max(0, budget - overhead) * LIMITS.roomTailShare)), inTurn: mode === 'turn' }
       : { estimate, keepTurns: mode === 'manual' ? LIMITS.manualKeepTurns : LIMITS.overflowKeepTurns },
   );
   const { history: pruned, pruned: prunedCount } = pruneToolResults(data.history, cut == null || mode === 'overflow' ? data.history.length : cut);
@@ -333,7 +358,7 @@ export async function runCompaction(data: SessionData, mode: CompactionMode, dep
     prunedCount ? { data: { ...data, history: pruned }, result: { compactedMessages: 0, tokensBefore, tokensAfter: overhead + estimate(pruned) } } : null;
 
   if (cut == null) return pruneOnly();
-  if (mode === 'auto' && prunedCount && overhead + estimate(pruned) <= budget) return pruneOnly();
+  if (auto && prunedCount && overhead + estimate(pruned) <= budget) return pruneOnly();
 
   const replaced = pruned.slice(0, cut);
   // The summary request reuses the conversation's cached prefix byte for byte (§5.1), so it reads

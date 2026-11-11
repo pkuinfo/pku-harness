@@ -60,4 +60,6 @@
 <string name="copilot_pairing_problem_text">Open Harness to see what to do.</string>
 <string name="copilot_resize">Resize preview</string>
 <string name="copilot_open_panel">Open Copilot controls</string>
+<string name="copilot_handoff_hint">Finish this step in the app, then tap Done.</string>
+<string name="copilot_handback_done">Done · continue</string>
 </resources>

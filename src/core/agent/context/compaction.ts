@@ -132,7 +132,7 @@ function reportedTotal(sessionId: string): number | undefined {
 
 const inflight = new Map<string, Promise<CompactionOutcome | null>>();
 
-async function compact(sessionId: string, mode: CompactionMode): Promise<CompactionResult | null> {
+async function compact(sessionId: string, mode: CompactionMode, opts: { force?: boolean } = {}): Promise<CompactionResult | null> {
   const running = inflight.get(sessionId);
   if (running) return (await running.catch(() => null))?.result ?? null;
   const before = readData(sessionId);
@@ -142,7 +142,7 @@ async function compact(sessionId: string, mode: CompactionMode): Promise<Compact
     estimate: estimateMessages,
     overhead: overheadTokens(sessionId),
     budget: contextBudget(sessionId),
-    reportedTotal: mode === 'auto' ? reportedTotal(sessionId) : undefined,
+    reportedTotal: opts.force ? Infinity : mode === 'auto' || mode === 'turn' ? reportedTotal(sessionId) : undefined,
     summarize: (messages) => summarize(sessionId, messages),
     newId,
   });
@@ -182,6 +182,20 @@ const REJECTED = { empty: 'chat.agent.compactEmpty', notShorter: 'chat.agent.com
 export async function maybeCompact(sessionId: string): Promise<CompactionResult | null> {
   try {
     return await compact(sessionId, 'auto');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Between the steps of a running turn, when the last step's prompt passed the budget: summarise
+ * the older history, the running turn's earlier steps included, keeping its newest steps verbatim.
+ * `force` compacts even when the estimate looks under budget (after an overflow error).
+ * Never throws.
+ */
+export async function compactInTurn(sessionId: string, opts: { force?: boolean } = {}): Promise<CompactionResult | null> {
+  try {
+    return await compact(sessionId, 'turn', opts);
   } catch {
     return null;
   }

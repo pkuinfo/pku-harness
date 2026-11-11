@@ -28,6 +28,10 @@ declare class PhoneControlModule extends NativeModule<{ onControlStopped: (event
   execute(sessionId: string, operation: 'look', args: Record<string, never>): Promise<PhoneLook | NativeFailure>;
   end(sessionId: string): Promise<void>;
   takeover(sessionId: string): Promise<void>;
+  /** takeover with the reason shown on the floating panel next to its Done button. Missing on APKs before 1.0.11. */
+  handoff?(sessionId: string, note: string | null): Promise<void>;
+  /** Resolves when the user hands the session back, it ends, or `timeoutMs` passes. Missing on APKs before 1.0.11. */
+  awaitHandback?(sessionId: string, timeoutMs: number): Promise<{ handedBack: boolean; ended: boolean; timedOut?: boolean }>;
   handback(sessionId: string): Promise<void>;
 }
 

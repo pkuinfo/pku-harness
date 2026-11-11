@@ -1,6 +1,7 @@
+import { BottomSheet, RNHostView } from '@expo/ui';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react';
-import { Alert, BackHandler, Pressable, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { BackHandler, Pressable, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, FadeIn, FadeOut, LinearTransition, SlideInDown, SlideOutDown, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -42,21 +43,13 @@ export function promptAppUpdate(update: AppUpdate) {
   setOffered(update);
 }
 
-function promptLegalNotice(kind: 'new' | 'updated') {
-  void markLegalAccepted();
-  const updated = kind === 'updated';
-  Alert.alert(t(updated ? 'app.settings.legalUpdatedTitle' : 'app.settings.legalNoticeTitle'), t(updated ? 'app.settings.legalUpdatedBody' : 'app.settings.legalNoticeBody'), [
-    { text: t('app.settings.legalNoticeRead'), onPress: () => router.push('/legal/privacy') },
-    { text: t('app.settings.legalNoticeOk') },
-  ]);
-}
-
 /**
  * Mounted once at the root: checks for a newer APK shortly after launch (not during the welcome)
  * (after a one-time notice about the terms, when due), and hosts the update sheet, which offers the
  * release and then shows its download in place until Android's installer takes over.
  */
 export function UpdatePrompt() {
+  const [legal, setLegal] = useState<'new' | 'updated' | null>(null);
   useEffect(() => {
     cleanUpdateDownloads();
     if (!isOnboarded()) return;
@@ -64,14 +57,62 @@ export function UpdatePrompt() {
       void (async () => {
         // People who set up before the terms existed (or before a material change) hear about them once.
         const legal = await legalNoticeDue();
-        if (legal) return promptLegalNotice(legal);
+        if (legal) {
+          void markLegalAccepted();
+          return setLegal(legal);
+        }
         const u = await checkOnLaunch();
         if (u) promptAppUpdate(u);
       })();
     }, 3000);
     return () => clearTimeout(id);
   }, []);
-  return <UpdateSheet />;
+  return (
+    <>
+      <UpdateSheet />
+      <LegalSheet kind={legal} onClose={() => setLegal(null)} />
+    </>
+  );
+}
+
+/** The one-time notice about the terms (new, or a material change), as a native bottom sheet (@expo/ui). */
+function LegalSheet({ kind, onClose }: { kind: 'new' | 'updated' | null; onClose: () => void }) {
+  const c = useTheme();
+  const t = useT();
+  const insets = useSafeAreaInsets();
+  // The native sheet measures its React content without a width limit: give it one so text wraps.
+  const width = Math.min(useWindowDimensions().width, SHEET_MAX_WIDTH);
+  // Keep the last kind while the sheet animates out.
+  const [shown, setShown] = useState(kind);
+  if (kind && kind !== shown) setShown(kind);
+  const updated = shown === 'updated';
+  const read = () => {
+    onClose();
+    router.push('/legal/privacy');
+  };
+  return (
+    <BottomSheet isPresented={!!kind} onDismiss={onClose} containerColor={c.elevated} contentPadding={{ left: 0, right: 0, top: 0, bottom: 0 }}>
+      <RNHostView matchContents>
+        <View className="gap-5 px-6 pt-1" style={{ width, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }}>
+          <View className="flex-row items-center gap-4">
+            <View className="size-12 items-center justify-center rounded-lg bg-accent-muted" style={CURVE}>
+              <Icon name={updated ? 'file' : 'shield'} size={24} color={c.accent} />
+            </View>
+            <Text variant="headline" className="flex-1">
+              {t(updated ? 'app.settings.legalUpdatedTitle' : 'app.settings.legalNoticeTitle')}
+            </Text>
+          </View>
+          <Text variant="callout" tone="muted">
+            {t(updated ? 'app.settings.legalUpdatedBody' : 'app.settings.legalNoticeBody')}
+          </Text>
+          <View className="gap-2">
+            <Button size="lg" title={t('app.settings.legalNoticeOk')} onPress={onClose} />
+            <Button size="lg" variant="ghost" icon="file" title={t('app.settings.legalNoticeRead')} onPress={read} />
+          </View>
+        </View>
+      </RNHostView>
+    </BottomSheet>
+  );
 }
 
 function UpdateSheet() {

@@ -493,6 +493,20 @@ class PhoneEngineTest {
         assertEquals(1, device.calls)
     }
 
+    @Test fun wholeScreenScrollAndBackActOnTheCurrentScreenEvenWithAnOlderSnapshot() = runBlocking {
+        val device = FakeDevice()
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        val old = engine.observe(id)
+        engine.observe(id) // a newer snapshot replaces it (an action batched in the same step)
+        engine.execute(id, PhoneAction.Scroll(true), old.snapshotId)
+        engine.execute(id, PhoneAction.Back, old.snapshotId)
+        assertEquals(2, device.calls)
+        // An element action still needs the current snapshot.
+        val approval = engine.assess(id, engine.observe(id).snapshotId, "e1")
+        expectFailure(PhoneFailure.STALE) { engine.execute(id, PhoneAction.Tap, old.snapshotId, "e1", approval) }
+    }
+
     @Test fun paymentsAndUserScreenPromptsRequireHandoff() = runBlocking {
         val device = FakeDevice().apply { effect = PhoneEffect.MONEY }
         val engine = device.engine()

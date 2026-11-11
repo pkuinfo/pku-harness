@@ -8,6 +8,8 @@ import { parts as clockParts, startOfDay as clockStartOfDay } from '@pku-harness
 
 import type { MessageKey, Params } from '@/i18n';
 
+import { isCheckpoint } from '@/core/agent/context/compaction-core';
+
 import type { AttachmentPart, ChatMessage, ChatPart } from './chat-store';
 
 /** Plain text a message shows (text parts only). */
@@ -126,7 +128,8 @@ export function cutBefore(
   const fromEnd = messages.slice(at).filter((m) => m.role === 'user').length;
   let seen = 0;
   for (let i = history.length - 1; i >= 0; i--) {
-    if (history[i].role !== 'user') continue;
+    // A compaction summary is not a user turn (a mid-turn one may have replaced this very turn).
+    if (history[i].role !== 'user' || isCheckpoint(history[i])) continue;
     seen++;
     if (seen === fromEnd) return { messages: messages.slice(0, at), history: history.slice(0, i), exact: true };
   }

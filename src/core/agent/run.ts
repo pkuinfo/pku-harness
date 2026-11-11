@@ -7,7 +7,7 @@ import { recordStep, type ToolCallUsage } from '@/core/usage';
 import { t as tr } from '@/i18n';
 
 import { installRunHooks, newId, sessionStore, type AttachmentPart, type ChatMessage, type ChatPart, type ChatState, type TurnMeta } from '@/core/agent/session/chat-store';
-import { capToolResultOutput, compactForOverflow, isContextOverflowError, maybeCompact } from '@/core/agent/context/compaction';
+import { capToolResultOutput, compactForOverflow, compactInTurn, contextBudget, isContextOverflowError, maybeCompact } from '@/core/agent/context/compaction';
 import { gatherContext } from '@/core/agent/context/request-context';
 import { aiConfig } from './provider';
 import { attachmentsOf, cutBefore, nextQueued, plainText, settleRunningTools, textOf, userText } from '@/core/agent/session/session-utils';
@@ -24,6 +24,8 @@ import { DEFAULT_STEP_LIMIT, stepBudget } from './step-budget';
 export type SendInput = string | { text: string; attachments?: AttachmentPart[] };
 
 const UI_TOOL = 'ui__render';
+/** After a mid-turn compaction found too little to summarise, the context grows at least this much before the next try. */
+const RETRY_GROWTH = 8_000;
 
 /** One reply streams at a time per session; replies in different sessions may overlap. */
 const controllers = new Map<string, AbortController>();
@@ -154,9 +156,21 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
   // acceptsImages: a tool may show this model an image (Copilot's opt-in screenshots, tool-images.ts).
   const taint = { sessionId: sid, tainted: false, userAsked: asksToRemember(text), acceptsImages: acceptsImages(providerId, modelName) };
 
+  // Tool calls of the turn's earlier segments (a mid-turn compaction starts a new one), so the
+  // step budget spans the whole turn.
+  const earlierTools: string[] = [];
+  let earlierSteps = 0;
+  // Over the context budget after a step that called tools: stop, compact, continue (§5.3).
+  let overBudget = false;
+  let lastSize = 0;
+  // A mid-turn compaction that achieved nothing is retried only once the context grew further.
+  let retryAbove = 0;
+
   const streamOnce = async (history: ModelMessage[]) => {
     produced = [];
     partial = '';
+    overBudget = false;
+    const budget = contextBudget(sid);
     let startedSteps = 0;
     let finishedSteps = 0;
     const toolStart = new Map<string, number>();
@@ -171,8 +185,20 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
       model: model!,
       ...prefix,
       stopWhen: ({ steps }) => {
-        stepLimit = stepBudget(steps.flatMap((step) => step.toolCalls.map((call) => call.toolName)), toolLimits);
-        return steps.length >= stepLimit;
+        const tools = steps.flatMap((step) => step.toolCalls.map((call) => call.toolName));
+        stepLimit = stepBudget([...earlierTools, ...tools], toolLimits);
+        if (earlierSteps + steps.length >= stepLimit) return true;
+        // The next request resends this prompt plus the step's output: past the budget, compact first.
+        const last = steps.at(-1);
+        const size = (last?.usage.inputTokens ?? 0) + (last?.usage.outputTokens ?? 0);
+        if (last?.toolCalls.length && size > Math.max(budget, retryAbove)) {
+          lastSize = size;
+          overBudget = true;
+          earlierTools.push(...tools);
+          earlierSteps += steps.length;
+          return true;
+        }
+        return false;
       },
       abortSignal: signal,
       prepareStep: ({ messages }) => {
@@ -251,10 +277,19 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     }
     // A step cut short keeps its text for the model only if it never finished.
     if (startedSteps <= finishedSteps) partial = '';
-    if (!signal.aborted && finishedSteps >= stepLimit) {
+    if (!signal.aborted && !overBudget && earlierSteps + finishedSteps >= stepLimit) {
       const last = produced.at(-1);
       if (last?.role === 'tool') sessions.notice(tr('chat.agent.stepLimit'), 'warn', { sessionId: sid });
     }
+  };
+
+  // Finished steps become session history now (instead of at the end of the turn), so a
+  // compaction can include them.
+  const commitProduced = (id: string) => {
+    const cur = sessionStore.get(id);
+    if (cur && produced.length) sessionStore.patch(id, { history: [...cur.history, ...produced] });
+    produced = [];
+    partial = '';
   };
 
   try {
@@ -270,13 +305,25 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
     model = await modelFor(providerId, modelName);
     await maybeCompact(sid);
     if (signal.aborted) throw signal.reason;
-    try {
-      await streamOnce(sessionStore.get(sid)?.history ?? []);
-    } catch (e) {
-      if (signal.aborted || !isContextOverflowError(e) || !(await compactForOverflow(sid))) throw e;
-      // Overflow (§5.4 step 4): drop what streamed, compact, retry once on the rebuilt history.
-      sessionStore.updateMessage(sid, assistant.id, (m) => ({ ...m, parts: [] }));
-      await streamOnce(sessionStore.get(sid)?.history ?? []);
+    let overflowRetried = false;
+    for (;;) {
+      try {
+        await streamOnce(sessionStore.get(sid)?.history ?? []);
+      } catch (e) {
+        if (signal.aborted || overflowRetried || !isContextOverflowError(e)) throw e;
+        overflowRetried = true;
+        // Overflow (§5.4 step 4): keep the finished steps, compact (inside this turn if it is the
+        // big part), and continue once from there.
+        commitProduced(sid);
+        if (!(await compactInTurn(sid, { force: true })) && !(await compactForOverflow(sid))) throw e;
+        continue;
+      }
+      if (!overBudget || signal.aborted) break;
+      // Long turn (a Copilot task, say): fold its older steps into a summary, then go on.
+      commitProduced(sid);
+      // The provider measured it over the budget: no second guess from the estimate.
+      if (!(await compactInTurn(sid, { force: true }))) retryAbove = lastSize + Math.max(RETRY_GROWTH, Math.floor(contextBudget(sid) * 0.1));
+      if (signal.aborted) throw signal.reason;
     }
   } catch (e) {
     if (signal.aborted) ended = 'stopped';

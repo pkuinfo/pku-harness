@@ -427,3 +427,47 @@ describe('isContextOverflowError', () => {
     expect(isContextOverflowError('oops')).toBe(false);
   });
 });
+
+// ---------------------------------------------------------------- mid-turn (one long task)
+
+/** One user request followed by n tool steps and no answer yet (a running Copilot task). */
+function longTurn(n: number): SessionData {
+  const history: ModelMessage[] = [user('帮我在设置里打开点按时长')];
+  for (let i = 0; i < n; i++) history.push(call(`s${i}`, `第 ${i} 步`), result(`s${i}`, 'z'.repeat(400)));
+  return { history, messages: [uiUser('帮我在设置里打开点按时长'), uiAssistant('')] };
+}
+
+describe('turn mode', () => {
+  test('auto keeps a single long turn whole; turn mode cuts inside it', async () => {
+    const data = longTurn(20);
+    expect(selectCut(data.history, { estimate, tailBudget: 250 })).toBeNull();
+    const cut = selectCut(data.history, { estimate, tailBudget: 250, inTurn: true })!;
+    expect(cut).toBeGreaterThan(1);
+    expect(data.history[cut].role).toBe('assistant');
+    expect(isBalancedCut(data.history, cut)).toBe(true);
+  });
+
+  test('turn: commits [checkpoint, newest steps] and puts the marker above the running reply', async () => {
+    const data = longTurn(20);
+    const out = (await runCompaction(data, 'turn', deps({ budget: 1_000 })))!;
+    const { history, messages } = out.data;
+    expect(isCheckpoint(history[0])).toBe(true);
+    expect(history[1].role).toBe('assistant');
+    expect(history.at(-1)).toBe(data.history.at(-1));
+    expect(messages.map((m) => m.role)).toEqual(['user', 'event', 'assistant']);
+  });
+
+  test('turn: a big fixed prefix shrinks the kept tail so there is still something to summarise', async () => {
+    const data = longTurn(12);
+    // 80 % of the budget is system prompt + tool definitions (Copilot's tools in a 64k budget).
+    const out = (await runCompaction(data, 'turn', deps({ budget: 2_000, overhead: 1_600 })))!;
+    const kept = out.data.history.slice(1);
+    expect(estimate(kept)).toBeLessThanOrEqual(Math.floor((2_000 - 1_600) * 0.4) + estimate([data.history.at(-1)!, data.history.at(-2)!]));
+    expect(out.result.compactedMessages).toBeGreaterThanOrEqual(0);
+    expect(isCheckpoint(out.data.history[0])).toBe(true);
+  });
+
+  test('turn: nothing below the budget', async () => {
+    expect(await runCompaction(longTurn(2), 'turn', deps({ budget: 100_000 }))).toBeNull();
+  });
+});

@@ -82,6 +82,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
     private val prefs = service.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
     private var previewShare = prefs.getFloat(PREVIEW_SHARE_KEY, PREVIEW_SHARE_DEFAULT).coerceIn(PREVIEW_SHARE_MIN, PREVIEW_SHARE_MAX)
     private var lastApproval: Int? = null
+    private var wasHanded = false
     /** A resize drag in progress: the status loop must not rebuild the panel under the finger. */
     private var resizing = false
 
@@ -103,10 +104,13 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                     val approval = PhoneOverlayBridge.approval?.takeIf { it.sessionId == sessionId }
                     // A new approval opens the panel, so a minimized ball never leaves a task waiting unseen.
                     if (approval != null && approval.id != lastApproval) { lastApproval = approval.id; expanded = true }
+                    // A handoff opens the panel too: it says what to do and holds the Done button.
+                    if (handed && !wasHanded) expanded = true
+                    wasHanded = handed
                     val front = harnessInFront()
                     if (front != inFront) { inFront = front; if (!front) openInFront = false }
                     val activity = operationStatus()
-                    val key = "${service.resources.configuration.uiMode}:$activity:${open()}:$paused:$handed:${approval?.id}:$busy:$error"
+                    val key = "${service.resources.configuration.uiMode}:$activity:${open()}:$paused:$handed:${PhoneRuntime.handoffNote}:${approval?.id}:$busy:$error"
                     if (key != rendered && menu == null && !resizing) { rendered = key; render(paused, handed, approval) }
                     if (open() && !handed && !paused && !busy && approval == null && previewJob?.isActive != true) {
                         val revision = previewRevision
@@ -282,7 +286,9 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
             if (approval != null) {
                 content.addView(label(approval.title).apply { setTypeface(typeface, Typeface.BOLD) })
                 content.addView(label(approval.detail))
-            } else if (!handed && !paused) {
+            } else if (handed) {
+                content.addView(label(PhoneRuntime.handoffNote ?: service.getString(R.string.copilot_handoff_hint)).apply { setTypeface(typeface, Typeface.BOLD) })
+            } else if (!paused) {
                 val preview = FrameLayout(ui).apply {
                     background = surface(R.color.copilot_overlay_preview_surface, R.dimen.copilot_overlay_inner_corner)
                     clipToOutline = true
@@ -312,6 +318,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
             if (approval != null) row(
                 button(R.string.copilot_deny) { PhoneOverlayBridge.answer(approval, false); rendered = "" },
                 button(R.string.copilot_allow, filled = true) { PhoneOverlayBridge.answer(approval, true); rendered = "" })
+            else if (handed) row(button(R.string.copilot_handback_done, filled = true) { action { PhoneRuntime.handback(service, sessionId) } })
             root.addView(LinearLayout(ui).apply {
                 gravity = Gravity.END
                 addView(iconButton(if (paused) R.string.copilot_resume else R.string.copilot_pause,

@@ -159,9 +159,21 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 
 - [x] Copilot app alphabet index: All apps is grouped by initial with a pinned, scrollable letter rail; tap jumps to the group. Search and Allowed apps retain their existing behavior. Latin accents normalize to base letters, other names group under #. C/S navigation checked on the emulator in light/dark; main 1,660 pass/3 skip, plugins 1,247 pass (2026-11-08).
 
-- [ ] Copilot asks for an app inline: `copilot.requestApp` (SDK `ToolDef.grant`, `PhoneService.allow`, native `PhoneEngine.allow`) shows "Copilot wants to use <app>" with Allow once / Always allow / Don't allow (floating controls: Allow = once) and adds the app to the running session instead of sending the user to /copilot. Unit-tested (TS + PhoneEngine); needs an on-device check (2026-11-10).
+- [x] Copilot asks for an app inline: `copilot.requestApp` (SDK `ToolDef.grant`, `PhoneService.allow`, native `PhoneEngine.allow`) shows "Copilot wants to use <app>" with Allow once / Always allow / Don't allow (floating controls: Allow = once) and adds the app to the running session instead of sending the user to /copilot. Unit-tested (TS + PhoneEngine); Allow once / Always allow checked on the emulator with Settings (2026-11-10).
 
 - [x] Copilot vision fallback for apps that hide their accessibility tree (WeChat): opt-in “Let the AI see screenshots” switch in /copilot (off by default), `copilot.look` (screenshot of the controlled display to a model that reads images, as a transient user-role image never stored in history; protected screens refused), `tapAt`/`typeAt` at screenshot pixels with `ToolDef.alwaysAsk` approval, money/password/scope/freshness checks in `PhoneEngine`. Privacy policy exception added (effective 2026-11-10). Unit-tested (TS + JVM); shipped in 1.0.9 and checked on WeChat with grid taps. With the TalkBack-compatible service it is the backup, not the main path. See `docs/COPILOT.md` (2026-11-10).
+
+- [x] Copilot keyboard fix: the TalkBack-named service made Samsung Keyboard switch to screen-reader typing (two taps per key). The service is now parked between tasks (`AccessibilityParking`: out of the system list after a task and after 20 s idle, written back at `begin` through the app's WRITE_SECURE_SETTINGS or the helper; parks only when it can restore). Emulator: parked after idle, "back on for a task" → task → parked again (2026-11-10).
+
+- [x] Copilot reliability: phone tools are `ToolDef.serial` (one at a time, approval included); disabled is judged on the row a tap reaches, and the error says to turn on the controlling switch; a whole-screen scroll/back acts on the current screen even with an older snapshot (JVM test) (2026-11-10).
+
+- [x] Copilot payment/login handoff that continues by itself: `handoff` takes a note and waits (`PhoneService.handoffAndWait`, native `handoff` + `awaitHandback`) until the user taps **Done · continue** on the auto-expanded floating panel, then returns the settled screen. Emulator: Settings → Display handed over, dark theme switched by hand, Done → the agent read the result without a new message (2026-11-10).
+
+- [x] Mid-turn auto-compaction: after every step the provider-reported prompt size is checked against the budget; over it, the turn stops, commits its steps, summarises older history including the running turn's earlier steps (`compactInTurn`, mode `turn`), and continues. The kept tail is sized from the room the fixed prefix leaves (2026-11-10).
+
+- [x] Reply language follows the user's message (or an explicit request), the app language only as a fallback; tool work before an answer folds into "Worked · N tool calls"; privacy notices are a native bottom sheet; About shows the open-source/free promise and GitHub contributors (2026-11-10).
+
+- [x] Claude-style shell: centred titles without dividers, floating pill tab bar with a sliding selected pill; content scrolls beneath (2026-11-10).
 
 ## Full-app UI refinement (2026-11-08)
 
