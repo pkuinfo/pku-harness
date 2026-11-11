@@ -175,6 +175,8 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
 
 - [x] Claude-style shell: centred titles without dividers, floating pill tab bar with a sliding selected pill; content scrolls beneath (2026-11-10).
 
+- [x] Voice input (dictation, Claude-style): mic in the composer (in place of send when empty) → live waveform, timer, ✕ / ✓ → "Transcribing…" → text appended to the draft. Bring-your-own-key speech services as plugins (`PluginDef.speech`, `speech` plugin: SiliconFlow SenseVoice/TeleSpeech + any OpenAI-compatible `/audio/transcriptions`); Settings → Voice input; key in SecureStore; recording uploaded with expo/fetch and deleted afterwards; 5-minute cap. Privacy policy 2026-11-11. Emulator: setup sheet, recording UI, upload reached SiliconFlow (401 without a key) (2026-11-11).
+
 ## Full-app UI refinement (2026-11-08)
 
 - [x] Apply the restrained Codex-inspired direction across Chat, Dashboard, Schedule,

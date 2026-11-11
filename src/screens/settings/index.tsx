@@ -11,6 +11,7 @@ import { Screen } from '@/components/screen';
 import { Segmented } from '@/components/segmented';
 import { Text } from '@/components/text';
 import { modelInfo } from '@/core/agent/attachments/attachments';
+import { useSpeechConfig } from '@/core/speech/config';
 import { useAIConfig } from '@/core/agent/provider';
 import { useCampusAccount } from '@/core/campus/account';
 import { displayHost } from '@/core/cloud/config';
@@ -54,6 +55,7 @@ export function Settings() {
   const zoneText = zoneId ? `${zoneName(zoneId, locale)} · ${formatUtcOffset(offsetNow(zoneId))}` : '';
   const timezoneSubtitle = timezonePref === 'auto' ? [t('core.settings.timezoneAuto'), zoneText].filter(Boolean).join(' · ') : zoneText;
   const ai = useAIConfig();
+  const voice = useSpeechConfig();
   const campus = useCampusAccount();
   const cloud = useCloudProvider();
   const cloudHost = displayHost(cloud.baseURL);
@@ -92,6 +94,12 @@ export function Settings() {
             title={t('app.settings.ai')}
             subtitle={ai.hasKey ? `${ai.config.name} · ${modelInfo(ai.config.providerId, ai.config.model)?.name ?? ai.config.model}` : t('app.settings.aiNotConnected')}
             onPress={() => router.push('/ai-settings')}
+          />
+          <ListRow
+            icon="mic"
+            title={t('app.settings.voice')}
+            subtitle={voice.ready && voice.provider ? `${voice.provider.def.name} · ${voice.provider.def.models.find((m) => m.id === voice.settings.model)?.name ?? voice.settings.model}` : t('app.settings.voiceOff')}
+            onPress={() => router.push('/voice-settings')}
           />
           <ListRow
             icon="cloud"

@@ -19,6 +19,7 @@ export const icons = {
   minus: { ios: 'minus', android: 'remove' },
   close: { ios: 'xmark', android: 'close' },
   check: { ios: 'checkmark', android: 'check' },
+  mic: { ios: 'mic', android: 'mic' },
   eye: { ios: 'eye', android: 'visibility' },
   eyeOff: { ios: 'eye.slash', android: 'visibility_off' },
   chevronRight: { ios: 'chevron.right', android: 'chevron_right' },

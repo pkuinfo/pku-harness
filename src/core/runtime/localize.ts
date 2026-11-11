@@ -57,13 +57,20 @@ export const providerText = (
   providerKey: string,
   src: { name: string; description: string; credentialHint?: string },
   locale: Locale = getLocale(),
+  section: 'providers' | 'speech' = 'providers',
 ) => {
-  const o = overlay(p, locale)?.providers?.[providerKey];
+  const o = overlay(p, locale)?.[section]?.[providerKey];
   return { name: o?.name ?? src.name, description: o?.description ?? src.description, credentialHint: o?.credentialHint ?? src.credentialHint };
 };
 
-export const modelText = (p: PluginDef | undefined, providerKey: string, model: { id: string; name?: string; description?: string }, locale: Locale = getLocale()) => {
-  const o = overlay(p, locale)?.providers?.[providerKey]?.models?.[model.id];
+export const modelText = (
+  p: PluginDef | undefined,
+  providerKey: string,
+  model: { id: string; name?: string; description?: string },
+  locale: Locale = getLocale(),
+  section: 'providers' | 'speech' = 'providers',
+) => {
+  const o = overlay(p, locale)?.[section]?.[providerKey]?.models?.[model.id];
   return { name: o?.name ?? model.name, description: o?.description ?? model.description };
 };
 

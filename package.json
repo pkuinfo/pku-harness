@@ -17,6 +17,7 @@
     "ai": "^7.0.143",
     "expo": "~58.0.14",
     "expo-application": "~58.1.2",
+    "expo-audio": "~58.0.11",
     "expo-background-task": "~58.0.11",
     "expo-blur": "~58.0.4",
     "expo-brightness": "~58.0.2",

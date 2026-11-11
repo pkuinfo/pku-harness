@@ -38,6 +38,8 @@ import { FullEditor, ImagePreview, TextPreview } from './previews';
 import { QueueChips } from './queue-chips';
 import { applyModel, useActiveSessionId, useSessionBusy, useSessionEmpty, useSessionModel } from './session';
 import { ComposerToast, composerToast } from './toast';
+import { useVoiceInput, VoiceBar } from './voice';
+import { appendDictation } from './voice-logic';
 
 const LINE = typography.callout.lineHeight;
 /** Grows to 6 lines, then scrolls (§4.3). */
@@ -94,6 +96,15 @@ export function Composer() {
   const partialCommand = query !== null && !parseCommand(text) && rankCommands(listCommands(), query).length > 0;
   const canSend = hasContent && !counter.over && pending === 0 && !partialCommand;
   const images = acceptsImages(providerId, model);
+
+  // ---- voice input (dictation into the draft) ------------------------------------------------
+  const voice = useVoiceInput(
+    useCallback((spoken: string) => {
+      composerDraft.setText(appendDictation(composerDraft.get().text, spoken));
+      input.current?.focus();
+    }, []),
+  );
+  const dictating = voice.phase !== 'idle';
 
   // ---- queue (§4.4) -------------------------------------------------------------------------
   const { queue, paused } = useQueue(sessionId);
@@ -319,6 +330,10 @@ export function Composer() {
         style={CURVE}>
         {attachments.length || pending ? <AttachmentTray items={attachments} pending={pending} onOpen={setPreview} onRemove={removeAttachment} /> : null}
 
+        {dictating ? (
+          <VoiceBar phase={voice.phase as 'recording' | 'transcribing'} levels={voice.levels} durationMs={voice.durationMs} onCancel={() => void voice.cancel()} onDone={() => void voice.finish()} />
+        ) : (
+        <>
         <View className="pl-3 pr-2 pt-1">
           <TextInput
             ref={input}
@@ -377,12 +392,23 @@ export function Composer() {
           <View className="flex-1" />
           {counterView}
           <Animated.View layout={layout} className="flex-row items-center gap-1.5">
+            {hasContent || busy ? (
+              <Animated.View key="mic-small" entering={pop} exiting={unpop}>
+                <IconButton icon="mic" label={t('chat.voice.start')} variant="ghost" size={36} onPress={() => void voice.start()} />
+              </Animated.View>
+            ) : null}
             {busy ? (
               <Animated.View key="stop" entering={pop} exiting={unpop}>
                 <IconButton icon="stop" label={t('chat.composer.stop')} variant={hasContent ? 'secondary' : 'primary'} size={36} onPress={onStop} />
               </Animated.View>
             ) : null}
-            {!busy || hasContent ? (
+            {!busy && !hasContent ? (
+              // Empty composer: the mic takes the send button's place (as in Claude's app).
+              <Animated.View key="mic" entering={pop} exiting={unpop}>
+                <IconButton icon="mic" label={t('chat.voice.start')} variant="secondary" size={36} onPress={() => void voice.start()} />
+              </Animated.View>
+            ) : null}
+            {hasContent ? (
               <Animated.View key={busy ? 'queue' : 'send'} entering={pop} exiting={unpop}>
                 <IconButton
                   icon={busy ? 'queue' : 'send'}
@@ -396,6 +422,8 @@ export function Composer() {
             ) : null}
           </Animated.View>
         </View>
+        </>
+        )}
       </Animated.View>
 
       <AttachSheet

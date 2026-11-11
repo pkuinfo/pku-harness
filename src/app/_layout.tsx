@@ -61,6 +61,7 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="welcome" options={{ animation: 'fade', gestureEnabled: false }} />
           <Stack.Screen name="ai-settings" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="voice-settings" options={{ presentation: 'modal' }} />
           <Stack.Screen name="cloud-settings" options={{ presentation: 'modal' }} />
           <Stack.Screen name="campus" options={{ presentation: 'modal' }} />
           <Stack.Screen name="m/[plugin]/[screen]" options={{ presentation: 'modal' }} />

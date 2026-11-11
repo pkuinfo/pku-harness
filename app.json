@@ -91,8 +91,7 @@
         "expo-image-picker",
         {
           "photosPermission": "允许 PKU Harness 访问相册，以便把图片作为附件发给 AI 助手",
-          "cameraPermission": "允许 PKU Harness 使用相机，以便拍照后作为附件发给 AI 助手",
-          "microphonePermission": false
+          "cameraPermission": "允许 PKU Harness 使用相机，以便拍照后作为附件发给 AI 助手"
         }
       ],
       [
@@ -115,7 +114,13 @@
           }
         }
       ],
-      "expo-sharing"
+      "expo-sharing",
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "PKU Harness uses the microphone for voice input. The recording goes only to the speech service you set up."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

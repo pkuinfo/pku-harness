@@ -9,7 +9,7 @@ import { unavailableReason } from './availability';
 import { hasDynamicCapability, subscribeCapabilities } from './capabilities';
 import { buildAliases, type LegacyAliases } from './legacy';
 import { modelText, providerText } from './localize';
-import type { Capability, CommandContribution, PluginDef, ProviderDef, ToolDef } from './types';
+import type { Capability, CommandContribution, PluginDef, ProviderDef, SpeechProviderDef, ToolDef } from './types';
 
 export type ToolEntry = { id: string; pluginId: string; name: string; def: ToolDef };
 /**
@@ -35,6 +35,7 @@ export function hostHas(c: Capability): boolean {
 }
 
 export type ProviderEntry = { id: string; pluginId: string; def: ProviderDef };
+export type SpeechProviderEntry = { id: string; pluginId: string; def: SpeechProviderDef };
 /** A plugin's `contributes.commands` entry; the commands module names and filters them. */
 export type CommandEntry = { pluginId: string; name: string; def: CommandContribution };
 
@@ -115,6 +116,19 @@ export const registry = {
   },
   provider(id: string): ProviderEntry | undefined {
     return this.providers().find((p) => p.id === id);
+  },
+  /** Speech-to-text services for voice input; ids are `<plugin>.<key>`, display strings localized. */
+  speechProviders(): SpeechProviderEntry[] {
+    return this.list().flatMap((p) =>
+      Object.entries(p.speech ?? {}).map(([key, def]) => {
+        const text = providerText(p, key, def, undefined, 'speech');
+        const models = def.models.map((m) => { const text = modelText(p, key, m, undefined, 'speech'); return { ...m, name: text.name ?? m.name, description: text.description }; });
+        return { id: `${p.id}.${key}`, pluginId: p.id, def: { ...def, ...text, models } };
+      }),
+    );
+  },
+  speechProvider(id: string): SpeechProviderEntry | undefined {
+    return this.speechProviders().find((p) => p.id === id);
   },
   subscribe(listener: () => void) {
     listeners.add(listener);
