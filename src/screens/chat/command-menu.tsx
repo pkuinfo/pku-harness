@@ -6,15 +6,16 @@
  */
 import { useEffect, useMemo, useRef, type ComponentRef } from 'react';
 import { ScrollView, StyleSheet } from 'react-native';
-import Animated, { FadeIn, FadeOut, useReducedMotion, withSpring, withTiming, type EntryAnimationsValues, type LayoutAnimation } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useReducedMotion, withTiming, type EntryAnimationsValues, type LayoutAnimation } from 'react-native-reanimated';
 
 import { Icon, type IconName } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import { COMMAND_GROUPS, isAsciiAlias, menuQuery, rankCommands, useCommands, type Command } from '@/core/commands';
 import { useLocale, useT } from '@/i18n';
-import { duration, shadows, spacing, springs, typography, useTheme } from '@/theme';
+import { duration, shadows, spacing, typography, useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
+import { timings } from '@/theme/transitions';
 
 export type CommandMenuProps = {
   /** The composer's current draft; the menu shows only while it is a `/` token being typed. */
@@ -40,7 +41,7 @@ function riseIn(_values: EntryAnimationsValues): LayoutAnimation {
     initialValues: { opacity: 0, transform: [{ translateY: RISE }] },
     animations: {
       opacity: withTiming(1, { duration: duration.fast }),
-      transform: [{ translateY: withSpring(0, springs.smooth) }],
+      transform: [{ translateY: withTiming(0, timings.base) }],
     },
   };
 }

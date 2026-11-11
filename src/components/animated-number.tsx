@@ -1,15 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { View, type StyleProp, type TextStyle } from 'react-native';
-import Animated, {
-  useAnimatedStyle,
-  useReducedMotion,
-  useSharedValue,
-  withSpring,
-} from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { springs, typography, useTheme, type TypographyVariant } from '@/theme';
+import { typography, useTheme, type TypographyVariant } from '@/theme';
 
 import { Text } from './text';
+import { timings } from '@/theme/transitions';
 
 const DIGITS = '0123456789';
 
@@ -70,7 +66,7 @@ function Digit({
       first.current = false;
       return;
     }
-    y.value = reduced ? -digit * lineHeight : withSpring(-digit * lineHeight, springs.smooth);
+    y.value = reduced ? -digit * lineHeight : withTiming(-digit * lineHeight, timings.base);
   }, [digit, lineHeight, reduced, y]);
   const animated = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
   return (

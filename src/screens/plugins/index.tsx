@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { TextInput, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition, useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useReducedMotion } from 'react-native-reanimated';
 
 import { IconButton } from '@/components/button';
 import { EmptyState } from '@/components/empty-state';
@@ -13,12 +13,13 @@ import { Text } from '@/components/text';
 import { pluginDescription, pluginName } from '@/core/runtime/localize';
 import { MAX_CONTENT_WIDTH, useLayout } from '@/hooks/use-layout';
 import { useLocale, useT } from '@/i18n';
-import { duration, fonts, radius, spacing, springs, typography, useTheme } from '@/theme';
+import { duration, fonts, radius, spacing, typography, useTheme } from '@/theme';
 
 import { ActionCard } from './action-card';
 import { PluginCard } from './plugin-card';
 import { GROUP_TONE, groupPlugins, matches, summarize } from './status';
 import { usePluginEntries } from './use-plugin-status';
+import { transitions } from '@/theme/transitions';
 
 const GAP = 0;
 
@@ -51,7 +52,7 @@ export function PluginsScreen() {
   const { on, total } = summarize(entries.map((e) => e.status));
   // Keep stable ordering across groups.
   const order = new Map(groups.flatMap((g) => g.plugins).map((p, i) => [p.id, i]));
-  const layout = reduced ? undefined : LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness);
+  const layout = reduced ? undefined : transitions.layout;
 
   return (
     <Screen title={t('app.plugins.title')} subtitle={total ? t('app.plugins.countLine', { on, total }) : undefined} back keyboardShouldPersistTaps="handled">

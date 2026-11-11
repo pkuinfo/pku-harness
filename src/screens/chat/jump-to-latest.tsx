@@ -1,16 +1,17 @@
 import { View } from 'react-native';
-import Animated, { FadeIn, FadeOut, useReducedMotion, ZoomIn, ZoomOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useReducedMotion } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import { useChat } from '@/core/agent/session/chat-store';
 import { useLocale, useT } from '@/i18n';
-import { springs, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 
 import { AgentOrbit } from '@/components/agent-orbit';
 
 import { phaseOf } from './agent-status';
+import { transitions } from '@/theme/transitions';
 
 /**
  * Floating "back to latest" pill, shown only while the reader has scrolled away from the end.
@@ -31,8 +32,8 @@ export function JumpToLatest({ unread, onPress }: { unread: boolean; onPress: ()
 
   const phase = busy ? phaseOf(reply, locale) : null;
   const label = phase ? `${phase.verb}${phase.detail ? ` ${phase.detail}` : ''}` : unread ? t('chat.jump.newReply') : null;
-  const enter = reduced ? FadeIn : ZoomIn.springify().damping(springs.snappy.damping).stiffness(springs.snappy.stiffness).mass(springs.snappy.mass);
-  const exit = reduced ? FadeOut : ZoomOut.duration(140);
+  const enter = reduced ? FadeIn : transitions.enter;
+  const exit = reduced ? FadeOut : transitions.exit;
 
   return (
     <Animated.View entering={enter} exiting={exit} pointerEvents="box-none" style={{ alignItems: 'center' }}>

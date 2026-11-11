@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Pressable, View, type GestureResponderEvent } from 'react-native';
-import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Line, Path } from 'react-native-svg';
 
 import { useT } from '@/i18n';
-import { springs, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 
 import { Text } from '../text';
+import { timings } from '@/theme/transitions';
 
 /** Column with a 4px rounded data end, square at the baseline. */
 function columnPath(x: number, y: number, w: number, h: number, rounded: boolean) {
@@ -56,7 +57,7 @@ export function ColumnChart({
 
   const grow = useSharedValue(reduced ? 1 : 0);
   useEffect(() => {
-    if (width > 0) grow.set(reduced ? withTiming(1, { duration: 200 }) : withSpring(1, springs.smooth));
+    if (width > 0) grow.set(reduced ? withTiming(1, { duration: 200 }) : withTiming(1, timings.base));
   }, [width, reduced, grow]);
   const growStyle = useAnimatedStyle(() => (reduced ? { opacity: grow.get() } : { transform: [{ scaleY: grow.get() }] }));
 

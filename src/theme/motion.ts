@@ -8,9 +8,8 @@ export const duration = {
 } as const;
 
 /**
- * Shared spring configs so motion across the app feels related. Both are critically damped
- * (damping = 2·√(stiffness·mass)): they settle as fast as possible without overshoot, so nothing
- * bounces or wobbles into place (docs/DESIGN.md, Motion). Use only these; no bare `.springify()`.
+ * Critically damped springs, kept for the welcome scene and gesture follow-through only. UI
+ * motion uses the timed `transitions` / `timings` in ./transitions.ts (docs/DESIGN.md, Motion).
  */
 export const springs = {
   snappy: { damping: 32, stiffness: 420, mass: 0.6 },

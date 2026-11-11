@@ -117,11 +117,15 @@ not delay input, hide errors, or leave transparent interactive layers over conte
 
 The standard for every screen, sheet and plugin:
 
-- **No bounce.** Springs come only from `springs` in `src/theme/motion.ts`, which are critically
-  damped: they settle without overshoot. Never a bare `.springify()` or `withSpring(x)` without a
-  preset; timing animations use the `curves`.
-- **Nothing appears or moves in one frame.** Things that enter fade or slide in; things that
-  change size or position animate (`LinearTransition` with a preset). A visible jump is a bug.
+- **Native, timed, calm.** Motion comes only from `src/theme/transitions.ts`: `transitions.enter`
+  / `exit` (a short fade in place), `layout` (size and position), `sheetIn` / `sheetOut` (a panel
+  from the bottom edge), and `timings.fast` / `base` for `withTiming`. All are timed with the
+  ease-out curve: no springs, no overshoot, no zooming in, no rising cascades or staggered lists.
+- **Press feedback is a quick dim** (`PressableScale`), not a shrink.
+- **Sheets are native when possible** (`NativeSheet`: Material's bottom sheet on Android, opening
+  fully at its content's height), with the platform's own slide and drag-to-dismiss.
+- **Nothing appears or moves in one frame.** Things that enter fade in; things that change size
+  or position animate (`transitions.layout`). A visible jump is a bug.
 - **One motion at a time, tied to its cause.** Whatever moves with the keyboard follows the
   keyboard's own animation frame by frame (`react-native-keyboard-controller`: the composer uses
   `useReanimatedKeyboardAnimation`, lists use `KeyboardChatScrollView`/`KeyboardAwareScrollView`).

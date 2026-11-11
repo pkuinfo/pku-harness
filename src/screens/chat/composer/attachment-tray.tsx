@@ -1,15 +1,16 @@
 import { Image } from 'expo-image';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition, useReducedMotion, ZoomIn, ZoomOut } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useReducedMotion } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import type { AttachmentPart } from '@/core/agent/session/chat-store';
 import { t as translateNow, useT } from '@/i18n';
-import { radius, spacing, springs, useTheme } from '@/theme';
+import { radius, spacing, useTheme } from '@/theme';
 
 import { firstLine, pasteLabel, textStats, type Tr } from './logic';
+import { transitions } from '@/theme/transitions';
 
 const CURVE = { borderCurve: 'continuous' } as const;
 /** 56 px thumbnails (§4.2). */
@@ -67,9 +68,9 @@ export function AttachmentTray({
   const c = useTheme();
   const t = useT();
   const reduced = useReducedMotion();
-  const enter = reduced ? FadeIn : ZoomIn.springify().damping(springs.snappy.damping).stiffness(springs.snappy.stiffness);
-  const exit = reduced ? FadeOut : ZoomOut;
-  const layout = reduced ? undefined : LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness);
+  const enter = reduced ? FadeIn : transitions.enter;
+  const exit = reduced ? FadeOut : transitions.exit;
+  const layout = reduced ? undefined : transitions.layout;
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerClassName="gap-0.5 pb-1 pl-3 pr-1.5 pt-1.5">
       {items.map((a) =>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition, useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
 import { AgentOrbit } from '@/components/agent-orbit';
 import { Icon } from '@/components/icon';
@@ -8,12 +8,12 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import type { ChatPart } from '@/core/agent/session/chat-store';
 import { useLocale, useT } from '@/i18n';
-import { springs, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 
 import { toolLabel } from './labels';
+import { timings, transitions } from '@/theme/transitions';
 
 type ToolPart = Extract<ChatPart, { type: 'tool' }>;
-
 
 function StatusIcon({ status }: { status: ToolPart['status'] }) {
   const c = useTheme();
@@ -55,7 +55,7 @@ export function ToolGroup({ parts }: { parts: ToolPart[] }) {
     : t('chat.tools.used', { count: parts.length, names: `${names.slice(0, 3).join(t('chat.tools.listSep'))}${names.length > 3 ? '…' : ''}` });
 
   return (
-    <Animated.View layout={LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)} className="max-w-full self-start gap-1.5">
+    <Animated.View layout={transitions.layout} className="max-w-full self-start gap-1.5">
       <PressableScale
         disabled={!!running}
         onPress={() => setOpen((o) => !o)}
@@ -88,7 +88,7 @@ export function ToolGroup({ parts }: { parts: ToolPart[] }) {
 
 /** Expand/collapse indicator shared by the chat's foldable rows. */
 export function Chevron({ open, color }: { open: boolean; color: string }) {
-  const style = useAnimatedStyle(() => ({ transform: [{ rotate: withSpring(open ? '180deg' : '0deg', springs.snappy) }] }));
+  const style = useAnimatedStyle(() => ({ transform: [{ rotate: withTiming(open ? '180deg' : '0deg', timings.fast) }] }));
   return (
     <Animated.View style={style}>
       <Icon name="chevronDown" size={14} color={color} />

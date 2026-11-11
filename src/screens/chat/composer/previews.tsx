@@ -1,16 +1,17 @@
 import { Image } from 'expo-image';
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Modal, ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { FadeIn, useReducedMotion, ZoomIn } from 'react-native-reanimated';
+import Animated, { FadeIn, useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, IconButton } from '@/components/button';
 import { Text } from '@/components/text';
 import type { AttachmentPart } from '@/core/agent/session/chat-store';
 import { useT } from '@/i18n';
-import { spacing, springs, useTheme } from '@/theme';
+import { spacing, useTheme } from '@/theme';
 
 import { textChipLines } from './attachment-tray';
+import { transitions } from '@/theme/transitions';
 
 /** Full-screen layer over everything (edge to edge, back button closes). */
 function FullScreen({
@@ -49,7 +50,7 @@ export function ImagePreview({ image, onClose, onRemove }: { image: AttachmentPa
       <View className="flex-1 bg-bg">
         {image ? (
           <Animated.View
-            entering={reduced ? FadeIn : ZoomIn.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
+            entering={reduced ? FadeIn : transitions.enter}
             className="flex-1">
             <Image source={{ uri: image.uri }} contentFit="contain" style={StyleSheet.absoluteFill} accessibilityLabel={image.name} />
           </Animated.View>

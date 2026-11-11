@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 
-import { springs } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
 
 import { PressableScale } from './pressable-scale';
 import { Text } from './text';
+import { timings } from '@/theme/transitions';
 
 const CURVE = { borderCurve: 'continuous' } as const;
 
@@ -28,7 +28,7 @@ export function Segmented<T extends string>({
   const seg = width / options.length;
   const thumb = useAnimatedStyle(() => ({
     width: seg - 4,
-    transform: [{ translateX: withSpring(index * seg + 2, springs.smooth) }],
+    transform: [{ translateX: withTiming(index * seg + 2, timings.base) }],
   }));
   return (
     <View

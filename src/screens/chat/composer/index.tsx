@@ -1,30 +1,20 @@
 import { router, useFocusEffect, type Href } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ComponentRef } from 'react';
 import { Keyboard, TextInput, View, type TextInputContentSizeChangeEvent } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition, useReducedMotion, withSpring, ZoomIn, ZoomOut, type LayoutAnimationFunction } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useReducedMotion, withTiming, type LayoutAnimationFunction } from 'react-native-reanimated';
 
 import { IconButton } from '@/components/button';
 import { ContextRing } from '@/components/context-ring';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
-import {
-  acceptsImages,
-  discardAttachmentFile,
-  limitNotice,
-  MAX_ATTACHMENTS,
-  pickFiles,
-  pickImages,
-  remainingSlots,
-  takePhoto,
-  textAttachment,
-} from '@/core/agent/attachments/attachments';
+import { acceptsImages, discardAttachmentFile, limitNotice, MAX_ATTACHMENTS, pickFiles, pickImages, remainingSlots, takePhoto, textAttachment } from '@/core/agent/attachments/attachments';
 import type { AttachmentPart } from '@/core/agent/session/chat-store';
 import { sendMessage, stopGeneration } from '@/core/agent/run';
 import { sessions, useDraftRevision, useQueue, type QueuedMessage } from '@/core/agent/session/sessions';
 import { executeCommandLine, listCommands, menuQuery, parseCommand, rankCommands, type Command, type CommandContext } from '@/core/commands';
 import { useT } from '@/i18n';
-import { springs, typography, useTheme } from '@/theme';
+import { typography, useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 import { haptics } from '@/utils/haptics';
 
@@ -40,6 +30,7 @@ import { applyModel, useActiveSessionId, useSessionBusy, useSessionEmpty, useSes
 import { ComposerToast, composerToast } from './toast';
 import { useVoiceInput, VoiceBar } from './voice';
 import { appendDictation } from './voice-logic';
+import { timings, transitions } from '@/theme/transitions';
 
 const LINE = typography.callout.lineHeight;
 /** Grows to 6 lines, then scrolls (§4.3). */
@@ -307,9 +298,9 @@ export function Composer() {
   const token = command ? text.split(/\s/, 1)[0] : '';
   const ghost = command?.command.argHint && !command.input && text.endsWith(' ') ? command.command.argHint : '';
 
-  const layout = reduced ? undefined : LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness);
-  const pop = reduced ? FadeIn : ZoomIn.springify().damping(springs.snappy.damping).stiffness(springs.snappy.stiffness);
-  const unpop = reduced ? FadeOut : ZoomOut.duration(120);
+  const layout = reduced ? undefined : transitions.layout;
+  const pop = reduced ? FadeIn : transitions.enter;
+  const unpop = reduced ? FadeOut : transitions.exit;
 
   const counterView = counter.show ? (
     <Text variant="caption" tone={counter.over ? 'down' : 'faint'} style={{ fontVariant: ['tabular-nums'] }} accessibilityLabel={t('chat.count.chars', { count: chars, n: chars })}>
@@ -464,20 +455,19 @@ export function Composer() {
 
 /**
  * The composer box's layout transition. The composer is anchored to the bottom, so the box only
- * really moves when its own height changes: keep its bottom edge fixed and spring the top. A
+ * really moves when its own height changes: keep its bottom edge fixed and ease the top. A
  * LinearTransition would also animate position changes caused by siblings above it (the command
  * menu filtering down, queue chips), sliding the box over them for a few frames.
  */
 const growFromBottom: LayoutAnimationFunction = (v) => {
   'worklet';
-  const config = { damping: springs.smooth.damping, stiffness: springs.smooth.stiffness };
   // Same height: only a sibling changed. Land in place, nothing to animate.
   if (Math.abs(v.targetHeight - v.currentHeight) < 0.5) {
     return { initialValues: { originX: v.targetOriginX, originY: v.targetOriginY, width: v.targetWidth, height: v.targetHeight }, animations: {} };
   }
   return {
     initialValues: { originX: v.targetOriginX, width: v.targetWidth, originY: v.targetOriginY + v.targetHeight - v.currentHeight, height: v.currentHeight },
-    animations: { originY: withSpring(v.targetOriginY, config), height: withSpring(v.targetHeight, config) },
+    animations: { originY: withTiming(v.targetOriginY, timings.base), height: withTiming(v.targetHeight, timings.base) },
   };
 };
 

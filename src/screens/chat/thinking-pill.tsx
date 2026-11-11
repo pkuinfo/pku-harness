@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useWindowDimensions, View } from 'react-native';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { AgentOrbit } from '@/components/agent-orbit';
 import { Icon } from '@/components/icon';
@@ -8,10 +8,11 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import type { ChatPart } from '@/core/agent/session/chat-store';
 import { useT } from '@/i18n';
-import { springs, typography, useTheme } from '@/theme';
+import { typography, useTheme } from '@/theme';
 
 import { Chevron } from './tool-chip';
 import { thinkingBody, thinkingPreview, thinkingSeconds, thinkingTail, thinkingWindowHeight } from './thinking';
+import { transitions } from '@/theme/transitions';
 
 type ReasoningPart = Extract<ChatPart, { type: 'reasoning' }>;
 
@@ -62,7 +63,7 @@ export function ThinkingPill({ part, live, replyStreaming }: { part: ReasoningPa
   const label = part.ms !== undefined ? t('chat.thinking.done', { s: thinkingSeconds(part.ms) }) : t('chat.thinking.untimed');
   const preview = thinkingPreview(part.text);
   return (
-    <Animated.View layout={LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)} className="max-w-full self-start gap-1.5">
+    <Animated.View layout={transitions.layout} className="max-w-full self-start gap-1.5">
       <PressableScale
         onPress={() => setOpen((o) => !o)}
         accessibilityRole="button"

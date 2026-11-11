@@ -68,10 +68,13 @@ export function VoiceSettings() {
   const [model, setModel] = useState(initial.model);
   const [credential, setCredential] = useState('');
   const [savedCredential, setSavedCredential] = useState('');
+  // Load the saved key when the service changes (by id: the registry builds new entry objects
+  // on every render, and reloading on those reset the field on each keystroke).
+  const entryId = entry?.id;
   useEffect(() => {
-    if (!entry) return;
+    if (!entryId) return;
     let live = true;
-    void speechConfig.credential(entry.id).then((k) => {
+    void speechConfig.credential(entryId).then((k) => {
       if (!live) return;
       setSavedCredential(k ?? '');
       setCredential(k ?? '');
@@ -79,7 +82,7 @@ export function VoiceSettings() {
     return () => {
       live = false;
     };
-  }, [entry]);
+  }, [entryId]);
   if (!entry) return null;
 
   const select = (id: string) => {

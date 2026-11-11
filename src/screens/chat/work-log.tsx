@@ -1,15 +1,16 @@
 import { useState, type ReactNode } from 'react';
-import Animated, { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import type { ChatPart } from '@/core/agent/session/chat-store';
 import { useT } from '@/i18n';
-import { springs, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { Chevron } from './tool-chip';
+import { transitions } from '@/theme/transitions';
 
 /**
  * The work before a reply's answer (thinking, tool calls, notes between them) folded into one
@@ -23,7 +24,7 @@ export function WorkLog({ parts, render }: { parts: ChatPart[]; render: (part: C
   const failed = tools.filter((p) => p.status === 'error').length;
   const label = [t('chat.tools.worked', { count: tools.length }), failed ? t('chat.tools.failed', { count: failed }) : ''].filter(Boolean).join(' · ');
   return (
-    <Animated.View layout={LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)} className="gap-1.5">
+    <Animated.View layout={transitions.layout} className="gap-1.5">
       <PressableScale
         onPress={() => {
           haptics.select();

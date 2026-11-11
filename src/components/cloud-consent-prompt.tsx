@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import Animated, { FadeIn, FadeOut, SlideInDown, SlideOutDown } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { displayHost } from '@/core/cloud/config';
@@ -9,13 +9,14 @@ import { useCloudProvider } from '@/core/cloud/provider';
 import { usePlugin } from '@/core/runtime/hooks';
 import { pluginName } from '@/core/runtime/localize';
 import { useLocale, useT } from '@/i18n';
-import { shadows, spacing, springs, useTheme } from '@/theme';
+import { shadows, spacing, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { Button } from './button';
 import { Chip } from './chip';
 import { Icon } from './icon';
 import { Text } from './text';
+import { transitions } from '@/theme/transitions';
 
 const CURVE = { borderCurve: 'continuous' } as const;
 
@@ -52,8 +53,8 @@ function Sheet({ id, pluginId }: { id: number; pluginId: string }) {
     <View className="absolute inset-0" pointerEvents="box-none">
       <Animated.View entering={FadeIn} exiting={FadeOut} className="absolute inset-0" style={{ backgroundColor: c.scrim }} />
       <Animated.View
-        entering={SlideInDown.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
-        exiting={SlideOutDown}
+        entering={transitions.sheetIn}
+        exiting={transitions.sheetOut}
         accessibilityViewIsModal
         className="absolute bottom-2 left-2 right-2 gap-3 rounded-xl bg-elevated p-4"
         style={{ borderCurve: 'continuous', paddingBottom: Math.max(insets.bottom, spacing.lg), boxShadow: shadows.overlay }}>

@@ -1,12 +1,13 @@
 import type { TabTriggerSlotProps } from 'expo-router/ui';
 import { useEffect } from 'react';
 import { Pressable } from 'react-native';
-import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { interpolateColor, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { spacing, springs, typography, useTheme } from '@/theme';
+import { spacing, typography, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { Icon, type IconName } from './icon';
+import { timings } from '@/theme/transitions';
 
 export type TabButtonProps = TabTriggerSlotProps & {
   icon: IconName;
@@ -26,7 +27,7 @@ export function TabButton({ icon, label, isFocused, onPress, ref: _ref, style: _
   const c = useTheme();
   const focus = useSharedValue(isFocused ? 1 : 0);
   useEffect(() => {
-    focus.set(withSpring(isFocused ? 1 : 0, springs.smooth));
+    focus.set(withTiming(isFocused ? 1 : 0, timings.base));
   }, [isFocused, focus]);
 
   const iconStyle = useAnimatedStyle(() => ({ opacity: 0.75 + 0.25 * focus.get() }));
@@ -59,7 +60,7 @@ export function TabIndicator({ index, count, width, height }: { index: number; c
   const x = useSharedValue(TAB_BAR_PAD + index * tabW);
   useEffect(() => {
     if (width <= 0 || index < 0) return;
-    x.set(withSpring(TAB_BAR_PAD + index * tabW, springs.smooth));
+    x.set(withTiming(TAB_BAR_PAD + index * tabW, timings.base));
   }, [index, tabW, width, x]);
   const style = useAnimatedStyle(() => ({ transform: [{ translateX: x.get() }] }));
   if (width <= 0 || height <= 0 || index < 0) return null;

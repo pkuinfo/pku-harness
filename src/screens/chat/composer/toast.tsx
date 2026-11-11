@@ -1,10 +1,11 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { View } from 'react-native';
-import Animated, { FadeIn, FadeInDown, FadeOut, useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useReducedMotion } from 'react-native-reanimated';
 
 import { Icon, type IconName } from '@/components/icon';
 import { Text } from '@/components/text';
-import { shadows, springs, useTheme, type ThemeColors } from '@/theme';
+import { shadows, useTheme, type ThemeColors } from '@/theme';
+import { transitions } from '@/theme/transitions';
 
 type Tone = 'info' | 'warn';
 type Toast = { id: number; text: string; tone: Tone };
@@ -55,7 +56,7 @@ export function ComposerToast() {
   return (
     <Animated.View
       key={toast.id}
-      entering={reduced ? FadeIn : FadeInDown.springify().damping(springs.snappy.damping).stiffness(springs.snappy.stiffness)}
+      entering={reduced ? FadeIn : transitions.enter}
       exiting={FadeOut}
       accessibilityLiveRegion="polite"
       accessibilityRole="alert"

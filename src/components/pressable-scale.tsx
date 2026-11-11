@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 import { Pressable, type PressableProps, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { pressScale, springs } from '@/theme';
+import { timings } from '@/theme/transitions';
 import { haptics } from '@/utils/haptics';
 
 const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
@@ -10,37 +10,30 @@ const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
 export type PressableScaleProps = Omit<PressableProps, 'style' | 'children'> & {
   style?: StyleProp<ViewStyle>;
   children?: ReactNode;
-  /** Scale while pressed (default 0.97). */
+  /** Kept for existing callers; presses now dim instead of shrinking. */
   scaleTo?: number;
   /** Fire a light haptic on press. */
   haptic?: boolean;
 };
 
-/** Pressable with spring scale feedback on the UI thread. Base of every tappable element. */
-export function PressableScale({
-  style,
-  children,
-  scaleTo = pressScale,
-  haptic = true,
-  onPressIn,
-  onPressOut,
-  onPress,
-  disabled,
-  ...rest
-}: PressableScaleProps) {
-  const scale = useSharedValue(1);
-  const animated = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+/** Opacity while pressed: a quick, native-style dim (no shrink, no spring). */
+const PRESSED = 0.55;
+
+/** Pressable with timed press feedback on the UI thread. Base of every tappable element. */
+export function PressableScale({ style, children, scaleTo: _scaleTo, haptic = true, onPressIn, onPressOut, onPress, disabled, ...rest }: PressableScaleProps) {
+  const opacity = useSharedValue(1);
+  const animated = useAnimatedStyle(() => ({ opacity: opacity.get() }));
 
   return (
     <AnimatedPressable
       {...rest}
       disabled={disabled}
       onPressIn={(e) => {
-        scale.set(withSpring(scaleTo, springs.snappy));
+        opacity.set(withTiming(PRESSED, { duration: 80 }));
         onPressIn?.(e);
       }}
       onPressOut={(e) => {
-        scale.set(withSpring(1, springs.snappy));
+        opacity.set(withTiming(1, timings.fast));
         onPressOut?.(e);
       }}
       onPress={(e) => {

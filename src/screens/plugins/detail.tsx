@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Alert, View } from 'react-native';
-import Animated, { FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { FadeIn, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
 import { Chip } from '@/components/chip';
@@ -22,7 +22,7 @@ import { registry } from '@/core/runtime/registry';
 import { remotePlugins } from '@/core/runtime/remote';
 import type { PluginDef } from '@/core/runtime/types';
 import { useLocale, useT } from '@/i18n';
-import { springs, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { CloudSection } from './cloud-section';
@@ -31,6 +31,7 @@ import { MODE_TONE, effectIcon, effectInfo, effectsOf, modeOptions } from './eff
 import { PluginTile } from './plugin-tile';
 import { STATUS_LABEL, STATUS_TONE, isRunning } from './status';
 import { usePluginStatus } from './use-plugin-status';
+import { timings } from '@/theme/transitions';
 
 /** Tab slots a plugin can fill → their routes (Expo Router tabs). */
 const TAB_ROUTE = { dashboard: '/dashboard', schedule: '/schedule' } as const;
@@ -66,7 +67,7 @@ function Collapsible({ title, children }: { title: string; children: ReactNode }
   const toggle = () => {
     const next = !open;
     setOpen(next);
-    turn.set(reduced ? (next ? 180 : 0) : withSpring(next ? 180 : 0, springs.snappy));
+    turn.set(reduced ? (next ? 180 : 0) : withTiming(next ? 180 : 0, timings.fast));
   };
   return (
     <View className="gap-2">

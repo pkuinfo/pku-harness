@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
-import { glassMaterial, radius as radii, springs, useThemeName } from '@/theme';
+import { glassMaterial, radius as radii, useThemeName } from '@/theme';
 import { haptics } from '@/utils/haptics';
-
+import { timings } from '@/theme/transitions';
 
 export type GlassProps = {
   children?: ReactNode;
@@ -62,11 +62,11 @@ export function Glass({ children, style, radius = radii.lg, tone = 'regular', on
       accessibilityLabel={accessibilityLabel}
       onPressIn={() => {
         lift.set(withTiming(1, { duration: 90 }));
-        scale.set(withSpring(0.98, springs.snappy));
+        scale.set(withTiming(0.98, timings.fast));
       }}
       onPressOut={() => {
         lift.set(withTiming(0, { duration: 260 }));
-        scale.set(withSpring(1, springs.snappy));
+        scale.set(withTiming(1, timings.fast));
       }}
       onPress={() => {
         if (haptic) haptics.tap();

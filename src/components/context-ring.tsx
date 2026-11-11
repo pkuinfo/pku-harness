@@ -1,14 +1,15 @@
 import { router } from 'expo-router';
 import { useEffect } from 'react';
-import Animated, { useAnimatedProps, useReducedMotion, useSharedValue, withSpring } from 'react-native-reanimated';
+import Animated, { useAnimatedProps, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 
 import { useContextBreakdown } from '@/core/usage/hooks';
 import { formatCompact, formatPercent } from '@/core/usage/format';
 import { useT } from '@/i18n';
-import { springs, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 
 import { PressableScale } from './pressable-scale';
+import { timings } from '@/theme/transitions';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -33,7 +34,7 @@ export function ContextRing({ sessionId, onPress }: { sessionId?: string; onPres
 
   const p = useSharedValue(fill);
   useEffect(() => {
-    p.set(reduced ? fill : withSpring(fill, springs.smooth));
+    p.set(reduced ? fill : withTiming(fill, timings.base));
   }, [fill, reduced, p]);
   const props = useAnimatedProps(() => ({ strokeDashoffset: LEN * (1 - p.get()) }));
 

@@ -1,20 +1,11 @@
 import { useEffect } from 'react';
 import { View } from 'react-native';
-import Animated, {
-  cancelAnimation,
-  Easing,
-  useAnimatedProps,
-  useReducedMotion,
-  useSharedValue,
-  withRepeat,
-  withSequence,
-  withSpring,
-  withTiming,
-} from 'react-native-reanimated';
+import Animated, { cancelAnimation, Easing, useAnimatedProps, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 
 import { brand } from '@/theme/brand';
-import { springs, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
+import { timings } from '@/theme/transitions';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -63,7 +54,7 @@ export function AgentOrbit({ state, size = 18 }: { state: OrbitState; size?: num
       const at = angle.get();
       const rest = (((HOME - at) % 360) + 360) % 360;
       angle.set(withTiming(at + rest, { duration: 260 + rest * 2.5, easing: Easing.bezier(0.23, 1, 0.32, 1) }));
-      tail.set(withSpring(0, springs.smooth));
+      tail.set(withTiming(0, timings.base));
       pulse.set(withTiming(1, { duration: 200 }));
       return;
     }
@@ -76,7 +67,7 @@ export function AgentOrbit({ state, size = 18 }: { state: OrbitState; size?: num
     }
     const from = angle.get();
     angle.set(withRepeat(withTiming(from + 360, { duration: m.ms, easing: Easing.linear }), -1, false));
-    tail.set(withSpring(m.tail, springs.smooth));
+    tail.set(withTiming(m.tail, timings.base));
   }, [state, reduced, angle, tail, pulse]);
 
   const dot = useAnimatedProps(() => {

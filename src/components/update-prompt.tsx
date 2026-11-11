@@ -1,21 +1,22 @@
-import { BottomSheet, RNHostView } from '@expo/ui';
+import { RNHostView } from '@expo/ui';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
-import { BackHandler, Pressable, useWindowDimensions, View } from 'react-native';
-import Animated, { Easing, FadeIn, FadeOut, LinearTransition, SlideInDown, SlideOutDown, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import { ScrollView, useWindowDimensions, View } from 'react-native';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isOnboarded } from '@/core/boot';
 import { legalNoticeDue, markLegalAccepted } from '@/core/legal';
 import { checkOnLaunch, installedVersion, snooze, type AppUpdate } from '@/core/update/app-update';
 import { cancelInstall, cleanUpdateDownloads, installUpdate, useInstallState, type InstallState } from '@/core/update/install';
-import { t, useLocale, useT } from '@/i18n';
-import { curves, shadows, spacing, springs, useTheme } from '@/theme';
+import { useLocale, useT } from '@/i18n';
+import { curves, spacing, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { Button } from './button';
 import { Icon } from './icon';
 import { Logo } from './logo';
+import { NativeSheet } from './native-sheet';
 import { Text } from './text';
 
 const CURVE = { borderCurve: 'continuous' } as const;
@@ -91,7 +92,7 @@ function LegalSheet({ kind, onClose }: { kind: 'new' | 'updated' | null; onClose
     router.push('/legal/privacy');
   };
   return (
-    <BottomSheet isPresented={!!kind} onDismiss={onClose} containerColor={c.elevated} contentPadding={{ left: 0, right: 0, top: 0, bottom: 0 }}>
+    <NativeSheet open={!!kind} onDismiss={onClose} color={c.elevated}>
       <RNHostView matchContents>
         <View className="gap-5 px-6 pt-1" style={{ width, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }}>
           <View className="flex-row items-center gap-4">
@@ -111,16 +112,25 @@ function LegalSheet({ kind, onClose }: { kind: 'new' | 'updated' | null; onClose
           </View>
         </View>
       </RNHostView>
-    </BottomSheet>
+    </NativeSheet>
   );
 }
 
+/**
+ * The update offer and its download, as a native bottom sheet (@expo/ui): the platform's own
+ * slide and drag-to-dismiss, and never taller than the screen (the notes scroll).
+ */
 function UpdateSheet() {
   const c = useTheme();
   const insets = useSafeAreaInsets();
+  const { width: screenW } = useWindowDimensions();
+  const width = Math.min(screenW, SHEET_MAX_WIDTH);
   const update = useOffered();
   const install = useInstallState();
   const open = !!update || install.phase !== 'idle';
+  // Keep the last offer on screen while the sheet slides away.
+  const [shown, setShown] = useState(update);
+  if (update && update !== shown) setShown(update);
 
   // A finished (or cancelled) download closes the sheet; Android's installer takes over from here.
   const phase = useRef(install.phase);
@@ -129,42 +139,28 @@ function UpdateSheet() {
     phase.current = install.phase;
   }, [install.phase]);
 
-  // Back or a tap outside: an unanswered offer counts as Later; a running download keeps going in
-  // the background (the installer still opens when it finishes); a failure is dismissed.
+  // Swipe down, back or a tap outside: an unanswered offer counts as Later; a running download
+  // keeps going in the background (the installer still opens when it finishes); a failure is dismissed.
   const dismiss = useCallback(() => {
     if (install.phase === 'failed') cancelInstall();
     else if (install.phase === 'idle' && update) void snooze(update);
     setOffered(null);
   }, [install.phase, update]);
 
-  useEffect(() => {
-    if (!open) return;
-    const sub = BackHandler.addEventListener('hardwareBackPress', () => (dismiss(), true));
-    return () => sub.remove();
-  }, [open, dismiss]);
-
-  if (!open) return null;
   return (
-    <View className="absolute inset-0" pointerEvents="box-none">
-      <Animated.View entering={FadeIn} exiting={FadeOut} className="absolute inset-0" style={{ backgroundColor: c.scrim }}>
-        <Pressable className="flex-1" accessibilityRole="button" accessibilityLabel={t('app.settings.updateLater')} onPress={dismiss} />
-      </Animated.View>
-      <Animated.View
-        entering={SlideInDown.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
-        exiting={SlideOutDown}
-        layout={LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
-        accessibilityViewIsModal
-        className="absolute bottom-0 left-0 right-0 mx-auto gap-5 rounded-t-xl bg-elevated px-6 pt-3"
-        style={{ ...CURVE, maxWidth: SHEET_MAX_WIDTH, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm, boxShadow: shadows.overlay }}>
-        <View className="h-1 w-9 self-center rounded-full opacity-40" style={{ backgroundColor: c.textFaint }} />
-        <Body update={update} install={install} />
-      </Animated.View>
-    </View>
+    <NativeSheet open={open} onDismiss={dismiss} color={c.elevated}>
+      <RNHostView matchContents>
+        <View className="gap-5 px-6 pt-1" style={{ width, paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.sm }}>
+          {shown || install.phase !== 'idle' ? <Body update={update ?? shown} install={install} /> : null}
+        </View>
+      </RNHostView>
+    </NativeSheet>
   );
 }
 
 function Body({ update, install }: { update: AppUpdate | null; install: InstallState }) {
   const t = useT();
+  const { height: screenH } = useWindowDimensions();
   const locale = useLocale();
   const c = useTheme();
   const version = install.phase === 'idle' ? update!.version : install.version;
@@ -213,14 +209,17 @@ function Body({ update, install }: { update: AppUpdate | null; install: InstallS
           <Text variant="micro" tone="faint">
             {t('app.settings.updateWhatsNew')}
           </Text>
-          {notes.map((n) => (
-            <View key={n} className="flex-row gap-3">
-              <View className="mt-2 size-1.5 rounded-full bg-brand" />
-              <Text variant="callout" className="flex-1">
-                {n}
-              </Text>
-            </View>
-          ))}
+          {/* Long release notes scroll inside the sheet instead of pushing it past the screen. */}
+          <ScrollView style={{ maxHeight: Math.round(screenH * 0.32) }} contentContainerClassName="gap-2.5" showsVerticalScrollIndicator nestedScrollEnabled>
+            {notes.map((n) => (
+              <View key={n} className="flex-row gap-3">
+                <View className="mt-2 size-1.5 rounded-full bg-brand" />
+                <Text variant="callout" className="flex-1">
+                  {n}
+                </Text>
+              </View>
+            ))}
+          </ScrollView>
         </View>
       ) : null}
 

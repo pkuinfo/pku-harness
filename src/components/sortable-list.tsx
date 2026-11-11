@@ -1,14 +1,15 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
 import { GestureDetector, usePanGesture } from 'react-native-gesture-handler';
-import Animated, { FadeIn, FadeOut, useAnimatedReaction, useAnimatedStyle, useSharedValue, withSpring, type SharedValue } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useAnimatedReaction, useAnimatedStyle, useSharedValue, withTiming, type SharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import { useT } from '@/i18n';
-import { shadows, spacing, springs, useTheme } from '@/theme';
+import { shadows, spacing, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
 
 import { Icon } from './icon';
+import { timings } from '@/theme/transitions';
 
 function move(list: string[], from: number, to: number) {
   'worklet';
@@ -44,7 +45,7 @@ function Row({
   useAnimatedReaction(
     () => order.get().indexOf(id),
     (i, prev) => {
-      if (i !== prev && !active.get()) top.set(withSpring(i * step, springs.smooth));
+      if (i !== prev && !active.get()) top.set(withTiming(i * step, timings.base));
     },
   );
 
@@ -70,7 +71,7 @@ function Row({
     onDeactivate: () => {
       'worklet';
       active.set(false);
-      top.set(withSpring(order.get().indexOf(id) * step, springs.smooth));
+      top.set(withTiming(order.get().indexOf(id) * step, timings.base));
       scheduleOnRN(onDrop, order.get());
     },
   });
@@ -78,7 +79,7 @@ function Row({
   const style = useAnimatedStyle(() => ({
     top: top.get(),
     zIndex: active.get() ? 10 : 0,
-    transform: [{ scale: withSpring(active.get() ? 1.03 : 1, springs.snappy) }],
+    transform: [{ scale: withTiming(active.get() ? 1.03 : 1, timings.fast) }],
     boxShadow: active.get() ? shadows.float : 'none',
   }));
 

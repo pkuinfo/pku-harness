@@ -6,9 +6,7 @@ import Swipeable, {
 } from "react-native-gesture-handler/ReanimatedSwipeable";
 import Animated, {
   FadeIn,
-  FadeInDown,
   FadeOut,
-  LinearTransition,
   useReducedMotion,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -29,9 +27,10 @@ import {
   type SessionMeta,
 } from "@/core/agent/session/sessions";
 import { useT } from "@/i18n";
-import { shadows, spacing, springs, typography, useTheme } from "@/theme";
+import { shadows, spacing, typography, useTheme } from "@/theme";
 import { cx } from "@/utils/cx";
 import { haptics } from "@/utils/haptics";
+import { transitions } from "@/theme/transitions";
 
 const UNDO_MS = 5000;
 
@@ -222,7 +221,7 @@ export function SessionsSheet() {
       {lastPending ? (
         <Animated.View
           key={lastPending.id}
-          entering={FadeInDown.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
+          entering={transitions.enter}
           exiting={FadeOut}
           className="absolute right-4 left-4 flex-row items-center gap-3 rounded-lg border-[0.5px] border-edge bg-elevated py-2 pr-2 pl-4"
           style={{
@@ -274,7 +273,7 @@ const SessionRow = memo(function SessionRow({
 
   return (
     <Animated.View
-      layout={reduced ? undefined : LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness)}
+      layout={reduced ? undefined : transitions.layout}
       className="mb-0.5"
     >
       <Swipeable

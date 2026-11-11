@@ -1,4 +1,4 @@
-import Animated, { FadeIn, FadeInDown, FadeOut, LinearTransition, useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, useReducedMotion } from 'react-native-reanimated';
 
 import { Button } from '@/components/button';
 import { Icon } from '@/components/icon';
@@ -6,9 +6,10 @@ import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
 import type { QueuedMessage } from '@/core/agent/session/sessions';
 import { useT } from '@/i18n';
-import { springs, useTheme } from '@/theme';
+import { useTheme } from '@/theme';
 
 import { firstLine, type Tr } from './logic';
+import { transitions } from '@/theme/transitions';
 
 const CURVE = { borderCurve: 'continuous' } as const;
 
@@ -41,8 +42,8 @@ export function QueueChips({
   const t = useT();
   const reduced = useReducedMotion();
   if (!queue.length) return null;
-  const enter = reduced ? FadeIn : FadeInDown.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness);
-  const layout = reduced ? undefined : LinearTransition.springify().damping(springs.smooth.damping).stiffness(springs.smooth.stiffness);
+  const enter = reduced ? FadeIn : transitions.enter;
+  const layout = reduced ? undefined : transitions.layout;
   return (
     <Animated.View layout={layout} className="gap-1.5">
       {paused ? (
