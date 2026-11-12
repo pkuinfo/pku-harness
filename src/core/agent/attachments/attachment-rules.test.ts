@@ -12,11 +12,11 @@ import {
 } from './attachment-rules';
 
 describe('limits', () => {
-  test('8 per message, 4 per library pick', () => {
+  test('8 per message; one library pick can fill every free slot', () => {
     expect(remainingSlots(0)).toBe(8);
     expect(remainingSlots(7)).toBe(1);
     expect(remainingSlots(9)).toBe(0);
-    expect(libraryPickLimit(0)).toBe(4);
+    expect(libraryPickLimit(0)).toBe(8);
     expect(libraryPickLimit(6)).toBe(2);
     expect(libraryPickLimit(8)).toBe(0);
   });
