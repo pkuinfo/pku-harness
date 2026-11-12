@@ -244,3 +244,14 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
   via ZipFile + XmlPullParser, JUnit-tested); audio transcribed by the voice-input service.
   Core `files` plugin (`files.list/read/search`) pages through long documents. Verified on
   emulator-5554 (release build): CJK PDF, DOCX, XLSX, PPTX answered correctly; scanned PDF refused.
+
+## Minimal surface: the agent finds its plugins (2026-11-12)
+
+- [x] `plugins.search` (installed + marketplace feed) and `plugins.use` (instructions + tools on
+  demand); non-core plugin tools load through `activeTools` from the session history
+  (ARCHITECTURE §5.2). Registry gained `describe` and `marketplace`.
+- [x] System prompt keeps core instructions only, plus a one-line index of loadable plugins.
+- [x] Removed: chat empty-state suggestions, the welcome plugin-picker step (old progress
+  resumes at Permissions), the done-step suggestions, the attach-sheet Command row (the menu
+  still opens on `/`), and two of the three starter dashboard cards. Copilot setup stays in
+  the welcome flow, skippable.

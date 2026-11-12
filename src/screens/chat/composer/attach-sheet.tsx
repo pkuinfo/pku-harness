@@ -11,7 +11,7 @@ import { useT } from '@/i18n';
 import { spacing, useTheme } from '@/theme';
 import { cx } from '@/utils/cx';
 
-export type AttachAction = 'camera' | 'library' | 'files' | 'command';
+export type AttachAction = 'camera' | 'library' | 'files';
 
 const CURVE = { borderCurve: 'continuous' } as const;
 
@@ -96,7 +96,6 @@ export function AttachSheet({
             onPress={() => onPick('library')}
           />
           <Row icon="file" title={t('chat.attach.files')} detail={full ? fullDetail : t('chat.attach.filesDetail')} disabled={full} onPress={() => onPick('files')} />
-          <Row icon="command" title={t('chat.attach.command')} detail={t('chat.attach.commandDetail')} onPress={() => onPick('command')} />
         </View>
       </RNHostView>
     </BottomSheet>

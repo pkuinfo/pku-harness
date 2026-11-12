@@ -7,8 +7,9 @@ import type { Widget } from '@pku-harness/sdk';
 const n = null;
 
 /**
- * First-run widgets that work without a campus login; the agent replaces them freely. Written
- * once, in the app language at first launch (the agent rewrites them in whatever language later).
+ * The first-run dashboard: one quiet card that works without a campus login. Everything else is
+ * built by the agent when the user asks for it. Written once, in the app language at first
+ * launch (the agent rewrites it in whatever language later).
  */
 const starters = (locale: Locale = getLocale()): Omit<Widget, 'position' | 'createdAt' | 'updatedAt'>[] => {
   const t = (key: Parameters<typeof translate>[1]) => translate(locale, key);
@@ -35,36 +36,6 @@ const starters = (locale: Locale = getLocale()): Omit<Widget, 'position' | 'crea
       },
     },
     bindings: { '/today': { tool: 'calendar.today', ttlMinutes: 30 } },
-  },
-  {
-    id: 'reminders',
-    title: t('app.starter.reminders'),
-    size: 'sm',
-    spec: {
-      root: 'stat',
-      elements: {
-        stat: {
-          type: 'Stat',
-          props: { label: t('app.starter.pending'), value: { $state: '/jobs' }, prefix: n, suffix: t('app.starter.pendingSuffix') || n, decimals: 0, delta: n, deltaTone: n, caption: n, icon: 'bell', size: 'lg' },
-        },
-      },
-    },
-    bindings: { '/jobs': { tool: 'scheduler.list', path: 'length', ttlMinutes: 0 } },
-  },
-  {
-    id: 'week',
-    title: t('app.starter.week'),
-    size: 'sm',
-    spec: {
-      root: 'stat',
-      elements: {
-        stat: {
-          type: 'Stat',
-          props: { label: t('app.starter.week'), value: { $state: '/week' }, prefix: t('app.starter.weekPrefix') || n, suffix: t('app.starter.weekSuffix') || n, decimals: 0, delta: n, deltaTone: n, caption: n, icon: 'schedule', size: 'lg' },
-        },
-      },
-    },
-    bindings: { '/week': { tool: 'calendar.today', path: 'semester.week', ttlMinutes: 30 } },
   },
   ];
 };

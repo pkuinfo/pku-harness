@@ -182,7 +182,8 @@ widgets) applies unchanged. TypeScript stays for the harness's own features and 
     User input in that UI comes back to the agent as the next message.
   - `dashboard.upsertWidget` / `dashboard.removeWidget` / `dashboard.list`
   - `scheduler.createJob` / `updateJob` / `deleteJob` / `listJobs`
-  - `todo.*`, `plugins.list`, `settings.list` / `settings.change` / `settings.open` (§5.1)
+  - `todo.*`, `plugins.list` / `plugins.search` / `plugins.use` (§5.2), `settings.list` /
+    `settings.change` / `settings.open` (§5.1)
 - **Autonomy**: by product decision, once a user accepts the terms and grants a plugin, the
   agent may call its tools without per-call confirmation. Each plugin's permission row in
   Settings has a per-effect switch (`read`/`write`/`money`/`public`) so a user can require
@@ -233,6 +234,30 @@ typed entries `{ key, group, title, kind, options, value, uiOnly, screen }`:
 The core `settings` plugin exposes `list` (read), `change` (write) and `open`. Changes follow
 the normal approval modes (§5 Autonomy: auto by default), validate every value against the
 entry, refuse unknown and `uiOnly` keys before changing anything, and return `before → after`.
+### 5.2 The agent finds its own plugins
+
+The app does not advertise what it can do: no suggestion chips, no plugin picker in the welcome
+flow, a near-empty first dashboard. The user asks; the agent finds the plugin that answers.
+
+- **Always loaded:** the tools of core plugins (`plugins`, `settings`, `ui`, `dashboard`,
+  `files`, `scheduler`, `todo`, `memory`, `calendar`, …). Every other enabled plugin appears in
+  the system prompt only as one index line, `- id：name，description`, inside `<可加载插件>`;
+  its tools and instructions stay out of the request.
+- **`plugins.use(ids)`** returns each plugin's instructions and tool list
+  (`HostServices.registry.describe`). From the next step on, `prepareStep` adds that plugin's
+  tools to `activeTools`. The loaded set is derived from the session history
+  (`src/core/agent/loaded-plugins.ts`: a `plugins__use` result without an error, or any earlier
+  call to one of the plugin's tools), so it survives restarts and compaction without its own
+  store. The tool set sent to the provider is still the full set; `activeTools` narrows it, so
+  the prompt prefix stays cacheable.
+- **`plugins.search(query)`** scores installed plugins by matching words, then asks
+  `HostServices.registry.marketplace(query)`: the website's `marketplace.json` feed (cached for an
+  hour, `src/core/runtime/market-search.ts`, falling back to the bundled registry) ranked by
+  `rankMarketplace` (`market-rank.ts`). A hit that isn't installed comes with its install link;
+  installing still goes through the normal permission sheet.
+- A switched-off plugin is never loaded; the error tells the agent to turn it on with
+  `settings.change plugin.<id>.enabled` (which asks the user under the usual modes).
+
 ## 6. Generative UI
 
 - Library: `@json-render/core` + `@json-render/react-native`. The agent emits a JSON spec;

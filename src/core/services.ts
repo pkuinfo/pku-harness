@@ -15,7 +15,10 @@ import { widgetStore } from '@/core/dashboard/store';
 import { deliveryReadiness, getNotificationPermission, openBatteryOptimizationSettings, openNotificationSettings, requestExactAlarmPermission, requestNotificationPermission } from '@/core/notify';
 import { docPlugins } from '@/core/runtime/doc-plugins';
 import { services } from '@/core/runtime/invoke';
-import { pluginName, toolTitle, widgetText } from '@/core/runtime/localize';
+import { pluginDescription, pluginName, toolTitle, widgetText } from '@/core/runtime/localize';
+import { marketplaceFeed, rankMarketplace } from '@/core/runtime/market-search';
+import { resolveDynamic } from '@/core/runtime/types';
+import { toModelName } from '@/core/agent/tools';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { effectOf, remotePlugins } from '@/core/runtime/remote';
 import { registry } from '@/core/runtime/registry';
@@ -26,7 +29,7 @@ import { timetable } from '@/core/timetable/store';
 import { addTodo, deleteTodo, setTodoDone, todoStore, updateTodo } from '@/core/todo';
 import { describeCatalog } from '@/genui/catalog';
 import { checkSpec } from '@/genui/check';
-import { t } from '@/i18n';
+import { getLocale, t } from '@/i18n';
 import { documentsService } from '@/core/files/service';
 import { settingsRegistry } from '@/core/settings/registry';
 
@@ -83,6 +86,24 @@ const host: HostServices = {
       const e = registry.tool(id);
       return e ? { id: e.id, pluginId: e.pluginId, title: toolTitle(registry.get(e.pluginId), e.name, e.def.title), effect: e.def.effect } : undefined;
     },
+    describe: (id) => {
+      const p = registry.get(id);
+      if (!p) return null;
+      return {
+        id: p.id,
+        name: pluginName(p),
+        description: pluginDescription(p),
+        core: !!p.core,
+        enabled: pluginSettings.get(p.id).enabled,
+        unavailable: registry.unavailable(p.id),
+        instructions: p.instructions ? resolveDynamic(p.instructions, host) : undefined,
+        tools: Object.entries(p.tools ?? {})
+          .filter(([, tool]) => !tool.userOnly)
+          .map(([name, tool]) => ({ name: toModelName(`${p.id}.${name}`), title: toolTitle(p, name, tool.title), effect: tool.effect })),
+      };
+    },
+    marketplace: async (query) =>
+      rankMarketplace(await marketplaceFeed(), query, new Set(registry.list().map((p) => p.id)), getLocale() === 'en' ? 'en' : 'zh-Hans'),
   },
   docs: {
     review: async ({ link, files }) => {

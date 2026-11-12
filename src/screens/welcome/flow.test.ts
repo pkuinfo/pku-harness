@@ -1,29 +1,26 @@
 /// <reference types="bun" />
 import { describe, expect, test } from 'bun:test';
 
-import { advance, nextStep, parseProgress, permissionsOutcome, prevStep, remindersSummary, resumePhase, retreat, startSetup, stepPosition, suggestionsFor, type OnboardingProgress } from './flow';
+import { advance, nextStep, parseProgress, permissionsOutcome, prevStep, remindersSummary, resumePhase, retreat, startSetup, stepPosition, type OnboardingProgress } from './flow';
 
 describe('step order', () => {
-  test('next / prev walk ai → campus → authenticator → plugins → permissions → copilot → done', () => {
+  test('next / prev walk ai → campus → authenticator → permissions → copilot → done', () => {
     expect(nextStep('ai')).toBe('campus');
     expect(nextStep('campus')).toBe('authenticator');
-    expect(nextStep('authenticator')).toBe('plugins');
-    expect(prevStep('plugins')).toBe('authenticator');
-    expect(nextStep('plugins')).toBe('permissions');
+    expect(nextStep('authenticator')).toBe('permissions');
     expect(nextStep('permissions')).toBe('copilot');
     expect(nextStep('copilot')).toBe('done');
     expect(nextStep('done')).toBe('done');
     expect(prevStep('ai')).toBeNull();
-    expect(prevStep('permissions')).toBe('plugins');
+    expect(prevStep('permissions')).toBe('authenticator');
     expect(prevStep('copilot')).toBe('permissions');
     expect(prevStep('done')).toBe('copilot');
   });
 
-  test('progress position covers the six task steps only', () => {
-    expect(stepPosition('ai')).toEqual({ index: 1, total: 6 });
-    expect(stepPosition('plugins')).toEqual({ index: 4, total: 6 });
-    expect(stepPosition('permissions')).toEqual({ index: 5, total: 6 });
-    expect(stepPosition('copilot')).toEqual({ index: 6, total: 6 });
+  test('progress position covers the five task steps only', () => {
+    expect(stepPosition('ai')).toEqual({ index: 1, total: 5 });
+    expect(stepPosition('permissions')).toEqual({ index: 4, total: 5 });
+    expect(stepPosition('copilot')).toEqual({ index: 5, total: 5 });
     expect(stepPosition('done')).toBeNull();
   });
 });
@@ -47,7 +44,7 @@ describe('progress and resume', () => {
 
   test('skipping every step still reaches the finish screen', () => {
     let p: OnboardingProgress = startSetup(0);
-    for (const s of ['ai', 'campus', 'authenticator', 'plugins', 'permissions', 'copilot'] as const) p = advance(p, s, 'skipped');
+    for (const s of ['ai', 'campus', 'authenticator', 'permissions', 'copilot'] as const) p = advance(p, s, 'skipped');
     expect(p.step).toBe('done');
     expect(p.outcomes.permissions).toBe('skipped');
   });
@@ -56,10 +53,12 @@ describe('progress and resume', () => {
     // An older build saved after the plugins step: the step was then the finish screen.
     const old = { v: 1, step: 'done', consentAt: 5, outcomes: { ai: 'done', campus: 'skipped', plugins: 'done' } };
     expect(resumePhase(old)).toEqual({ kind: 'setup', step: 'done' });
-    expect(parseProgress(old)?.outcomes).toEqual({ ai: 'done', campus: 'skipped', plugins: 'done' });
+    expect(parseProgress(old)?.outcomes).toEqual({ ai: 'done', campus: 'skipped' });
+  });
+
+  test('progress saved on the removed plugins step resumes at the next one', () => {
     const mid = { v: 1, step: 'plugins', consentAt: 5, outcomes: { ai: 'done' } };
-    const p = parseProgress(mid);
-    expect(p && advance(p, 'plugins', 'done').step).toBe('permissions');
+    expect(resumePhase(mid)).toEqual({ kind: 'setup', step: 'permissions' });
   });
 
   test('a permissions outcome round-trips through storage', () => {
@@ -80,7 +79,7 @@ describe('progress and resume', () => {
     expect(parseProgress({ v: 1, step: 'nope', consentAt: 1 })).toBeNull();
     expect(parseProgress({ v: 1, step: 'ai' })).toBeNull();
     expect(parseProgress('ai')).toBeNull();
-    expect(parseProgress({ v: 1, step: 'campus', consentAt: 1, outcomes: { ai: 'weird', zzz: 'done', plugins: 'done' } })?.outcomes).toEqual({ plugins: 'done' });
+    expect(parseProgress({ v: 1, step: 'campus', consentAt: 1, outcomes: { ai: 'weird', zzz: 'done', campus: 'done' } })?.outcomes).toEqual({ campus: 'done' });
   });
 });
 
@@ -97,28 +96,5 @@ describe('permissions step', () => {
     expect(remindersSummary(ready)).toBe('onTime');
     expect(remindersSummary({ ...ready, exactAlarms: false })).toBe('mayBeLate');
     expect(remindersSummary({ ...ready, notifications: 'denied', exactAlarms: false })).toBe('off');
-  });
-});
-
-describe('suggestions', () => {
-  const all = new Set(['wallet', 'course-sync', 'courses']);
-  test('none without an AI service', () => {
-    expect(suggestionsFor({ ai: false, campus: true, enabled: all })).toEqual([]);
-  });
-  test('campus questions first when signed in', () => {
-    const s = suggestionsFor({ ai: true, campus: true, enabled: all });
-    expect(s[0]).toBe('welcome.done.suggest.balance');
-    expect(s).toHaveLength(3);
-  });
-  test('general questions when not signed in', () => {
-    const s = suggestionsFor({ ai: true, campus: false, enabled: all });
-    expect(s).toHaveLength(3);
-    expect(s).not.toContain('welcome.done.suggest.balance');
-  });
-  test('respects disabled plugins', () => {
-    const s = suggestionsFor({ ai: true, campus: true, enabled: new Set(['courses']) });
-    expect(s[0]).toBe('welcome.done.suggest.homework');
-    expect(s).not.toContain('welcome.done.suggest.balance');
-    expect(s).toHaveLength(3);
   });
 });

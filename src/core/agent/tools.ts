@@ -1,4 +1,4 @@
-import { tool, zodSchema, type Schema, type ToolSet } from 'ai';
+import { tool, zodSchema, type ModelMessage, type Schema, type ToolSet } from 'ai';
 
 import { invokeTool, services } from '@/core/runtime/invoke';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
@@ -6,6 +6,7 @@ import { registry } from '@/core/runtime/registry';
 import { resolveDynamic, type TurnInfo } from '@/core/runtime/types';
 
 import { byStability } from './context/assembly';
+import { activeToolNames } from './loaded-plugins';
 import { dropModelImage, type ToolImages } from './tool-images';
 
 /**
@@ -26,6 +27,17 @@ function inputSchema(input: object): Schema<unknown> {
 /** Model-facing tool names can't contain dots: `wallet.cardBalance` → `wallet__cardBalance`. */
 export const toModelName = (id: string) => id.replace('.', '__');
 export const fromModelName = (name: string) => name.replace('__', '.');
+
+/** Core plugins: their tools are offered in every chat; the rest load on demand (loaded-plugins.ts). */
+export const alwaysLoadedPlugins = () => new Set(registry.list().filter((p) => p.core).map((p) => p.id));
+
+/** The model-facing names of the tools offered for a chat with this history. */
+export const activeToolsFor = (set: ToolSet, history: readonly ModelMessage[]) => activeToolNames(Object.keys(set), alwaysLoadedPlugins(), history);
+
+/** `set` narrowed to the tools offered for a chat with this history. */
+export function activeToolSet(set: ToolSet, history: readonly ModelMessage[]): ToolSet {
+  return Object.fromEntries(activeToolsFor(set, history).map((name) => [name, set[name]]));
+}
 
 /**
  * Every enabled plugin tool, sorted by id; execution goes through `invokeTool`. The block is the

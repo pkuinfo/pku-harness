@@ -20,7 +20,7 @@ import {
 import { sessions } from '@/core/agent/session/sessions';
 import { contextBudget, loadContextBudget, sessionModel } from './budget';
 import { contextBreakdown, estimateMessages, estimateTokens } from './tokens';
-import { buildToolSet } from '@/core/agent/tools';
+import { activeToolSet, buildToolSet } from '@/core/agent/tools';
 import { modelFor, requestPrefix } from './request';
 import { buildSystemPrompt } from './system-prompt';
 
@@ -112,7 +112,7 @@ async function summarize(sessionId: string, messages: ModelMessage[]): Promise<s
 
 /** System prompt + tool definitions, in estimated tokens. */
 function overheadTokens(sessionId: string): number {
-  const tools = Object.entries(buildToolSet()).map(([name, t]) => [name, t.description]);
+  const tools = Object.entries(activeToolSet(buildToolSet(), sessions.data(sessionId)?.history ?? [])).map(([name, t]) => [name, t.description]);
   const own = estimateTokens(buildSystemPrompt()) + estimateTokens(JSON.stringify(tools));
   try {
     const b = contextBreakdown(sessionId);

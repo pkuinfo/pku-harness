@@ -638,12 +638,6 @@ export const app = {
     date: '${/today/month}月${/today/day}日 · ${/today/weekday}',
     weekLine: '第 ${/today/semester/week} 周 · 距学期结束 ${/today/semester/daysLeft} 天',
     hint: '告诉 AI 开学日期，这里会显示教学周',
-    reminders: '提醒',
-    pending: '待触发提醒',
-    pendingSuffix: ' 个',
-    week: '教学周',
-    weekPrefix: '第 ',
-    weekSuffix: ' 周',
   },
   usage: {
     title: '用量',

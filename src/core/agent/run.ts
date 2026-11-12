@@ -15,7 +15,7 @@ import { sessions } from '@/core/agent/session/sessions';
 import { autoTitle } from '@/core/agent/session/title';
 import { asksToRemember } from '@/core/agent/context/assembly';
 import { modelFor, requestPrefix } from '@/core/agent/context/request';
-import { fromModelName } from './tools';
+import { activeToolsFor, fromModelName } from './tools';
 import { ToolImages } from './tool-images';
 import { acceptsImages } from './attachments/attachments';
 
@@ -193,7 +193,9 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
       abortSignal: signal,
       prepareStep: ({ messages }) => {
         const next = images.prepare(messages);
-        return next ? { messages: next } : undefined;
+        // A plugin loaded this turn (plugins__use) is offered from the next step on.
+        const activeTools = activeToolsFor(prefix.tools, messages);
+        return next ? { messages: next, activeTools } : { activeTools };
       },
       onStepEnd: (step) => {
         finishedSteps++;

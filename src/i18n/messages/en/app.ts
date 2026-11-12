@@ -633,12 +633,6 @@ export const app: Messages['app'] = {
     date: '${/today/weekdayEn}, ${/today/monthEn} ${/today/day}',
     weekLine: 'Week ${/today/semester/week} · ${/today/semester/daysLeft} days left',
     hint: 'Tell the AI when the semester starts to see the teaching week here',
-    reminders: 'Reminders',
-    pending: 'Upcoming reminders',
-    pendingSuffix: '',
-    week: 'Teaching week',
-    weekPrefix: 'Week ',
-    weekSuffix: '',
   },
   usage: {
     title: 'Usage',

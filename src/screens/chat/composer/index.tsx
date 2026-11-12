@@ -124,7 +124,7 @@ export function Composer() {
   }, [sessionId]);
 
   const runPick = useCallback(
-    async (action: Exclude<AttachAction, 'command'>) => {
+    async (action: AttachAction) => {
       const count = composerDraft.get().attachments.length;
       try {
         // Photos take a moment to resize and documents to read; placeholder tiles hold their place.
@@ -149,13 +149,6 @@ export function Composer() {
   const onAttach = useCallback(
     (action: AttachAction) => {
       setSheet(false);
-      if (action === 'command') {
-        // `/` at the start opens the command menu; keep whatever was typed after it.
-        const cur = composerDraft.get().text;
-        composerDraft.put({ text: cur.startsWith('/') ? cur : `/${cur}`, attachments: composerDraft.get().attachments });
-        requestAnimationFrame(() => input.current?.focus());
-        return;
-      }
       void runPick(action);
     },
     [runPick],

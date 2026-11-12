@@ -7,7 +7,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, IconButton } from '@/components/button';
 import { FadeIn } from '@/components/fade-in';
-import { Icon } from '@/components/icon';
 import { Text } from '@/components/text';
 import { AgentOrbit } from '@/components/agent-orbit';
 import { PressableScale } from '@/components/pressable-scale';
@@ -40,7 +39,6 @@ const hasReplyContent = (messages: { role: string; parts: unknown[]; meta?: { en
 const NEAR_END = 72;
 
 /** Starter prompts on the empty chat, in the app language (they're sent as typed). */
-const SUGGESTIONS = ['chat.empty.suggestBalance', 'chat.empty.suggestDashboard', 'chat.empty.suggestReminder', 'chat.empty.suggestClasses'] as const;
 
 /** Chat tab: the agent conversation (docs/ARCHITECTURE.md §5–6). */
 export function Chat() {
@@ -254,18 +252,7 @@ export function Chat() {
                   </Text>
                   <Button title={t('chat.empty.connect')} icon="key" onPress={() => router.push('/ai-settings')} />
                 </FadeIn>
-              ) : (
-                <View className="border-t border-edge">
-                  {SUGGESTIONS.map((key) => t(key)).map((s, i) => (
-                    <FadeIn key={s} index={i + 1}>
-                      <PressableScale onPress={() => sendMessage(s)} accessibilityRole="button" accessibilityLabel={s} className="min-h-12 flex-row items-center gap-3 border-b border-edge py-3">
-                        <Text variant="callout" tone="muted" className="flex-1">{s}</Text>
-                        <SuggestionArrow />
-                      </PressableScale>
-                    </FadeIn>
-                  ))}
-                </View>
-              )}
+              ) : null}
             </View>
           </FadeIn>
         ) : (
@@ -281,11 +268,6 @@ export function Chat() {
       <View style={{ height: bar }} />
     </View>
   );
-}
-
-function SuggestionArrow() {
-  const c = useTheme();
-  return <Icon name="chevronRight" size={16} color={c.textFaint} />;
 }
 
 function submitForm(callId: string, form: Record<string, unknown>, label?: string) {

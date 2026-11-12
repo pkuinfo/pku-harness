@@ -11,7 +11,7 @@ import { contextBudget, contextWindowOf, getContextBudgetSetting } from './budge
 import { aiConfig } from '@/core/agent/provider';
 import { sessions } from '@/core/agent/session/sessions';
 import { buildSystemPrompt } from './system-prompt';
-import { buildToolSet } from '@/core/agent/tools';
+import { activeToolSet, buildToolSet } from '@/core/agent/tools';
 
 export { estimateMessages, estimateTokens, estimateTools } from '@/core/usage/estimate';
 
@@ -65,7 +65,7 @@ export function contextBreakdown(sessionId?: string): ContextBreakdown {
     // Registry not ready: leave at 0.
   }
   try {
-    toolsTokens = estimateTools(buildToolSet());
+    toolsTokens = estimateTools(activeToolSet(buildToolSet(), history));
   } catch {
     // idem
   }
