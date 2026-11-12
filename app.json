@@ -2,7 +2,7 @@
   "expo": {
     "name": "PKU Harness",
     "slug": "pku-harness",
-    "version": "1.0.19",
+    "version": "1.0.20",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "pkuharness",
@@ -32,7 +32,7 @@
       }
     },
     "android": {
-      "versionCode": 20,
+      "versionCode": 21,
       "adaptiveIcon": {
         "backgroundColor": "#07080A",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
