@@ -109,7 +109,7 @@ export async function takePhoto(current: number, onProcessing?: OnProcessing): P
   return storeImages(res.assets, remainingSlots(current), onProcessing);
 }
 
-/** 相册: the system photo picker, as many as the message still has room for (8 per message). */
+/** 相册: the system photo picker, up to 4 at once (fewer when the message is nearly full). */
 export async function pickImages(current: number, onProcessing?: OnProcessing): Promise<PickOutcome> {
   const limit = libraryPickLimit(current);
   if (limit === 0) return { added: [], notice: limitNotice() };

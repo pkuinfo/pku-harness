@@ -147,7 +147,7 @@ convention); sending is the button only.
 
 ### 4.2 Attachments
 
-- `+` opens a sheet: 拍照, 相册 (multi-select, up to the free slots: 8 per message), 文件, and 输入命令 (inserts `/`).
+- `+` opens a sheet: 拍照, 相册 (multi-select, up to 4), 文件, and 输入命令 (inserts `/`).
   Images are offered only if the session's model lists `image` in `inputModalities`; otherwise
   the rows are disabled with "当前模型不支持图片（可切换到 Flash）".
 - Images: resize to ≤ 1568 px long side, JPEG 0.8, copied into

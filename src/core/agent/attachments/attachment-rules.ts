@@ -6,6 +6,8 @@
 
 /** Attachments per message. */
 export const MAX_ATTACHMENTS = 8;
+/** Photos per library pick. */
+export const MAX_LIBRARY_PICK = 4;
 /** Long side of an image sent to the model (px). */
 export const MAX_IMAGE_SIDE = 1568;
 export const IMAGE_QUALITY = 0.8;
@@ -27,9 +29,9 @@ export function remainingSlots(count: number): number {
   return Math.max(0, MAX_ATTACHMENTS - count);
 }
 
-/** How many photos one library pick may return: every free slot. 0 = the picker is closed. */
+/** How many photos one library pick may return (≤ 4, ≤ free slots). 0 = the picker is closed. */
 export function libraryPickLimit(count: number): number {
-  return remainingSlots(count);
+  return Math.min(MAX_LIBRARY_PICK, remainingSlots(count));
 }
 
 /**
