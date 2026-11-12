@@ -172,7 +172,7 @@ widgets) applies unchanged. TypeScript stays for the harness's own features and 
   live in SecureStore per provider; the agent asks the active provider for its model.
   Streaming uses `expo/fetch`.
 - **Loop** (`src/core/agent/run.ts`): `streamText` with tools from every enabled plugin plus core
-  tools, multi-step until the model stops (10-step cap). Each **session** keeps its UI messages
+  tools, multi-step until the model stops (no step cap; the context is compacted mid-turn). Each **session** keeps its UI messages
   and its exact model-visible history separately (`src/core/agent/session/`; SQLite `sessions`
   rows + per-session records), following DeepSeek Harness's "model-visible means logged" rule.
   Sessions, `/` commands, the composer, context management (compaction, budget, tool-output
@@ -182,7 +182,7 @@ widgets) applies unchanged. TypeScript stays for the harness's own features and 
     User input in that UI comes back to the agent as the next message.
   - `dashboard.upsertWidget` / `dashboard.removeWidget` / `dashboard.list`
   - `scheduler.createJob` / `updateJob` / `deleteJob` / `listJobs`
-  - `todo.*`, `plugins.list`, `settings.get`
+  - `todo.*`, `plugins.list`, `settings.list` / `settings.change` / `settings.open` (§5.1)
 - **Autonomy**: by product decision, once a user accepts the terms and grants a plugin, the
   agent may call its tools without per-call confirmation. Each plugin's permission row in
   Settings has a per-effect switch (`read`/`write`/`money`/`public`) so a user can require
@@ -206,6 +206,33 @@ widgets) applies unchanged. TypeScript stays for the harness's own features and 
   are flagged `untrusted` (remote plugins always are); calling one taints the agent's turn, and
   memory written after that waits for the user's approval (AGENT-HARNESS §5.7).
 
+### 5.1 One entry point: the agent operates everything
+
+Everything a person can do in the app, the agent can do through a tool, and the screens are a
+second way in to the same stores, never a separate path. Three surfaces cover it:
+
+| Surface | What it operates | Through |
+| --- | --- | --- |
+| Campus and data | campus services, card, schedule, todos, dashboard, memory, files | each plugin's tools (§4) |
+| The app itself | every setting: appearance, language, time zone, haptics, AI and voice service, each plugin's switch and permissions, each plugin's own preferences | the settings registry + core `settings` plugin |
+| The phone | other apps on the device | Copilot (`copilot.*`, docs/COPILOT.md) |
+
+**Settings registry** (`src/core/settings/registry.ts`, `HostServices.settings`). One list of
+typed entries `{ key, group, title, kind, options, value, uiOnly, screen }`:
+- built-in: `app.theme`, `app.language`, `app.timezone`, `app.haptics`, `ai.provider`, `ai.model`,
+  `voice.provider`;
+- per plugin: `plugin.<id>.enabled` (not for core plugins) and `plugin.<id>.permission.<effect>`
+  (`auto` | `ask` | `off`);
+- each plugin's own preferences, declared in its manifest as `PluginDef.preferences` (title,
+  kind, zod `input`, `get`/`set` on the plugin's kv and services) and listed as `<plugin>.<name>`,
+  e.g. `copilot.enabled`, `copilot.apps`, `copilot.screenshots`. A plugin adds a setting by
+  declaring it; nothing in the host changes.
+- `uiOnly` entries (API keys, the campus account, system notification permissions) are listed
+  with their screen; the agent can't set them and opens the screen with `settings.open` instead.
+
+The core `settings` plugin exposes `list` (read), `change` (write) and `open`. Changes follow
+the normal approval modes (§5 Autonomy: auto by default), validate every value against the
+entry, refuse unknown and `uiOnly` keys before changing anything, and return `before → after`.
 ## 6. Generative UI
 
 - Library: `@json-render/core` + `@json-render/react-native`. The agent emits a JSON spec;

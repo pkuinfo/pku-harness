@@ -13,23 +13,21 @@ type CopilotStatus = { enabled?: boolean; setupMissing?: string[] };
  */
 export function useCopilotSetup(): { ready: boolean | null; missing: string[] | null; refresh: () => void } {
   const [status, setStatus] = useState<{ ready: boolean | null; missing: string[] | null }>({ ready: null, missing: null });
-  const [tick, setTick] = useState(0);
-  useFocusEffect(
-    useCallback(() => {
-      let alive = true;
-      invokeTool('copilot.status', {}, { actor: 'user' })
-        .then((s) => {
-          const st = s as CopilotStatus;
-          const missing = st.setupMissing ?? [];
-          if (alive) setStatus({ ready: !!st.enabled && !missing.length, missing });
-        })
-        .catch(() => alive && setStatus({ ready: false, missing: ['helper', 'accessibility', 'apps', 'enable'] }));
-      return () => {
-        alive = false;
-      };
-    }, [tick]),
-  );
-  return { ...status, refresh: useCallback(() => setTick((n) => n + 1), []) };
+  const load = useCallback(() => {
+    let alive = true;
+    invokeTool('copilot.status', {}, { actor: 'user' })
+      .then((s) => {
+        const st = s as CopilotStatus;
+        const missing = st.setupMissing ?? [];
+        if (alive) setStatus({ ready: !!st.enabled && !missing.length, missing });
+      })
+      .catch(() => alive && setStatus({ ready: false, missing: ['helper', 'accessibility', 'apps', 'enable'] }));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  useFocusEffect(load);
+  return { ...status, refresh: useCallback(() => void load(), [load]) };
 }
 
 /** Whether Copilot is set up and on (null while reading). */

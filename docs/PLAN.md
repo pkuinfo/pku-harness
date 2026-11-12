@@ -3,6 +3,10 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (with date). Update this file as work lands.
 Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on the Android emulator.
 
+## Agent operates everything (2026-11-11)
+- [x] Settings registry (`src/core/settings/registry.ts`, `HostServices.settings`): app settings, AI and voice service, each plugin's switch and per-effect permission, and plugin-declared preferences (`PluginDef.preferences`; Copilot: enabled, apps, screenshots) in one typed list; secrets are `uiOnly`. Core `settings` plugin (`list`, `change`, `open`) under the normal approval modes. ARCHITECTURE §5.1. Verified on emulator-5554 by chat: language/theme/haptics changed and reverted, Copilot's apps read and its write permission changed and reverted.
+- [x] Authenticator widget face down by default; a tap flips it over (timed rotate, cross-fade with reduced motion) to the code and hourglass; turns back after a minute or when the app is backgrounded. Both faces the same height.
+
 ## Copilot shell input (2026-11-11)
 - [x] Route taps, double taps, swipes, scrolls, wheel drags, slider touches, text replacement and editor submission through the display-owned shell helper; add synchronized two-finger input. Remove semantic accessibility actions from the interaction driver. Preserve observation, policy checks and readback.
 - [x] Report rejected movement and release the touch at its last delivered position. Reject main-display task input. Add continuous-swipe and partial-failure regression tests.

@@ -28,6 +28,7 @@ import { describeCatalog } from '@/genui/catalog';
 import { checkSpec } from '@/genui/check';
 import { t } from '@/i18n';
 import { documentsService } from '@/core/files/service';
+import { settingsRegistry } from '@/core/settings/registry';
 
 /**
  * The harness side of the plugin contract: every service a plugin may use, implemented on the
@@ -35,6 +36,7 @@ import { documentsService } from '@/core/files/service';
  */
 const host: HostServices = {
   phone: phoneService,
+  settings: settingsRegistry,
   browser: {
     // Custom Tabs / SFSafariViewController: the page runs in the system browser, isolated from the
     // app, and the browser itself hands weixin:// / alipays:// links to those apps.
