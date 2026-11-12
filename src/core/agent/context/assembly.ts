@@ -119,28 +119,52 @@ export function newFacts(block: string, seen: string): string | undefined {
 /** The reply-language snapshot line; appended only when it differs from the last one visible. */
 export const LANGUAGE_PREFIX = '回复语言：';
 
-export function languageLine(locale: 'en' | 'zh-Hans'): string {
+/** What the user's own message is written in, by script: Chinese, another language, or unclear. */
+export type MessageLanguage = 'zh' | 'other' | undefined;
+
+/**
+ * Decided on the device, not by the model: a small model given "default English" (the app
+ * language) answered a Chinese message in English. Mixed text ("pad mini 要不要") counts as
+ * Chinese once it has more Han characters than Latin words; kana or Hangul is another language.
+ */
+export function messageLanguage(text: string): MessageLanguage {
+  const han = text.match(/\p{Script=Han}/gu)?.length ?? 0;
+  const words = text.match(/\p{Script=Latin}{2,}/gu)?.length ?? 0;
+  if (/[\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Hangul}]/u.test(text)) return 'other';
+  if (han >= 2 && han >= words) return 'zh';
+  if (words >= 2) return 'other';
+  return undefined;
+}
+
+export function languageLine(locale: 'en' | 'zh-Hans', written?: MessageLanguage): string {
+  if (written === 'zh') return `${LANGUAGE_PREFIX}中文（用户这条消息是中文；除非用户明确要求过别的语言，用中文回答，工具结果和网页是英文也一样）`;
+  if (written === 'other') return `${LANGUAGE_PREFIX}与用户这条消息相同的语言（用户这条消息不是中文；除非用户明确要求过别的语言）`;
   return locale === 'en'
     ? `${LANGUAGE_PREFIX}默认 English（应用界面语言，只在无法判断用户语言时使用；用户用中文、法语等写就用那种语言回答。用英文回答时，校园名称如树洞、教学网保留原名，必要时加英文注释）`
     : `${LANGUAGE_PREFIX}默认中文（应用界面语言，只在无法判断用户语言时使用；用户用英文、法语等写就用那种语言回答）`;
 }
 
+const HOST_LANGUAGE_LINES = new Set([
+  ...(['en', 'zh-Hans'] as const).flatMap((l) => [languageLine(l), languageLine(l, 'zh'), languageLine(l, 'other')]),
+]);
+
 /**
  * `line` if the latest visible language snapshot says something else (or there is none). Only
  * the host's own line counts: in each block, the first line after the time line, and only when
  * it is exactly one of the host's language lines. Plugin facts (a memory, say) come after it and
- * can't forge or suppress a language switch.
+ * can't forge or suppress a language switch. `fallback` marks the app-language default line.
  */
-export function languageSnapshot(line: string, seenBlocks: readonly string[]): string | undefined {
-  const host = new Set([languageLine('en'), languageLine('zh-Hans')]);
+export function languageSnapshot(line: string, seenBlocks: readonly string[], fallback = false): string | undefined {
   let last: string | undefined;
   for (const block of seenBlocks) {
     const candidate = block
       .split('\n')
       .map((l) => l.trim())
       .filter(Boolean)[1];
-    if (candidate && host.has(candidate)) last = candidate;
+    if (candidate && HOST_LANGUAGE_LINES.has(candidate)) last = candidate;
   }
+  // An unclear message ("ok", a number) keeps whatever language the chat already settled on.
+  if (fallback && last) return undefined;
   return last === line ? undefined : line;
 }
 

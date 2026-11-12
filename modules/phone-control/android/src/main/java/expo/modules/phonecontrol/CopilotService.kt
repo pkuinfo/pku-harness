@@ -71,6 +71,8 @@ class CopilotService : Service() {
                     helper == null -> stopControl(started)
                     // Switched off by the user or the system mid-task: turn it back on first, and
                     // stop only when that is not possible (AccessibilityParking.ensureOn).
+                    // Held off on purpose while the user is in PKU harness; the next call turns it on.
+                    accessibility == null && AccessibilityParking.heldForHost -> Unit
                     accessibility == null -> if (!AccessibilityParking.ensureOn(applicationContext)) stopControl(started)
                     // Back on as a new service instance: the floating panel belongs to the old one.
                     overlay?.belongsTo(accessibility) == false -> withContext(Dispatchers.Main) {

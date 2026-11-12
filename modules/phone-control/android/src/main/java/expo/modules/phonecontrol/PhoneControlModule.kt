@@ -16,7 +16,10 @@ import org.pkuinfo.harness.phone.platform.PhonePlatform
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.functions.Coroutine
 import expo.modules.kotlin.modules.ModuleDefinition
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class PhoneControlModule : Module() {
@@ -28,6 +31,8 @@ class PhoneControlModule : Module() {
 
     private suspend fun result(block: suspend () -> Map<String, Any?>): Map<String, Any?> = try { block() }
         catch (error: PhoneException) { mapOf("nativeError" to mapOf("code" to error.code.name, "message" to error.message)) }
+
+    private val hostScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun definition() = ModuleDefinition {
         Name("PhoneControl")
@@ -42,6 +47,9 @@ class PhoneControlModule : Module() {
             PhoneRuntime.initialize(context)
             PhonePlatform.of(context).start()
         }
+        // Mid-task, Copilot's accessibility service is off while PKU harness is in front (AccessibilityParking).
+        OnActivityEntersForeground { val ctx = context; hostScope.launch { PhoneRuntime.hostVisibility(ctx, inFront = true) } }
+        OnActivityEntersBackground { val ctx = context; hostScope.launch { PhoneRuntime.hostVisibility(ctx, inFront = false) } }
         OnDestroy { PhoneOverlayBridge.onControlStopped = null; PhoneOverlayBridge.status = null; PhoneOverlayBridge.onAnswer = null; PhoneOverlayBridge.update(null) }
         AsyncFunction("overlayStatus") { value: Map<String, Any?>? ->
             val id = value?.get("sessionId") as? String

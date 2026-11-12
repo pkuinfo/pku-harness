@@ -144,8 +144,10 @@ object PhoneRuntime {
 
     suspend fun begin(context: Context, packages: List<String>): Map<String, Any?> {
         require(packages.size <= 20) { "Choose up to 20 apps" }
-        requireAccessibility(context)
-        val opened = engine(context).begin(packages.toSet())
+        val opened = AccessibilityParking.during {
+            requireAccessibility(context)
+            engine(context).begin(packages.toSet())
+        }
         sessionIdentity = opened.id
         try { CopilotService.start(context, opened.id) }
         catch (error: Throwable) { end(context, opened.id); throw error }
@@ -188,14 +190,26 @@ object PhoneRuntime {
     private suspend fun trackOperation(id: String, operation: String, block: suspend () -> Map<String, Any?>): Map<String, Any?> {
         val ticket = PhoneOverlayBridge.startOperation(id, operation)
         try {
-            requireAccessibility()
-            val result = block()
+            val result = AccessibilityParking.during {
+                requireAccessibility()
+                block()
+            }
             PhoneOverlayBridge.finishOperation(ticket, result["ok"] == false)
             return result
         } catch (error: Throwable) {
             PhoneOverlayBridge.finishOperation(ticket, true)
             throw error
+        } finally {
+            // The call ended with PKU harness in front (an approval, a question in the chat).
+            appContext?.let { AccessibilityParking.holdForHost(it) }
         }
+    }
+
+    /** PKU harness came to the front or left it; mid-task the service follows (AccessibilityParking). */
+    suspend fun hostVisibility(context: Context, inFront: Boolean) {
+        AccessibilityParking.hostInFront = inFront
+        if (sessionIdentity == null) return
+        if (inFront) AccessibilityParking.holdForHost(context) else AccessibilityParking.releaseForHost(context)
     }
 
     private suspend fun executeOperation(context: Context, id: String, operation: String, args: Map<String, Any?>): Map<String, Any?> {

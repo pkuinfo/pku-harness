@@ -6,14 +6,14 @@ import { registry } from '@/core/runtime/registry';
 import { kv } from '@/core/store/kv';
 import { getLocale } from '@/i18n';
 
-import { byStability, languageLine, languageSnapshot, newFacts, visibleContextBlocks } from './assembly';
+import { byStability, languageLine, languageSnapshot, messageLanguage, newFacts, visibleContextBlocks } from './assembly';
 import { localTimeLine } from './prompt-time';
 
 /**
  * Request context for one user turn (the `<context>` block at the start of the user message;
  * docs/AGENT-HARNESS.md §5.1). Per-turn facts live here, not in the system prompt, so the prompt
  * stays a stable cacheable prefix. Fixed order: the current (device-local) time (always), the reply
- * language (only when it changed), then plugin contributors by stability (assembly.ts). Facts the
+ * language (read from the user's message; only when it changed), then plugin contributors by stability (assembly.ts). Facts the
  * model can already see in `history` are not repeated (`newFacts`). Each contributor gets a short
  * time budget; a slow or failing plugin is skipped rather than blocking the reply.
  */
@@ -33,5 +33,6 @@ export async function gatherContext(query: string, history: readonly ModelMessag
     ),
   );
   const fresh = parts.map((part) => (part ? newFacts(part, seen) : undefined));
-  return [localTimeLine(now), languageSnapshot(languageLine(getLocale()), blocks), ...fresh].filter(Boolean).join('\n\n');
+  const written = messageLanguage(query);
+  return [localTimeLine(now), languageSnapshot(languageLine(getLocale(), written), blocks, !written), ...fresh].filter(Boolean).join('\n\n');
 }

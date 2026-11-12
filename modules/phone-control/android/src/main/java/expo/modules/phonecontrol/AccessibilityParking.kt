@@ -25,6 +25,9 @@ import org.pkuinfo.harness.phone.platform.accessibility.ScreenAccessibility
  * service is parked (taken out of the system list) and put back when the next task begins, and
  * checked again before every Copilot call (it may also have been switched off by the user or the
  * system meanwhile; [ensureOn]).
+ * It is also held off during a task while PKU harness itself is in front and no Copilot call is
+ * running ([holdForHost]), so typing a new message in the chat takes one tap per key; it comes
+ * back for the next call or when the user leaves the app ([releaseForHost]).
  * It parks only when that can be undone without the user: this app holds WRITE_SECURE_SETTINGS,
  * or the helper is connected. Otherwise it stays on, as before.
  */
@@ -38,6 +41,12 @@ internal object AccessibilityParking {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     @Volatile private var watching: Job? = null
+    /** PKU harness has a resumed activity (set from the module's lifecycle hooks). */
+    @Volatile var hostInFront = false
+    /** Off because the user is in PKU harness mid-task; the session monitor leaves it off. */
+    @Volatile var heldForHost = false
+        private set
+    private val calls = java.util.concurrent.atomic.AtomicInteger(0)
 
     private fun prefs(context: Context) = context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
@@ -63,6 +72,25 @@ internal object AccessibilityParking {
                 if (!busy()) park(app)
             }
         }
+    }
+
+    /** Runs one Copilot call; the service can't be held off while any call is running. */
+    suspend fun <T> during(block: suspend () -> T): T {
+        calls.incrementAndGet()
+        try { return block() } finally { calls.decrementAndGet() }
+    }
+
+    /** Mid-task, with PKU harness in front and no call running: off, so its keyboard types normally. */
+    fun holdForHost(context: Context) {
+        if (!hostInFront || calls.get() > 0 || ScreenAccessibility.instance.value == null) return
+        heldForHost = true
+        if (!park(context)) heldForHost = false else Log.i(TAG, "held off while PKU harness is in front")
+    }
+
+    /** The user left PKU harness mid-task: back on, so the floating panel returns over other apps. */
+    suspend fun releaseForHost(context: Context) {
+        if (!heldForHost) return
+        ensureOn(context)
     }
 
     /** Take the service out of the system list between tasks. True when it is parked now. */
@@ -94,7 +122,7 @@ internal object AccessibilityParking {
             return false
         }
         val bound = withTimeoutOrNull(BIND_TIMEOUT_MS) { ScreenAccessibility.instance.first { it != null } } != null
-        if (bound) setParked(context, false)
+        if (bound) { setParked(context, false); heldForHost = false }
         Log.i(TAG, if (bound) "back on for a task" else "written back but not bound yet")
         return bound
     }
