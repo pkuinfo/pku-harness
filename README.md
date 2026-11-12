@@ -1,8 +1,9 @@
 <div align="center">
 
-<img src="assets/images/icon.png" width="96" height="96" alt="PKU Harness logo" />
-
-# PKU Harness
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/brand/lockup-white.svg">
+  <img src="assets/brand/lockup-red.svg" alt="PKU Harness" width="360">
+</picture>
 
 **A pluggable, keyless, unified agent harness on your phone.**
 

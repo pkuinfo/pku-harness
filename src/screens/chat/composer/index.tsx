@@ -91,8 +91,11 @@ export function Composer() {
   // ---- voice input (dictation into the draft) ------------------------------------------------
   const voice = useVoiceInput(
     useCallback((spoken: string) => {
-      composerDraft.setText(appendDictation(composerDraft.get().text, spoken));
+      const next = appendDictation(composerDraft.get().text, spoken);
+      composerDraft.setText(next);
       input.current?.focus();
+      // Cursor at the end, so a long draft scrolls to the newly dictated words.
+      requestAnimationFrame(() => input.current?.setSelection(next.length, next.length));
     }, []),
   );
   const dictating = voice.phase !== 'idle';

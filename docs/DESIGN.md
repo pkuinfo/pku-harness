@@ -39,7 +39,10 @@ still an explicit option. `ListGroup` defaults to flat light rows and rounded da
 `Aurora` remains a compatibility export that paints only a static theme canvas; its wake hooks
 no longer run an idle animation. Native controls still use the host theme.
 
-The P/orbit logo is retained as the product mark. It is not repeated as decorative page art.
+The approved little-swallow symbol replaces the P/orbit mark. Its single canonical path lives
+in `src/theme/brand.ts`; identity variants and usage rules are in [BRAND.md](BRAND.md).
+The wordmark is exactly **PKU harness**. Do not redraw, rotate or add a literal P to the bird.
+The mark is not repeated as decorative page art.
 Onboarding is the one place with hero art: the intro's first page shows the 3D brand hero (2D
 fallback when GL is unavailable or errors), the other intro pages their illustrations, and the
 finish screen the celebrating hero. Setup steps use a compact icon.
@@ -103,7 +106,7 @@ loading), `style` merged last, accessibility role/state/label.
 | `Sheet` | Use `@expo/ui` BottomSheet; wrapper only adds theme. |
 | `Field` (text, secure, number) | Inputs with label, hint, error; focus ring in accent. |
 | `EmptyState` / `Skeleton` | Every data view has loading, empty, error, content states. Skeletons shimmer; no full-screen spinners. |
-| `Logo` | The brand mark (Skia); `orbiting` while the agent works, `intro` draws it on. |
+| `Logo` | The canonical swallow (Skia); `orbiting` gently pulses while working, `intro` fades it in. Reduced motion stays still. |
 | `TabBar` | Custom bottom bar over Expo Router tabs: opaque neutral surface, restrained selection, haptics. |
 
 Native-first rule: pickers, switches, sliders, menus, date/time pickers and bottom sheets

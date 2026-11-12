@@ -19,7 +19,7 @@ const MOTION: Record<Exclude<OrbitState, 'rest'>, { ms: number; tail: number }> 
   writing: { ms: 1150, tail: 80 },
 };
 
-// viewBox 0 0 24 24: the logo's open orbit (its gap faces the stem, on the left), scaled down.
+// Activity indicator, separate from the swallow brand mark; viewBox 0 0 24 24.
 const C = 12;
 const R = 8;
 const START = brand.orbit.startDeg;
@@ -34,10 +34,10 @@ const ORBIT = (() => {
 })();
 
 /**
- * The agent at work, in the brand's own language: the logo's open orbit with the agent dot
+ * The agent at work: an activity ring with the agent dot
  * travelling on it and a comet tail behind. Pace and tail say what it's doing (thinking, calling
  * a tool, writing); at rest the dot glides forward to its home in the logo and stops, so the
- * indicator settles into the mark. SVG + Reanimated on the UI thread (no Skia surface).
+ * indicator settles at rest. SVG + Reanimated on the UI thread (no Skia surface).
  */
 export function AgentOrbit({ state, size = 18 }: { state: OrbitState; size?: number }) {
   const c = useTheme();

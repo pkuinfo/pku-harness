@@ -70,7 +70,8 @@
       [
         "expo-notifications",
         {
-          "color": "#F0444F",
+          "icon": "./assets/brand/mark-white.png",
+          "color": "#8B0012",
           "enableRemoteNotifications": false
         }
       ],
