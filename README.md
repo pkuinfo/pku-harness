@@ -2,7 +2,9 @@
 
 # PKU Harness
 
-**An open-source, AI-native app for campus life at Peking University.**
+**A pluggable, keyless, unified agent harness on your phone.**
+
+An open-source, AI-native app for campus life at Peking University.
 
 [![CI](https://github.com/pkuinfo/pku-harness/actions/workflows/ci.yml/badge.svg)](https://github.com/pkuinfo/pku-harness/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/pkuinfo/pku-harness?color=8B0012)](https://github.com/pkuinfo/pku-harness/releases/latest)
