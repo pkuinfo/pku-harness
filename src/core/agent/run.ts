@@ -10,6 +10,7 @@ import { installRunHooks, newId, sessionStore, type AttachmentPart, type ChatMes
 import { capToolResultOutput, compactForOverflow, compactInTurn, contextBudget, isContextOverflowError, maybeCompact } from '@/core/agent/context/compaction';
 import { gatherContext } from '@/core/agent/context/request-context';
 import { aiConfig } from './provider';
+import { stepReasoning } from './step-reasoning';
 import { attachmentsOf, cutBefore, nextQueued, plainText, settleRunningTools, textOf, userText } from '@/core/agent/session/session-utils';
 import { sessions } from '@/core/agent/session/sessions';
 import { autoTitle } from '@/core/agent/session/title';
@@ -195,7 +196,9 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
         const next = images.prepare(messages);
         // A plugin loaded this turn (plugins__use) is offered from the next step on.
         const activeTools = activeToolsFor(prefix.tools, messages);
-        return next ? { messages: next, activeTools } : { activeTools };
+        // Quick thinking between Copilot taps, full thinking for planning (step-reasoning.ts).
+        const reasoning = stepReasoning(providerId, messages);
+        return { ...(next ? { messages: next } : {}), activeTools, ...(reasoning ? { reasoning } : {}) };
       },
       onStepEnd: (step) => {
         finishedSteps++;

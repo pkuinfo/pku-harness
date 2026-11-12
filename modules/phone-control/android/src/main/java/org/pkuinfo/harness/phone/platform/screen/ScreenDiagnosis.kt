@@ -52,8 +52,10 @@ object ScreenDiagnosis {
     private val CAPTCHA = listOf(
         "captcha", "人机验证", "安全验证", "滑块验证", "拖动滑块", "向右滑动完成", "请完成验证", "verify you are human", "not a robot",
     )
+    // A cashier or payment sheet. "立即支付" / "Pay now" are not here: on an order page they open the
+    // cashier, which Copilot may do itself; the sheet that opens is the user's (PhoneActionPolicy).
     private val PAYMENT = listOf(
-        "支付密码", "确认支付", "确认付款", "立即支付", "输入密码支付", "payment password", "confirm payment", "pay now",
+        "支付密码", "确认支付", "确认付款", "输入密码支付", "payment password", "confirm payment",
     )
     private val SMS_CODE = listOf(
         "获取验证码", "发送验证码", "短信验证码", "get code", "send code", "verification code",

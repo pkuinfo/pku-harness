@@ -16,10 +16,20 @@ class PhoneActionPolicyTest {
         }
     }
 
-    @Test fun paymentAndPurchaseControlsRequireTheMoneyGate() {
-        for (label in listOf("Pay", "Buy now", "付款", "下单")) {
+    @Test fun orderAndPayButtonsBeforeThePaymentSheetArePublicActions() {
+        // Copilot places the order itself; the payment sheet that opens is the user's.
+        for (label in listOf("Pay", "Buy now", "付款", "下单", "提交订单", "立即支付")) {
             val target = button(label)
-            assertEquals(PhoneEffect.MONEY, policy.assess(frame(target), target))
+            assertEquals(PhoneEffect.PUBLIC, policy.assess(frame(target), target))
+        }
+    }
+
+    @Test fun everyTapOnAPaymentSheetRequiresTheMoneyGate() {
+        val amount = DeviceElement("@e2", "text", "实付 ¥23.50", listOf(100, 100, 900, 200))
+        val method = DeviceElement("@e3", "text", "选择支付方式", listOf(100, 300, 900, 400))
+        for (label in listOf("支付宝", "微信支付", "确认支付")) {
+            val target = button(label)
+            assertEquals(PhoneEffect.MONEY, policy.assess(frame(target, amount, method), target))
         }
     }
 

@@ -142,6 +142,11 @@ reference and is not retried by the session engine. Unknown or unselected app wi
 operations. Reopening a selected app is permitted for recovery; an explicit restart can reset
 an agent-owned app task when ordinary launch restores the blocked screen, but must not discard
 unsaved user work. Passwords, protected screens, and payment confirmation require user handoff.
+The user only pays: Copilot places the order itself, including the submit-order or pay-now tap
+(a public action, asked like any other). Every tap on the payment sheet that opens (choosing
+Alipay or WeChat Pay, the cashier, password or fingerprint) is MONEY and hands over
+(`PhoneActionPolicy.assess`). Steps that follow only Copilot screen operations think at low
+effort (`src/core/agent/step-reasoning.ts`); planning keeps the provider default.
 
 Physical device brightness uses separate typed `readBrightness` and `setBrightness` operations.
 The virtual display's Settings page can omit hardware brightness controls, so this capability

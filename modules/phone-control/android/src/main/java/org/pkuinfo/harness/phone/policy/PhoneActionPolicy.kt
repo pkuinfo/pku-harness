@@ -24,15 +24,20 @@ class PhoneActionPolicy : ActionPolicy {
     override fun assessPoint(frame: DeviceFrame, x: Int, y: Int): PhoneEffect =
         if (IrreversibleDetector.paymentPage(screen(frame)) != null) PhoneEffect.MONEY else super.assessPoint(frame, x, y)
 
+    /**
+     * The user only pays: Copilot places the order and taps "Pay" or "Submit order" itself (asked
+     * like any public action), and the payment sheet that opens (method choice, cashier, password,
+     * fingerprint) is the user's. Every tap on such a sheet needs the money gate, which hands over.
+     */
     override fun assess(frame: DeviceFrame, target: DeviceElement): PhoneEffect {
         val screen = screen(frame)
+        if (IrreversibleDetector.paymentPage(screen) != null) return PhoneEffect.MONEY
         val risk = IrreversibleDetector.classify(GateTarget.Tap, buildJsonObject {
             put("ref", target.key)
             put("snapshotId", screen.snapshotId)
         }, screen)
         return when (risk?.action) {
-            IrrevAction.pay, IrrevAction.order -> PhoneEffect.MONEY
-            IrrevAction.send, IrrevAction.submit -> PhoneEffect.PUBLIC
+            IrrevAction.pay, IrrevAction.order, IrrevAction.send, IrrevAction.submit -> PhoneEffect.PUBLIC
             else -> PhoneEffect.WRITE
         }
     }
