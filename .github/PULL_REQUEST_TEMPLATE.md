@@ -8,12 +8,13 @@
 
 ## Screenshots
 
-<!-- For UI changes: light and dark theme. Redact any personal data. -->
+<!-- For UI changes: emulator or device screenshots in light and dark themes. Redact any personal data. -->
 
 ## Checklist
 
-- [ ] `bun run verify` passes
-- [ ] UI changes were checked on a device in light and dark themes against the [DESIGN.md](../docs/DESIGN.md) checklist
+- [ ] `bun run verify` passes (typecheck + lint + tests, exactly what CI runs)
+- [ ] UI changes were checked on an emulator or device in light and dark themes against the [DESIGN.md](../docs/DESIGN.md) checklist, with screenshots above
 - [ ] No real credentials, student IDs or personal data are committed
 - [ ] Plugin changes were committed to the plugins repository first; this PR only bumps the submodule
-- [ ] Related docs are updated (README, docs/, PLAN.md)
+- [ ] Docs are updated where behaviour changed (README, docs/, PLAN.md, website docs)
+- [ ] Commits follow [Conventional Commits](https://www.conventionalcommits.org) (`feat(chat): …`)

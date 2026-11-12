@@ -35,6 +35,15 @@ bun run android        # development build on an emulator or device (JDK 17 + An
   at a time (Gradle build, emulator, full test run) and stop the Gradle daemon after builds
   (`./gradlew --stop`).
 
+## Finding something to work on
+
+- Issues labelled [`good first issue`](https://github.com/pkuinfo/pku-harness/labels/good%20first%20issue)
+  are small and well described; [`help wanted`](https://github.com/pkuinfo/pku-harness/labels/help%20wanted)
+  marks larger tasks where we'd welcome a hand.
+- Ideas and design questions start in [Discussions](https://github.com/pkuinfo/pku-harness/discussions).
+- Want a campus service connected? Use the plugin request form, or write it yourself in the
+  [plugins repository](https://github.com/pkuinfo/pku-harness-plugins).
+
 ## Workflow
 
 1. Open an issue describing what you want to change. Small fixes can go straight to a pull

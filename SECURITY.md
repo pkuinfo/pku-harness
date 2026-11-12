@@ -6,7 +6,7 @@ reports seriously.
 
 ## Supported versions
 
-Security fixes go into the latest release and the `master` branch. JavaScript fixes reach
+Security fixes go into the latest release and the `main` branch. JavaScript fixes reach
 installed apps through signed over-the-air updates; native fixes ship as a new signed APK.
 
 ## Reporting a vulnerability

@@ -27,8 +27,11 @@ body:
   - type: input
     id: version
     attributes:
-      label: Version or commit
-      placeholder: Release version (e.g. 1.0.0) or git commit
+      label: App version
+      description: Settings → About, or the git commit for development builds
+      placeholder: e.g. 1.0.20
+    validations:
+      required: true
   - type: dropdown
     id: platform
     attributes:
@@ -37,10 +40,19 @@ body:
     validations:
       required: true
   - type: input
+    id: android
+    attributes:
+      label: Android version
+      placeholder: e.g. Android 16
+    validations:
+      required: true
+  - type: input
     id: device
     attributes:
-      label: Device and OS version
-      placeholder: e.g. Pixel 8 · Android 16
+      label: Device model
+      placeholder: e.g. Pixel 8, Xiaomi 14, emulator (API 37)
+    validations:
+      required: true
   - type: input
     id: model
     attributes:

@@ -1,8 +1,17 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Questions and ideas (Discussions)
+    url: https://github.com/pkuinfo/pku-harness/discussions
+    about: Ask how something works, share an idea, or show what you built.
+  - name: Documentation
+    url: https://harness.novadiffusion.com/en/docs
+    about: User guide, plugin language, SDK and Cloud docs (中文 at /docs).
+  - name: Website and download
+    url: https://harness.novadiffusion.com/en
+    about: Download the latest signed APK and browse the plugin marketplace.
+  - name: A campus service broke, or a plugin question
+    url: https://github.com/pkuinfo/pku-harness-plugins/issues/new/choose
+    about: Treehole, campus card, courses and other services are plugins; report them in the plugins repository.
   - name: Security vulnerability
     url: https://github.com/pkuinfo/pku-harness/security/advisories/new
     about: Please report privately, not in a public issue (see SECURITY.md).
-  - name: Plugins and campus services
-    url: https://github.com/pkuinfo/pku-harness-plugins/issues/new/choose
-    about: A campus service is broken, you want a new one connected, or you have a plugin development question.

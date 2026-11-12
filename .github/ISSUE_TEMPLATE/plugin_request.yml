@@ -1,0 +1,43 @@
+name: Plugin request
+description: Ask for a campus service to be connected (a new adapter / plugin)
+labels: [plugin-request, plugin]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        New campus services are built as plugins in [pku-harness-plugins](https://github.com/pkuinfo/pku-harness-plugins). If you can describe the tools in detail, the [new plugin proposal](https://github.com/pkuinfo/pku-harness-plugins/issues/new?template=new_plugin.yml) there is the best place. This form is for students who just want a service connected.
+        **Never paste passwords, cookies, tokens or student IDs.**
+  - type: input
+    id: service
+    attributes:
+      label: Campus service
+      description: Name and website address
+      placeholder: e.g. Gym booking (epe.pku.edu.cn)
+    validations:
+      required: true
+  - type: textarea
+    id: scenarios
+    attributes:
+      label: What would you ask the assistant?
+      description: Example requests, and anything that should appear on the dashboard or in the schedule
+      placeholder: |
+        "Book a badminton court for Saturday afternoon"
+        "Remind me when a court frees up"
+    validations:
+      required: true
+  - type: dropdown
+    id: network
+    attributes:
+      label: Where does the service work?
+      options: [Anywhere, Campus network only, Not sure]
+  - type: textarea
+    id: references
+    attributes:
+      label: Existing tools or references
+      description: Optional. A pkucli crate, a script, an API you know of, or a WeChat mini program that does it.
+  - type: checkboxes
+    id: dev
+    attributes:
+      label: Contributing
+      options:
+        - label: I'd like to help write this plugin.

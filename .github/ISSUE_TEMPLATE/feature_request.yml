@@ -19,7 +19,7 @@ body:
     attributes:
       label: Area
       multiple: true
-      options: [Chat / agent, Composer and commands, Dashboard, Schedule and reminders, Settings and permissions, Design and motion, Performance, Documentation, Other]
+      options: [Chat / agent, Copilot (phone control), Voice and files, Composer and commands, Dashboard, Schedule and reminders, Settings and permissions, Design and motion, Performance, Documentation, Other]
   - type: checkboxes
     id: plugin
     attributes:
