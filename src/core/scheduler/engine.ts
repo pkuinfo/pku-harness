@@ -105,9 +105,12 @@ export async function updateJob(
   const cur = jobStore.get(id);
   if (!cur) throw new Error(t('app.schedule.noJob', { id }));
   const now = Date.now();
+  // Only fields given a value change: `{ enabled: undefined }` (a caller passing "unchanged"
+  // through) must not switch the job off.
+  const given = Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)) as JobPatch;
   const next: Job = {
     ...cur,
-    ...patch,
+    ...given,
     trigger: patch.trigger ? triggerSchema.parse(patch.trigger) : cur.trigger,
     action: patch.action ? actionSchema.parse(patch.action) : cur.action,
     // Ensure updatedAt changes even within the same millisecond, so notifications re-arm.

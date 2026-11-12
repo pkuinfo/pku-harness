@@ -150,7 +150,7 @@ export const welcome: Messages['welcome'] = {
     needHelper: 'Phone helper (Wireless debugging pairing)',
     needHelperWhy: 'Lets Copilot open apps on its own screen, and turns accessibility on by itself when needed.',
     needAccessibility: 'Accessibility permission',
-    needAccessibilityWhy: 'Copilot reads the screen, taps and types through accessibility. With it off, Copilot can’t see or type anything. Turn it on in Settings → Accessibility → PKU Harness.',
+    needAccessibilityWhy: 'Copilot reads what’s on the screen through accessibility (the phone helper does the tapping and typing). With it off, Copilot can’t see the screen. Turn it on in Settings → Accessibility → Copilot.',
     needApps: 'Apps it may use',
     needAppsWhy: 'Choose the apps Copilot may operate; it asks you before using any other.',
     needDone: 'Done',

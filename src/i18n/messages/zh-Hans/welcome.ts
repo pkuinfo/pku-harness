@@ -129,7 +129,7 @@ export const welcome = {
     needHelper: '手机助手（无线调试配对）',
     needHelperWhy: '让 Copilot 在独立屏幕上打开 App，并在需要时自动开启无障碍。',
     needAccessibility: '无障碍权限',
-    needAccessibilityWhy: 'Copilot 通过无障碍读取屏幕、点按和输入文字。关闭后它什么都看不到，也无法输入。在 系统设置 → 无障碍 → PKU Harness 中开启。',
+    needAccessibilityWhy: 'Copilot 通过无障碍读取屏幕上的内容（点按和输入由手机助手完成）。关闭后它看不到屏幕。在 系统设置 → 无障碍 → Copilot 中开启。',
     needApps: '允许使用的 App',
     needAppsWhy: '选好 Copilot 可以操作的 App；需要其他 App 时它会先问你。',
     needDone: '已完成',
