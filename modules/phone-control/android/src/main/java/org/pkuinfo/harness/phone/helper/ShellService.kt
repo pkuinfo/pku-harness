@@ -1656,7 +1656,7 @@ class ShellService(
         const val CLIP_SET = 0
         const val CLIP_UNREADABLE = 1
         const val CLIP_FAILED = 2
-        private const val CLIP_LABEL = "PKU Harness Copilot"
+        private const val CLIP_LABEL = "PKU harness Copilot"
         // AppOpsManager 里这个名字是隐藏的
         private const val OPSTR_READ_CLIPBOARD = "android:read_clipboard"
         private const val READ_CLIPBOARD_IN_BACKGROUND = "android.permission.READ_CLIPBOARD_IN_BACKGROUND"

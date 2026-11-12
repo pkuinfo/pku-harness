@@ -286,7 +286,7 @@ internal object SelfSignedCertificate {
 
     fun create(keyPair: KeyPair): X509Certificate {
         val algId = seq(tlv(0x06, SHA256_WITH_RSA), tlv(0x05, ByteArray(0)))
-        val name = seq(tlv(0x31, seq(tlv(0x06, COMMON_NAME), tlv(0x0c, "PKU Harness Copilot".toByteArray()))))
+        val name = seq(tlv(0x31, seq(tlv(0x06, COMMON_NAME), tlv(0x0c, "PKU harness Copilot".toByteArray()))))
         val validity = seq(tlv(0x17, "700101000000Z".toByteArray()), tlv(0x18, "20991231235959Z".toByteArray()))
         val tbs = seq(
             tlv(0xa0, tlv(0x02, byteArrayOf(2))),

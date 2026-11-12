@@ -16,5 +16,5 @@ Before you post:
 - **Never post passwords, cookies, tokens, student IDs or other personal data**, and redact
   screenshots.
 
-PKU Harness is maintained by student volunteers, so answers can take a few days. The university's
+PKU harness is maintained by student volunteers, so answers can take a few days. The university's
 own IT services can't help with this app; it is not an official Peking University product.

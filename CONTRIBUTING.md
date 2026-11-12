@@ -1,4 +1,4 @@
-# Contributing to PKU Harness
+# Contributing to PKU harness
 
 Thanks for helping. This repository is the **harness**: the app shell, the agent loop, the design
 system and the host services. Connecting a new campus service almost always belongs in the

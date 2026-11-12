@@ -15,7 +15,7 @@ function unwrap<T>(value: T | { nativeError: { code: string; message: string } }
   return value;
 }
 
-const UPDATE_FOR_VISION = 'This app version cannot show screenshots to the AI. Tell the user to update PKU Harness.';
+const UPDATE_FOR_VISION = 'This app version cannot show screenshots to the AI. Tell the user to update PKU harness.';
 
 const isEnded = (value: unknown) => !!value && typeof value === 'object' && 'nativeError' in value
   && (value as { nativeError: { code: string } }).nativeError.code === 'ENDED';
@@ -59,7 +59,7 @@ export const phoneService: PhoneService = {
     leases.claim(id, signal);
     const module = native();
     // An OTA can reach an APK built before `allow` existed.
-    if (typeof module.allow !== 'function') throw new Error('This app version cannot add apps to a running Copilot task. Update PKU Harness, or tell the user to add the app in /copilot.');
+    if (typeof module.allow !== 'function') throw new Error('This app version cannot add apps to a running Copilot task. Update PKU harness, or tell the user to add the app in /copilot.');
     const result = await module.allow(id, packageName);
     signal?.throwIfAborted();
     return unwrap(result);
@@ -117,7 +117,7 @@ export const phoneService: PhoneService = {
   handoffAndWait: async (id, note, timeoutMs, signal) => {
     leases.claim(id, signal);
     const module = native();
-    if (typeof module.handoff !== 'function' || typeof module.awaitHandback !== 'function') throw new Error('This app version cannot wait for a handoff. Use handoff without wait, and tell the user to update PKU Harness.');
+    if (typeof module.handoff !== 'function' || typeof module.awaitHandback !== 'function') throw new Error('This app version cannot wait for a handoff. Use handoff without wait, and tell the user to update PKU harness.');
     await module.handoff(id, note);
     signal?.throwIfAborted();
     // The wait stops with the run: Stop in chat or the panel cancels it (the session then ends,

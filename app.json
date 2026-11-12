@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "PKU Harness",
+    "name": "PKU harness",
     "slug": "pku-harness",
     "version": "1.0.21",
     "orientation": "portrait",
@@ -91,8 +91,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "允许 PKU Harness 访问相册，以便把图片作为附件发给 AI 助手",
-          "cameraPermission": "允许 PKU Harness 使用相机，以便拍照后作为附件发给 AI 助手"
+          "photosPermission": "允许 PKU harness 访问相册，以便把图片作为附件发给 AI 助手",
+          "cameraPermission": "允许 PKU harness 使用相机，以便拍照后作为附件发给 AI 助手"
         }
       ],
       [
@@ -119,7 +119,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "PKU Harness uses the microphone for voice input. The recording goes only to the speech service you set up."
+          "microphonePermission": "PKU harness uses the microphone for voice input. The recording goes only to the speech service you set up."
         }
       ]
     ],

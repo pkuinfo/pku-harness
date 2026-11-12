@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/brand/lockup-white.svg">
-  <img src="assets/brand/lockup-red.svg" alt="PKU Harness" width="360">
+  <img src="assets/brand/lockup-red.svg" alt="PKU harness" width="360">
 </picture>
 
 **A pluggable, keyless, unified agent harness on your phone.**
@@ -36,7 +36,7 @@
 
 ## 为什么做它
 
-北大的校园服务分散在十几个网站上，各有各的登录方式和怪癖。PKU Harness 用一个智能体统一接入它们：
+北大的校园服务分散在十几个网站上，各有各的登录方式和怪癖。PKU harness 用一个智能体统一接入它们：
 
 - **可插拔**：每个校园服务都是一个插件，即一份可读的 `PLUGIN.md` 文档，可以通过链接安装、分享、审阅，也可以自己写。新增服务无需发布新版应用。
 - **无钥匙**：校园密码、验证器密钥和模型 API Key 只保存在手机的安全存储里。没有我们的账号体系，我们的服务器也看不到你的对话。
@@ -49,7 +49,7 @@
 - **日程**：从教务同步课表，加上待办和提醒。支持自由的重复规则（“两天后”“每 3 天一次，共 16 次”），由系统闹钟准点送达；助手还能在对话中为你创建定时检查，例如“每天早上检查校园卡，余额低于 ¥100 就提醒我”。
 - **Copilot（手机操控）**：可选插件，让智能体逐步操作你允许的其他 Android 应用，悬浮面板随时可暂停或接管。点按和按键通过 shell 输入完成，无障碍服务只用于观察屏幕和核验结果。支付等敏感步骤交还给你。见 [docs/COPILOT.md](docs/COPILOT.md)。
 - **插件与插件市场**：插件是带 `PLUGIN.md` 的文件夹，由应用解释执行的 YAML 步骤和安全表达式构成，不运行任意代码；通过链接（`pkuharness://plugin?src=…`）安装，更新即数据。另支持 MCP 远程插件。[插件市场](https://harness.novadiffusion.com/marketplace)会索引 GitHub 上的插件仓库，安装前展示其可访问的全部范围。
-- **隐私与安全**：每个工具都声明其效果（读取、修改、付款、公开发布），你可以按插件选择助手直接执行、先询问或禁止。插件只拿到限定范围的校园会话，拿不到密码。**PKU Harness Cloud** 为可选服务，提供端到端加密的中继与存储，例如把校园卡付款码借给朋友（带消费上限和 PIN）。JavaScript 更新经签名后空中下发，原生版本以签名 APK 发布。
+- **隐私与安全**：每个工具都声明其效果（读取、修改、付款、公开发布），你可以按插件选择助手直接执行、先询问或禁止。插件只拿到限定范围的校园会话，拿不到密码。**PKU harness Cloud** 为可选服务，提供端到端加密的中继与存储，例如把校园卡付款码借给朋友（带消费上限和 PIN）。JavaScript 更新经签名后空中下发，原生版本以签名 APK 发布。
 
 ## 快速开始
 
@@ -73,6 +73,6 @@ bun run android    # 在模拟器或真机上构建开发版
 
 ## 许可与致谢
 
-[MIT](LICENSE)，第三方组件以其自带的许可声明为准。PKU Harness 是学生项目，与北京大学无隶属关系，也未获其背书。
+[MIT](LICENSE)，第三方组件以其自带的许可声明为准。PKU harness 是学生项目，与北京大学无隶属关系，也未获其背书。
 
 致谢 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)、[pkucli](https://github.com/pkuinfo/pkucli)、[Mobile Next](https://github.com/mobile-next/mobile-mcp)、[Mika](https://github.com/wangzan101/Mika) 和 [DSH Go](https://github.com/ccch1mneyyy/dsh-go)。完整致谢与第三方代码许可说明见[英文 README](README.md#acknowledgments)。

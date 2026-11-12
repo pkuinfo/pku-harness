@@ -11,7 +11,7 @@
  */
 const { withAppBuildGradle } = require('@expo/config-plugins');
 
-const MARK = '// PKU Harness release signing (config-plugins/with-release-signing.js)';
+const MARK = '// PKU harness release signing (config-plugins/with-release-signing.js)';
 
 const SIGNING = `
         release {

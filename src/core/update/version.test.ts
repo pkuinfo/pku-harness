@@ -58,7 +58,7 @@ describe('releaseNotes', () => {
   });
 
   test('is empty without a section', () => {
-    expect(releaseNotes('PKU Harness v1.0.7 for Android 7.0+.')).toEqual({ en: [], 'zh-Hans': [] });
+    expect(releaseNotes('PKU harness v1.0.7 for Android 7.0+.')).toEqual({ en: [], 'zh-Hans': [] });
     expect(releaseNotes(undefined)).toEqual({ en: [], 'zh-Hans': [] });
   });
 

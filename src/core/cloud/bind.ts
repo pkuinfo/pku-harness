@@ -4,7 +4,7 @@ import { CloudError, type Channel, type CloudErrorCode, type CloudManifest, type
 import type { ProviderMode } from './config';
 
 /**
- * `ctx.cloud` / `props.cloud`: PKU Harness Cloud bound to one plugin (docs/CLOUD.md §2.1 rule 4,
+ * `ctx.cloud` / `props.cloud`: PKU harness Cloud bound to one plugin (docs/CLOUD.md §2.1 rule 4,
  * §2.5). `HostServices` has no caller identity, so cloud access is a separate object per plugin
  * and every call is checked here, in order:
  *

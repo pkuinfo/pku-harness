@@ -29,7 +29,7 @@ object PhoneRuntime {
     /** Shown to the model when the service is off and can't be turned on: never "protected". */
     private const val OFF_MESSAGE = "Copilot's accessibility service is off (switched off in system settings or stopped by the system) " +
         "and could not be turned back on, so Copilot can neither read the screen nor type. This is not a protected screen. " +
-        "Ask the user to turn on PKU Harness in Settings > Accessibility (or reconnect the phone helper in Copilot settings), then try again."
+        "Ask the user to turn on PKU harness in Settings > Accessibility (or reconnect the phone helper in Copilot settings), then try again."
 
     /**
      * Every Copilot call first checks that the accessibility service is bound and turns it back on

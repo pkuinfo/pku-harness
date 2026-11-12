@@ -1,6 +1,6 @@
 # Code of Conduct
 
-PKU Harness follows the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
+PKU harness follows the [Contributor Covenant, version 2.1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/).
 
 In short: be kind, be inclusive, and argue about ideas, not people. No harassment, no personal
 attacks, and never publish other people's private information. On a campus project that

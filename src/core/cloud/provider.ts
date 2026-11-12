@@ -58,7 +58,7 @@ export async function fetchMeta(baseURL: string, signal?: AbortSignal): Promise<
   try {
     json = JSON.parse(text);
   } catch {
-    throw new CloudError('protocol', 'not a PKU Harness Cloud server (response is not JSON)');
+    throw new CloudError('protocol', 'not a PKU harness Cloud server (response is not JSON)');
   }
   if ((json as { protocol?: unknown })?.protocol !== PROTOCOL_VERSION) throw new CloudError('protocol', `unsupported protocol ${(json as { protocol?: unknown })?.protocol ?? '?'}`);
   const r = metaResponse.safeParse(json);

@@ -208,7 +208,7 @@ impersonate TalkBack/Select to Speak, and there are no on-device models (ML Kit 
   for payments or passwords; mention once that WeChat's terms forbid automation and Tencent may
   restrict accounts.
 - Native changes (engine, Expo `assessAt`, `look`/`tapAt`/`typeAt` operations) need a new APK; an
-  older APK reached by OTA answers with “update PKU Harness”.
+  older APK reached by OTA answers with “update PKU harness”.
 The native preview polls only when expanded and appropriate for the current session state;
 the in-app preview polls only while its screen is focused and Harness is active. Handoff moves
 the task to the user's screen only when explicitly requested or needed for a manual step.

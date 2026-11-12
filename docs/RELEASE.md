@@ -17,7 +17,7 @@ and give it to GitHub only as `release` environment secrets.
 
 ```bash
 keytool -genkeypair -v -keystore pku-harness-release.keystore -alias pku-harness \
-  -keyalg RSA -keysize 4096 -validity 36500 -dname "CN=PKU Harness, O=pkuinfo"
+  -keyalg RSA -keysize 4096 -validity 36500 -dname "CN=PKU harness, O=pkuinfo"
 ```
 
 Then, in the `pkuinfo/pku-harness` repository settings → Environments → `release` (create it;
@@ -78,7 +78,7 @@ workflow artifact for three days.
   once and keeps an "update available" row at the top of Settings. "Update" downloads the APK
   built for the phone's CPU into the cache with a progress dialog, then opens Android's package
   installer (`src/core/update/install.ts`, `REQUEST_INSTALL_PACKAGES`), which installs it over
-  the app and keeps its data; the first time, Android asks to allow installs from PKU Harness.
+  the app and keeps its data; the first time, Android asks to allow installs from PKU harness.
   "Later" quiets that version for 3 days. Settings → About → Check for updates runs the check
   on demand. Builds before 1.0.6 don't check; 1.0.6 opens the APK link in the browser instead.
 

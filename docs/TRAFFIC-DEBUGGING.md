@@ -20,8 +20,8 @@ MCP server, so an AI coding agent can read the captured flows directly.
 
 | App | Trusts a user CA? | What you need |
 |---|---|---|
-| PKU Harness **debug** build | Yes: `config-plugins/with-debug-user-ca.js` adds a debug-only network security config | Nothing more |
-| PKU Harness release build | No (system CAs only) | Not supported on purpose |
+| PKU harness **debug** build | Yes: `config-plugins/with-debug-user-ca.js` adds a debug-only network security config | Nothing more |
+| PKU harness release build | No (system CAs only) | Not supported on purpose |
 | Other apps (e.g. official PKU apps), Android 7+ | No | A **system** CA, which needs a rooted/writable emulator (a Google APIs image with `adb root`, or Magisk + a trust-user-certs module). Apps that pin certificates also need an unpinning hook (LSPosed + e.g. TrustMeAlready). |
 
 The Google Play emulator images are `user` builds (`adb root` is refused), so they can only

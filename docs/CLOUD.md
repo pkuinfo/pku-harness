@@ -1,4 +1,4 @@
-# Design: PKU Harness Cloud (plugin backend standard) and the `card-share` plugin
+# Design: PKU harness Cloud (plugin backend standard) and the `card-share` plugin
 
 Status: accepted 2026-10-23, with the recommended defaults in §5 (to be revisited: hosting, domain). Written from a read-only exploration of `pku-harness`, `pku-harness/plugins`, `pkubdcard`, `pkucli/crates/campuscard` and `deepseek-harness`.
 
@@ -85,7 +85,7 @@ What is still unknown and must be measured before any design depends on it (spik
 
 ---
 
-## 2. The plugin backend standard ("PKU Harness Cloud")
+## 2. The plugin backend standard ("PKU harness Cloud")
 
 ### 2.1 Principles
 1. **Serverless from the user's trust perspective.** The default server is a blind router and store. Plaintext leaves the device only for things a plugin declares in plain words, and the user approves it.

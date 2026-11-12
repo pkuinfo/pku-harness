@@ -9,7 +9,7 @@ import { isNewer } from './version';
  * In-app APK update: download the release APK into the cache, then hand it to Android's package
  * installer, which installs it over this app and keeps all data. Android itself checks that the
  * APK is signed with the same key as the installed app, so a tampered download can't replace it.
- * The first time, Android asks the user to allow PKU Harness to install apps (a one-time switch).
+ * The first time, Android asks the user to allow PKU harness to install apps (a one-time switch).
  */
 
 export type InstallState =

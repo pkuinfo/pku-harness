@@ -2,7 +2,7 @@
 
 生效日期：2026 年 11 月 12 日
 
-本政策说明 PKU Harness 处理哪些数据、数据去向何处，以及你如何掌控这些数据。本政策适用于 PKU Harness 应用、网站 harness.novadiffusion.com，以及由 pkuinfo 贡献者（以下称“我们”）运营的可选服务 PKU Harness Cloud。PKU Harness 与北京大学没有关联。
+本政策说明 PKU harness 处理哪些数据、数据去向何处，以及你如何掌控这些数据。本政策适用于 PKU harness 应用、网站 harness.novadiffusion.com，以及由 pkuinfo 贡献者（以下称“我们”）运营的可选服务 PKU harness Cloud。PKU harness 与北京大学没有关联。
 
 ## 概要
 
@@ -39,7 +39,7 @@
 
 插件在应用内运行。每个插件都会声明它可以连接哪些主机、可以执行哪些操作，由你授予相应权限。在你授予的权限范围内，社区插件可能把数据发送到其作者的服务器，相关处理由插件作者负责。安装插件前，请阅读其说明和所需权限。
 
-## 5. PKU Harness Cloud（可选）
+## 5. PKU harness Cloud（可选）
 
 位于 harness.novadiffusion.com/cloud 的云服务只在你启用云功能（例如分享校园卡付款码）时使用。你可以在 **设置 → 云服务** 中关闭它或改用自己的服务器。
 - 你的手机会生成一对密钥。服务器只能看到公钥，用它识别你的设备。
@@ -68,7 +68,7 @@
 
 ## 9. 未成年人
 
-PKU Harness 面向北京大学的成员，不是为未满 14 周岁的儿童设计的。
+PKU harness 面向北京大学的成员，不是为未满 14 周岁的儿童设计的。
 
 ## 10. 政策的变更
 

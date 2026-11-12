@@ -2,7 +2,7 @@
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="assets/brand/lockup-white.svg">
-  <img src="assets/brand/lockup-red.svg" alt="PKU Harness" width="360">
+  <img src="assets/brand/lockup-red.svg" alt="PKU harness" width="360">
 </picture>
 
 **A pluggable, keyless, unified agent harness on your phone.**
@@ -42,7 +42,7 @@ capability comes from **plugins**, and built-in and community plugins are equal.
 ## Why
 
 Campus life at PKU is spread over a dozen websites, each with its own login, layout and quirks.
-PKU Harness puts one agent in front of all of them:
+PKU harness puts one agent in front of all of them:
 
 - **Pluggable.** Each campus service is a plugin: a readable `PLUGIN.md` document you can install
   from a link, share, review and write yourself. No app release needed to add a service.
@@ -108,7 +108,7 @@ PKU Harness puts one agent in front of all of them:
 - **Permissions you can read.** Every tool declares its effect (read, change, money, public);
   you choose per plugin whether the assistant may act, must ask first, or never acts.
 - **Credentials stay on the device.** Plugins get scoped campus sessions, never your password.
-- **PKU Harness Cloud** is optional: an end-to-end-encrypted relay and store for features like
+- **PKU harness Cloud** is optional: an end-to-end-encrypted relay and store for features like
   sharing your campus-card payment code with a friend (spend cap and PIN included). It knows your
   device only by an anonymous key. See [docs/CLOUD.md](docs/CLOUD.md).
 - **Signed updates.** JavaScript updates come over the air from our own server, signed; native
@@ -134,7 +134,7 @@ flowchart LR
   Remote --> Web[(Plugin servers)]
   Builtin --> Phone[(Phone<br/>alarms, notifications, files)]
   Copilot --> Apps[(Other Android apps)]
-  Runtime --> Cloud[(PKU Harness Cloud<br/>E2E-encrypted, optional)]
+  Runtime --> Cloud[(PKU harness Cloud<br/>E2E-encrypted, optional)]
 ```
 
 The full design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).

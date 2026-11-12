@@ -2,7 +2,7 @@
 
 Effective date: 12 November 2026
 
-This policy explains what data PKU Harness handles, where it goes, and how you control it. It applies to the PKU Harness app, the website harness.novadiffusion.com, and the optional PKU Harness Cloud service run by the pkuinfo contributors ("we"). PKU Harness is not affiliated with Peking University.
+This policy explains what data PKU harness handles, where it goes, and how you control it. It applies to the PKU harness app, the website harness.novadiffusion.com, and the optional PKU harness Cloud service run by the pkuinfo contributors ("we"). PKU harness is not affiliated with Peking University.
 
 ## In short
 
@@ -39,7 +39,7 @@ Your campus password and authenticator secret are never sent to the AI. The prov
 
 Plugins run inside the app. Each plugin declares which hosts it may contact and which actions it may take, and you grant that access. Community plugins may send data to their own servers within the access you grant. The plugin's author is responsible for that handling. Read a plugin's description and requested access before you install it.
 
-## 5. PKU Harness Cloud (optional)
+## 5. PKU harness Cloud (optional)
 
 The cloud service at harness.novadiffusion.com/cloud is used only when you turn on a cloud feature, such as sharing a campus card payment code. You can switch it off or use your own server in **Settings → Cloud**.
 - Your phone creates a key pair. The server sees only the public key, and uses it to recognise your device.
@@ -68,7 +68,7 @@ Because your data is stored on your phone, you can view, export and delete it in
 
 ## 9. Children
 
-PKU Harness is meant for members of Peking University. It is not designed for children under 14.
+PKU harness is meant for members of Peking University. It is not designed for children under 14.
 
 ## 10. Changes to this policy
 

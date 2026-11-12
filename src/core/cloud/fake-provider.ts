@@ -1,5 +1,5 @@
 /**
- * A tiny in-memory stand-in for a PKU Harness Cloud provider, enough for client / store /
+ * A tiny in-memory stand-in for a PKU harness Cloud provider, enough for client / store /
  * channel unit tests: /v1/meta, device registration (verifies the proof of work), signed token
  * auth (verifies the signature) and a route table per test. Requests and bodies are validated
  * against the wire schemas so tests catch protocol drift.

@@ -146,7 +146,7 @@ jobs:
             PASS=$(openssl rand -hex 16)
             echo "::add-mask::$PASS"
             keytool -genkeypair -v -keystore "$KS" -storepass "$PASS" -keypass "$PASS" -alias dryrun \
-              -keyalg RSA -keysize 4096 -validity 2 -dname "CN=PKU Harness dry run" >/dev/null 2>&1
+              -keyalg RSA -keysize 4096 -validity 2 -dname "CN=PKU harness dry run" >/dev/null 2>&1
             { echo "PKU_HARNESS_KEYSTORE_PASSWORD=$PASS"; echo "PKU_HARNESS_KEY_PASSWORD=$PASS"; echo "PKU_HARNESS_KEY_ALIAS=dryrun"; } >> "$GITHUB_ENV"
           else
             if [ -z "$KEYSTORE_BASE64" ] || [ -z "$KEYSTORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ]; then
@@ -252,7 +252,7 @@ jobs:
           FIRST="pku-harness-${{ needs.check.outputs.version }}-${ABIS%% *}.apk"
           # docs/releases/<version>.md holds the "## 更新内容" / "## What's new" bullets the in-app update sheet shows.
           cat > notes.md <<EOF
-          PKU Harness ${TAG} for Android 7.0+. Most phones need \`arm64-v8a\`; \`armeabi-v7a\` is for
+          PKU harness ${TAG} for Android 7.0+. Most phones need \`arm64-v8a\`; \`armeabi-v7a\` is for
           older 32-bit phones and \`x86_64\` for emulators and x86 devices.
 
           $(cat "docs/releases/${{ needs.check.outputs.version }}.md" 2>/dev/null)
@@ -273,5 +273,5 @@ jobs:
           Later JS and plugin updates arrive over the air, signed by the maintainers.
           EOF
           # The website offers a release's first asset as the main download: upload arm64 alone first.
-          gh release create "$TAG" "dist/$FIRST" --title "PKU Harness ${TAG}" --notes-file notes.md --verify-tag
+          gh release create "$TAG" "dist/$FIRST" --title "PKU harness ${TAG}" --notes-file notes.md --verify-tag
           for f in dist/*.apk; do [ "$f" = "dist/$FIRST" ] || gh release upload "$TAG" "$f"; done

@@ -1,5 +1,5 @@
 /**
- * Provider configuration rules for PKU Harness Cloud (docs/CLOUD.md §2.4). Pure: no native
+ * Provider configuration rules for PKU harness Cloud (docs/CLOUD.md §2.4). Pure: no native
  * modules, so the rules are unit-tested and shared by the settings screen and the runtime.
  */
 

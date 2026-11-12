@@ -18,7 +18,7 @@ export const welcome = {
     privacy: '隐私政策',
   },
   /** Accessibility label of the 3D hero. */
-  heroA11y: 'PKU Harness 助手',
+  heroA11y: 'PKU harness 助手',
   /** Text inside the intro and step illustrations (short: they sit in pills and small cards). */
   art: {
     agentAsk: '每天 8 点查校园卡余额',

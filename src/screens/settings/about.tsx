@@ -97,7 +97,7 @@ export function AboutSettings() {
       <FadeIn index={0}>
         <View className="items-center gap-2 py-4">
           <Logo size={72} />
-          <Text variant="title">PKU Harness</Text>
+          <Text variant="title">PKU harness</Text>
           <Text variant="callout" tone="muted" align="center">
             {t('app.settings.aboutTagline')}
           </Text>

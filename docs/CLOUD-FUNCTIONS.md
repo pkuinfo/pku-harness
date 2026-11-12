@@ -1,4 +1,4 @@
-# Design: plugin server functions (PKU Harness Cloud, part 2)
+# Design: plugin server functions (PKU harness Cloud, part 2)
 
 Status: **on hold** (2026-10-23). The maintainer decided the server must stay minimal: the
 official instance is a 2-core / 4 GB VPS that is easy to break. What exists stays (stage 2:

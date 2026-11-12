@@ -1,4 +1,4 @@
-# Design: plugins as shareable documents (the PKU Harness plugin language)
+# Design: plugins as shareable documents (the PKU harness plugin language)
 
 Status: accepted 2026-10-23 (direction set by the maintainer: "a plugin should be like a skill,
 but more powerful; we build a language for that; easy to share and use, no package to upload").

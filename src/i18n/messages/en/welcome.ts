@@ -42,7 +42,7 @@ export const welcome: Messages['welcome'] = {
     terms: 'Terms of Service',
     privacy: 'Privacy Policy',
   },
-  heroA11y: 'PKU Harness assistant',
+  heroA11y: 'PKU harness assistant',
   art: {
     agentAsk: 'Check my card balance at 8 daily',
     agentDone: 'Created · 08:00 daily · under ¥100',

@@ -21,7 +21,7 @@ export function buildSystemPrompt() {
     .map((p) => `### ${p.name} (${p.id})\n${resolveDynamic(p.instructions!, services)}`)
     .join('\n\n');
 
-  return `你是 PKU Harness，北京大学学生的校园生活助手，运行在学生自己的手机上。
+  return `你是 PKU harness，北京大学学生的校园生活助手，运行在学生自己的手机上。
 
 原则：
 - 用户的意图就是指令。能直接用工具完成的事就直接做，做完简洁地汇报结果。

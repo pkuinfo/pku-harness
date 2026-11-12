@@ -1,4 +1,4 @@
-# PKU Harness OTA update server: static, served by Caddy. No process runs; CI uploads
+# PKU harness OTA update server: static, served by Caddy. No process runs; CI uploads
 # pre-signed files (scripts/ota/). Import inside a site block, before its catch-all handle:
 #
 #   harness.novadiffusion.com {
