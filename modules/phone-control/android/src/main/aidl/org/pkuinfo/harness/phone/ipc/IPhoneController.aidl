@@ -118,6 +118,9 @@ interface IPhoneController {
     Bundle readDeviceBrightness() = 50;
     Bundle setDeviceBrightness(float percent, int adaptiveMode) = 51;
 
+    // Two synchronized fingers on an owned display; packed x/y arrays are [finger0, finger1] per sample.
+    boolean injectTwoFingerStroke(int displayId, in int[] xs, in int[] ys, in long[] times) = 52;
+
     // 沿用早先定下的销毁事务号;AIDL 要求要么全部方法编号要么都不编号
     void destroy() = 16777114;
 }
