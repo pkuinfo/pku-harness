@@ -43,6 +43,7 @@ export const app: Messages['app'] = {
     timezoneHint: '"auto" follows the phone; otherwise an IANA zone such as Asia/Shanghai',
     aiProvider: 'AI service',
     aiModel: 'AI model',
+    aiEffort: 'AI thinking effort',
     aiKey: 'AI API key',
     voiceProvider: 'Voice input service',
     voiceKey: 'Voice input API key',

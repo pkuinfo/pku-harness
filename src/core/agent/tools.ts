@@ -32,7 +32,10 @@ export const fromModelName = (name: string) => name.replace('__', '.');
 export const alwaysLoadedPlugins = () => new Set(registry.list().filter((p) => p.core).map((p) => p.id));
 
 /** The model-facing names of the tools offered for a chat with this history. */
-export const activeToolsFor = (set: ToolSet, history: readonly ModelMessage[]) => activeToolNames(Object.keys(set), alwaysLoadedPlugins(), history);
+/** Model-facing names of `onDemand` tools (left out until their plugin is loaded explicitly). */
+const onDemandTools = () => new Set([...registry.tools()].filter((t) => t.def.onDemand).map((t) => toModelName(t.id)));
+
+export const activeToolsFor = (set: ToolSet, history: readonly ModelMessage[]) => activeToolNames(Object.keys(set), alwaysLoadedPlugins(), history, onDemandTools());
 
 /** `set` narrowed to the tools offered for a chat with this history. */
 export function activeToolSet(set: ToolSet, history: readonly ModelMessage[]): ToolSet {

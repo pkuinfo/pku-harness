@@ -147,6 +147,10 @@ The user only pays: Copilot places the order itself, including the submit-order 
 Alipay or WeChat Pay, the cashier, password or fingerprint) is MONEY and hands over
 (`PhoneActionPolicy.assess`). Steps that follow only Copilot screen operations think at low
 effort (`src/core/agent/step-reasoning.ts`); planning keeps the provider default.
+While a task is open and the user types in PKU harness (its keyboard is open), the accessibility
+service is held off between calls, so keyboards such as Samsung Keyboard don't switch to
+screen-reader typing (`AccessibilityParking.holdForHost`); each call turns it back on first, and
+switching is serialized so a call never runs on a service that is unbinding.
 
 Physical device brightness uses separate typed `readBrightness` and `setBrightness` operations.
 The virtual display's Settings page can omit hardware brightness controls, so this capability

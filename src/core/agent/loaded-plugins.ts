@@ -20,27 +20,40 @@ function outputValue(output: unknown): unknown {
   return output;
 }
 
-/** Plugins this chat has loaded, from its messages. */
+/** Plugins this chat has loaded, from its messages: `plugins__use` results, and calls to their tools. */
 export function loadedPlugins(messages: readonly ModelMessage[]): Set<string> {
-  const out = new Set<string>();
+  const { used, called } = scan(messages);
+  return new Set([...used, ...[...called].map(pluginOfTool)]);
+}
+
+/** Plugins loaded explicitly (`plugins__use`), and the tools this chat has called. */
+function scan(messages: readonly ModelMessage[]): { used: Set<string>; called: Set<string> } {
+  const used = new Set<string>();
+  const called = new Set<string>();
   for (const m of messages) {
     if (!Array.isArray(m.content)) continue;
     for (const part of m.content as Part[]) {
-      if (part.type === 'tool-call' && part.toolName && part.toolName !== USE_TOOL) out.add(pluginOfTool(part.toolName));
+      if (part.type === 'tool-call' && part.toolName && part.toolName !== USE_TOOL) called.add(part.toolName);
       if (part.type === 'tool-result' && part.toolName === USE_TOOL) {
         const value = outputValue(part.output) as { loaded?: { id?: unknown; error?: unknown }[] } | undefined;
-        for (const l of value?.loaded ?? []) if (typeof l.id === 'string' && !l.error) out.add(l.id);
+        for (const l of value?.loaded ?? []) if (typeof l.id === 'string' && !l.error) used.add(l.id);
       }
     }
   }
-  return out;
+  return { used, called };
 }
 
-/** The tool names to offer: every tool of an always-loaded plugin, plus those of plugins this chat loaded. */
-export function activeToolNames(toolNames: readonly string[], always: ReadonlySet<string>, messages: readonly ModelMessage[]): string[] {
-  const loaded = loadedPlugins(messages);
+/**
+ * The tool names to offer: every tool of an always-loaded plugin, plus those of plugins this chat
+ * loaded. An `onDemand` tool (even of a core plugin) waits for an explicit `plugins__use` of its
+ * plugin, or stays once the chat has called it.
+ */
+export function activeToolNames(toolNames: readonly string[], always: ReadonlySet<string>, messages: readonly ModelMessage[], onDemand: ReadonlySet<string> = new Set()): string[] {
+  const { used, called } = scan(messages);
+  const loaded = new Set([...used, ...[...called].map(pluginOfTool)]);
   return toolNames.filter((name) => {
     const id = pluginOfTool(name);
+    if (onDemand.has(name)) return used.has(id) || called.has(name);
     return always.has(id) || loaded.has(id);
   });
 }

@@ -24,4 +24,16 @@ describe('loaded plugins', () => {
   test('calling a tool keeps its plugin loaded (older chats, compaction summaries aside)', () => {
     expect([...loadedPlugins([call('copilot__observe'), call('plugins__use')])]).toEqual(['copilot']);
   });
+
+  test('an on-demand tool of a core plugin waits for plugins__use of its plugin', () => {
+    const tools = ['plugins__search', 'plugins__validate'];
+    const always = new Set(['plugins']);
+    const onDemand = new Set(['plugins__validate']);
+    expect(activeToolNames(tools, always, [], onDemand)).toEqual(['plugins__search']);
+    // Calling another tool of the plugin is not loading it.
+    expect(activeToolNames(tools, always, [call('plugins__search')], onDemand)).toEqual(['plugins__search']);
+    expect(activeToolNames(tools, always, [used([{ id: 'plugins', tools: [] }])], onDemand)).toEqual(tools);
+    // Once called, it stays offered (the history shows the call).
+    expect(activeToolNames(tools, always, [call('plugins__validate')], onDemand)).toEqual(tools);
+  });
 });

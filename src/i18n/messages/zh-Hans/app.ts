@@ -44,6 +44,7 @@ export const app = {
     timezoneHint: '"auto" 跟随手机；否则填 IANA 时区，例如 Asia/Shanghai',
     aiProvider: 'AI 服务',
     aiModel: 'AI 模型',
+    aiEffort: 'AI 思考强度',
     aiKey: 'AI API Key',
     voiceProvider: '语音输入服务',
     voiceKey: '语音输入 API Key',

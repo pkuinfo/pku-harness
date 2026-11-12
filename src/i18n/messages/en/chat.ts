@@ -216,6 +216,12 @@ export const chat: Messages['chat'] = {
     title: 'Choose a model',
     subtitle: 'Used in this chat from your next message, and as the default for new chats',
     noProviders: 'No AI provider plugins available yet',
+    effort: 'Thinking',
+    effortLevels: { auto: 'Auto', minimal: 'Minimal', low: 'Low', medium: 'Medium', high: 'High', xhigh: 'Very high', max: 'Max' },
+    effortHint: {
+      auto: 'Thinks carefully when planning, quickly between steps on your phone',
+      fixed: 'Every step thinks at this level',
+    },
     setup: 'Set up',
     setupFor: 'Set up {name}',
     enterModel: 'Enter a model name in AI provider settings',

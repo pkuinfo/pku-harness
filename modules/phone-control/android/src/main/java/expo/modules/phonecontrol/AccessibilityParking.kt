@@ -12,6 +12,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import org.pkuinfo.harness.phone.connection.protocol.AccessibilityList
 import org.pkuinfo.harness.phone.connection.protocol.PermissionCommands
@@ -25,9 +26,11 @@ import org.pkuinfo.harness.phone.platform.accessibility.ScreenAccessibility
  * service is parked (taken out of the system list) and put back when the next task begins, and
  * checked again before every Copilot call (it may also have been switched off by the user or the
  * system meanwhile; [ensureOn]).
- * It is also held off during a task while PKU harness itself is in front and no Copilot call is
- * running ([holdForHost]), so typing a new message in the chat takes one tap per key; it comes
- * back for the next call or when the user leaves the app ([releaseForHost]).
+ * It is also held off during a task while the user types in PKU harness (its keyboard is open)
+ * and no Copilot call is running ([holdForHost]), so typing a new message takes one tap per key;
+ * it comes back for the next call or when the user leaves the app ([releaseForHost]). Turning it
+ * off and on is serialized, and turning off waits for the service to unbind, so a call that
+ * starts right after never runs on a service that is going away.
  * It parks only when that can be undone without the user: this app holds WRITE_SECURE_SETTINGS,
  * or the helper is connected. Otherwise it stays on, as before.
  */
@@ -43,7 +46,11 @@ internal object AccessibilityParking {
     @Volatile private var watching: Job? = null
     /** PKU harness has a resumed activity (set from the module's lifecycle hooks). */
     val hostInFront = kotlinx.coroutines.flow.MutableStateFlow(false)
-    /** Off because the user is in PKU harness mid-task; the session monitor leaves it off. */
+    /** PKU harness's keyboard is open (the user is typing there). */
+    @Volatile var typing = false
+    /** Turning the service off or on, one at a time. */
+    private val switching = kotlinx.coroutines.sync.Mutex()
+    /** Off because the user is typing in PKU harness mid-task; the session monitor leaves it off. */
     @Volatile var heldForHost = false
         private set
     private val calls = java.util.concurrent.atomic.AtomicInteger(0)
@@ -80,11 +87,16 @@ internal object AccessibilityParking {
         try { return block() } finally { calls.decrementAndGet() }
     }
 
-    /** Mid-task, with PKU harness in front and no call running: off, so its keyboard types normally. */
-    fun holdForHost(context: Context) {
-        if (!hostInFront.value || calls.get() > 0 || ScreenAccessibility.instance.value == null) return
-        heldForHost = true
-        if (!park(context)) heldForHost = false else Log.i(TAG, "held off while PKU harness is in front")
+    /** Mid-task, the user typing in PKU harness and no call running: off, so the keyboard types normally. */
+    suspend fun holdForHost(context: Context) {
+        if (!typing || !hostInFront.value || calls.get() > 0 || ScreenAccessibility.instance.value == null) return
+        switching.withLock {
+            if (!typing || calls.get() > 0 || ScreenAccessibility.instance.value == null) return
+            heldForHost = true
+            if (!park(context)) { heldForHost = false; return }
+            withTimeoutOrNull(BIND_TIMEOUT_MS) { ScreenAccessibility.instance.first { it == null } }
+            Log.i(TAG, "held off while the user types in PKU harness")
+        }
     }
 
     /** The user left PKU harness mid-task: back on, so the floating panel returns over other apps. */
@@ -113,7 +125,9 @@ internal object AccessibilityParking {
      * wait for Android to bind it. False only when it is off and cannot be turned on without the
      * user.
      */
-    suspend fun ensureOn(context: Context): Boolean {
+    suspend fun ensureOn(context: Context): Boolean = switching.withLock { turnOn(context) }
+
+    private suspend fun turnOn(context: Context): Boolean {
         if (ScreenAccessibility.instance.value != null) return true
         val written = runCatching { if (canWriteDirectly(context)) write(context, on = true) else PhoneRuntime.enableAccessibility(context) }
             .getOrDefault(false)

@@ -200,16 +200,22 @@ object PhoneRuntime {
             PhoneOverlayBridge.finishOperation(ticket, true)
             throw error
         } finally {
-            // The call ended with PKU harness in front (an approval, a question in the chat).
+            // The call ended while the user types in PKU harness.
             appContext?.let { AccessibilityParking.holdForHost(it) }
         }
     }
 
-    /** PKU harness came to the front or left it; mid-task the service follows (AccessibilityParking). */
+    /** PKU harness came to the front or left it; leaving mid-task brings the service back (AccessibilityParking). */
     suspend fun hostVisibility(context: Context, inFront: Boolean) {
         AccessibilityParking.hostInFront.value = inFront
-        if (sessionIdentity == null) return
-        if (inFront) AccessibilityParking.holdForHost(context) else AccessibilityParking.releaseForHost(context)
+        if (!inFront) AccessibilityParking.typing = false
+        if (sessionIdentity != null && !inFront) AccessibilityParking.releaseForHost(context)
+    }
+
+    /** PKU harness's keyboard opened or closed; while it is open mid-task the service is held off. */
+    suspend fun hostTyping(context: Context, typing: Boolean) {
+        AccessibilityParking.typing = typing
+        if (typing && sessionIdentity != null) AccessibilityParking.holdForHost(context)
     }
 
     private suspend fun executeOperation(context: Context, id: String, operation: String, args: Map<String, Any?>): Map<String, Any?> {

@@ -6,6 +6,7 @@ import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { pluginName } from '@/core/runtime/localize';
 import { registry, type ProviderEntry } from '@/core/runtime/registry';
 import { kv } from '@/core/store/kv';
+import type { ReasoningEffort } from '@pku-harness/sdk';
 import { subscribeLocale, t } from '@/i18n';
 import { secrets, type SecretKey } from '@/core/store/secrets';
 
@@ -17,7 +18,10 @@ import { secrets, type SecretKey } from '@/core/store/secrets';
 
 export const DEFAULT_PROVIDER = 'deepseek.api';
 
-export type ProviderSettings = { baseURL: string; model: string };
+/** `auto`: the provider's default effort, lower for quick steps (step-reasoning.ts). */
+export type EffortChoice = 'auto' | ReasoningEffort;
+
+export type ProviderSettings = { baseURL: string; model: string; effort?: EffortChoice };
 
 /** What screens read. `name` and `model` describe the active provider. */
 export type AIConfig = { providerId: string; name: string; baseURL: string; model: string };
@@ -37,6 +41,7 @@ function settingsFor(entry: ProviderEntry | undefined, providerId: string): Prov
   return {
     baseURL: s?.baseURL || entry?.def.defaultBaseURL || '',
     model: s?.model || entry?.def.defaultModel || '',
+    effort: s?.effort && entry?.def.efforts?.includes(s.effort as ReasoningEffort) ? s.effort : 'auto',
   };
 }
 
@@ -123,6 +128,11 @@ export const aiConfig = {
 
 export function useAIConfig() {
   return useSyncExternalStore(aiConfig.subscribe, aiConfig.snapshot);
+}
+
+/** A provider's thinking-effort choice, re-rendering when it changes. */
+export function useEffort(providerId: string): EffortChoice {
+  return useSyncExternalStore(aiConfig.subscribe, () => aiConfig.settingsFor(providerId).effort ?? 'auto');
 }
 
 /** Language model of a provider (default: the active one). Throws with a readable reason. */

@@ -11,6 +11,7 @@ import { capToolResultOutput, compactForOverflow, compactInTurn, contextBudget, 
 import { gatherContext } from '@/core/agent/context/request-context';
 import { aiConfig } from './provider';
 import { stepReasoning } from './step-reasoning';
+import { registry } from '@/core/runtime/registry';
 import { attachmentsOf, cutBefore, nextQueued, plainText, settleRunningTools, textOf, userText } from '@/core/agent/session/session-utils';
 import { sessions } from '@/core/agent/session/sessions';
 import { autoTitle } from '@/core/agent/session/title';
@@ -197,7 +198,7 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
         // A plugin loaded this turn (plugins__use) is offered from the next step on.
         const activeTools = activeToolsFor(prefix.tools, messages);
         // Quick thinking between Copilot taps, full thinking for planning (step-reasoning.ts).
-        const reasoning = stepReasoning(providerId, messages);
+        const reasoning = stepReasoning(registry.provider(providerId)?.def.efforts, aiConfig.settingsFor(providerId).effort, messages);
         return { ...(next ? { messages: next } : {}), activeTools, ...(reasoning ? { reasoning } : {}) };
       },
       onStepEnd: (step) => {

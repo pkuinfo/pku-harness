@@ -90,6 +90,12 @@ function appEntries(): Entry[] {
         await aiConfig.save(ai.providerId, { model: value.trim() }, { activate: true });
       },
     },
+    ...(aiProvider?.def.efforts?.length
+      ? [{
+          key: 'ai.effort', group: t('app.prefs.groupAI'), title: t('app.prefs.aiEffort'), screen: '/model-picker', read: () => aiConfig.settingsFor(ai.providerId).effort ?? 'auto',
+          ...choice(['auto', ...aiProvider.def.efforts] as const, (v) => t(`chat.model.effortLevels.${v}`), (v) => aiConfig.save(ai.providerId, { effort: v }, { activate: false })),
+        }]
+      : []),
     { key: 'ai.apiKey', group: t('app.prefs.groupAI'), title: t('app.prefs.aiKey'), kind: 'text', uiOnly: true, screen: '/ai-settings', read: () => null },
     {
       key: 'voice.provider', group: t('app.prefs.groupAI'), title: t('app.prefs.voiceProvider'), screen: '/voice-settings', read: () => voice.providerId,

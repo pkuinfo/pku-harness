@@ -219,6 +219,12 @@ export const chat = {
     title: '选择模型',
     subtitle: '从下一条消息起用于这个对话，也会作为新对话的默认模型',
     noProviders: '还没有可用的 AI 服务插件',
+    effort: '思考强度',
+    effortLevels: { auto: '自动', minimal: '最低', low: '低', medium: '中', high: '高', xhigh: '很高', max: '最高' },
+    effortHint: {
+      auto: '规划任务时认真思考，操作手机的每一步快速思考',
+      fixed: '每一步都按这个强度思考',
+    },
     setup: '去设置',
     setupFor: '去设置 {name}',
     enterModel: '在 AI 服务设置里填写模型名称',

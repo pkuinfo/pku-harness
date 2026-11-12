@@ -71,7 +71,8 @@ export type RequestPrefix = { system: string; tools: ToolSet; messages: ModelMes
 /**
  * System prompt, tool block and resolved messages for a request on `history`.
  *
- * Side requests (title, summary) pass `{ sideRequest: true }` and append their instruction after
+ * Side requests (title, summary) pass `{ sideRequest: true }` (a summary also `loadedFrom`: the
+ * whole chat, whose loaded plugins set the tool block) and append their instruction after
  * `messages`. They keep the same tool schemas but without `execute`, and must NOT set
  * `toolChoice: 'none'`: DeepSeek then renders the prompt without its tool section, so the
  * request diverges right after the system prompt and the cached conversation is missed
@@ -79,7 +80,7 @@ export type RequestPrefix = { system: string; tools: ToolSet; messages: ModelMes
  */
 export async function requestPrefix(
   history: ModelMessage[],
-  opts: { signal?: AbortSignal; sideRequest?: boolean; turn?: TurnInfo; actor?: 'agent' | 'scheduler'; images?: ToolImages } = {},
+  opts: { signal?: AbortSignal; sideRequest?: boolean; turn?: TurnInfo; actor?: 'agent' | 'scheduler'; images?: ToolImages; loadedFrom?: ModelMessage[] } = {},
 ): Promise<RequestPrefix> {
   // The same tool block for every actor (the cached prefix); who may run what is decided in invokeTool.
   const all = timed('tool block', () => buildToolSet(opts.signal, opts.turn, opts.actor, opts.images));
@@ -88,7 +89,9 @@ export async function requestPrefix(
   // Plugins load on demand (loaded-plugins.ts): the model sees the core tools plus those of the
   // plugins this chat loaded. A side request sends exactly that block (same prefix as the turn).
   if (opts.sideRequest) {
-    const tools = activeToolSet(all, history);
+    // A summary covers only the older part of the chat; its tool block must still be the chat's
+    // (plugins loaded later included), or the request misses the cache right after the system prompt.
+    const tools = activeToolSet(all, opts.loadedFrom ? [...opts.loadedFrom, ...history] : history);
     for (const name of Object.keys(tools)) tools[name] = { ...tools[name], execute: undefined };
     return { system, tools, messages };
   }

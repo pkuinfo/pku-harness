@@ -34,6 +34,21 @@ class PhoneControlModule : Module() {
 
     private val hostScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
+    private var watchedDecor: java.lang.ref.WeakReference<android.view.View>? = null
+
+    /** Reports PKU harness's keyboard opening and closing (any text field: the composer, a form). */
+    private fun watchKeyboard(ctx: android.content.Context) {
+        if (android.os.Build.VERSION.SDK_INT < 30) return
+        val decor = appContext.currentActivity?.window?.decorView ?: return
+        if (watchedDecor?.get() === decor) return
+        watchedDecor = java.lang.ref.WeakReference(decor)
+        var shown = false
+        decor.viewTreeObserver.addOnGlobalLayoutListener {
+            val now = decor.rootWindowInsets?.isVisible(android.view.WindowInsets.Type.ime()) == true
+            if (now != shown) { shown = now; hostScope.launch { PhoneRuntime.hostTyping(ctx, now) } }
+        }
+    }
+
     override fun definition() = ModuleDefinition {
         Name("PhoneControl")
         Events("onOverlayAnswer", "onControlStopped")
@@ -48,7 +63,11 @@ class PhoneControlModule : Module() {
             PhonePlatform.of(context).start()
         }
         // Mid-task, Copilot's accessibility service is off while PKU harness is in front (AccessibilityParking).
-        OnActivityEntersForeground { val ctx = context; hostScope.launch { PhoneRuntime.hostVisibility(ctx, inFront = true) } }
+        OnActivityEntersForeground {
+            val ctx = context
+            hostScope.launch { PhoneRuntime.hostVisibility(ctx, inFront = true) }
+            watchKeyboard(ctx)
+        }
         OnActivityEntersBackground { val ctx = context; hostScope.launch { PhoneRuntime.hostVisibility(ctx, inFront = false) } }
         OnDestroy { PhoneOverlayBridge.onControlStopped = null; PhoneOverlayBridge.status = null; PhoneOverlayBridge.onAnswer = null; PhoneOverlayBridge.update(null) }
         AsyncFunction("overlayStatus") { value: Map<String, Any?>? ->

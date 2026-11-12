@@ -90,7 +90,7 @@ async function summarize(sessionId: string, messages: ModelMessage[]): Promise<s
   // reused; the instruction is the only new message. Tools stay declared but can't run.
   const r = await generateText({
     model: await modelFor(providerId, modelName),
-    ...(await requestPrefix(messages, { sideRequest: true })),
+    ...(await requestPrefix(messages, { sideRequest: true, loadedFrom: sessions.data(sessionId)?.history })),
     maxOutputTokens: 4_096,
   });
   recordStep({

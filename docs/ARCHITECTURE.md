@@ -255,6 +255,15 @@ flow, a near-empty first dashboard. The user asks; the agent finds the plugin th
   hour, `src/core/runtime/market-search.ts`, falling back to the bundled registry) ranked by
   `rankMarketplace` (`market-rank.ts`). A hit that isn't installed comes with its install link;
   installing still goes through the normal permission sheet.
+- A tool flagged `onDemand` (plugin authoring in the core `plugins` plugin) stays out even of a
+  core plugin's default tools until `plugins.use` loads that plugin; the authoring workflow lives
+  in those tools' descriptions, not the system prompt.
+- Every request about a chat shares one prefix (system → tools → history) so the provider's cache
+  hits: a compaction summary takes its tool block from the whole chat (`loadedFrom`), not just
+  the part it summarises.
+- Thinking effort: a provider lists the levels its API takes (`ProviderDef.efforts`); the model
+  picker offers Auto or a fixed level (`ai.effort` setting). Auto keeps the provider default and
+  uses the lowest level for a step that only continues Copilot screen work (`step-reasoning.ts`).
 - A switched-off plugin is never loaded; the error tells the agent to turn it on with
   `settings.change plugin.<id>.enabled` (which asks the user under the usual modes).
 

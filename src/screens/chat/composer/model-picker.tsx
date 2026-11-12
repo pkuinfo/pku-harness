@@ -5,11 +5,13 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Button, IconButton } from '@/components/button';
 import { Chip } from '@/components/chip';
+import { Segmented } from '@/components/segmented';
 import { FadeIn } from '@/components/fade-in';
 import { Icon } from '@/components/icon';
 import { PressableScale } from '@/components/pressable-scale';
 import { Text } from '@/components/text';
-import { useAIConfig } from '@/core/agent/provider';
+import { aiConfig, useAIConfig, useEffort, type EffortChoice } from '@/core/agent/provider';
+import { registry } from '@/core/runtime/registry';
 import { sessions } from '@/core/agent/session/sessions';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import type { ProviderModel } from '@/core/runtime/types';
@@ -42,6 +44,13 @@ export function ModelPicker() {
   const current = useSessionModel();
   const busy = useSessionBusy();
   const groups = pickerProviders();
+  // Thinking effort of the chat's provider, when its API takes one (ProviderDef.efforts).
+  const efforts = registry.provider(current.providerId)?.def.efforts ?? [];
+  const effort = useEffort(current.providerId);
+  const setEffort = (value: EffortChoice) => {
+    haptics.select();
+    void aiConfig.save(current.providerId, { effort: value }, { activate: false });
+  };
 
   const select = async (providerId: string, model: ProviderModel) => {
     if (providerId === current.providerId && model.id === current.model) {
@@ -66,6 +75,21 @@ export function ModelPicker() {
         </View>
         <IconButton icon="close" label={t('core.common.close')} variant="ghost" size={36} onPress={() => router.back()} />
       </View>
+      {efforts.length ? (
+        <View className="gap-2 px-5 pb-4">
+          <Text variant="micro" tone="faint">
+            {t('chat.model.effort')}
+          </Text>
+          <Segmented<EffortChoice>
+            options={(['auto', ...efforts] as EffortChoice[]).map((v) => ({ value: v, label: t(`chat.model.effortLevels.${v}`) }))}
+            value={effort}
+            onChange={setEffort}
+          />
+          <Text variant="caption" tone="muted">
+            {t(effort === 'auto' ? 'chat.model.effortHint.auto' : 'chat.model.effortHint.fixed')}
+          </Text>
+        </View>
+      ) : null}
       <ScrollView style={{ flexGrow: 0 }} nestedScrollEnabled contentContainerClassName="gap-5 px-3" contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.lg) + spacing.lg }}>
         {groups.length === 0 ? (
           <View className="items-center gap-3 px-4 py-8">

@@ -4,6 +4,7 @@ import type { ModelMessage } from 'ai';
 
 import { stepReasoning } from './step-reasoning';
 
+const DS = ['low', 'high', 'max'] as const;
 const user: ModelMessage = { role: 'user', content: '帮我在美团点一份午饭' };
 const call = (...names: string[]): ModelMessage => ({
   role: 'assistant',
@@ -17,19 +18,27 @@ const ok = (name: string) => result(name, { type: 'json', value: { ok: true } })
 
 describe('step reasoning', () => {
   test('the next step of a running Copilot task thinks briefly', () => {
-    expect(stepReasoning('deepseek', [user, call('copilot__observe'), ok('copilot__observe')])).toBe('low');
-    expect(stepReasoning('deepseek', [user, call('copilot__tap', 'copilot__wait'), ok('copilot__tap')])).toBe('low');
+    expect(stepReasoning(DS, 'auto', [user, call('copilot__observe'), ok('copilot__observe')])).toBe('low');
+    expect(stepReasoning(DS, 'auto', [user, call('copilot__tap', 'copilot__wait'), ok('copilot__tap')])).toBe('low');
   });
 
   test('planning, other plugins and failures keep the default', () => {
-    expect(stepReasoning('deepseek', [user])).toBeUndefined();
-    expect(stepReasoning('deepseek', [user, call('copilot__start'), ok('copilot__start')])).toBeUndefined();
-    expect(stepReasoning('deepseek', [user, call('copilot__tap', 'wallet__cardBalance'), ok('copilot__tap')])).toBeUndefined();
-    expect(stepReasoning('deepseek', [user, call('copilot__tap'), result('copilot__tap', { type: 'error-text', value: 'STALE' })])).toBeUndefined();
-    expect(stepReasoning('deepseek', [call('copilot__tap'), ok('copilot__tap'), user])).toBeUndefined();
+    expect(stepReasoning(DS, 'auto', [user])).toBeUndefined();
+    expect(stepReasoning(DS, 'auto', [user, call('copilot__start'), ok('copilot__start')])).toBeUndefined();
+    expect(stepReasoning(DS, 'auto', [user, call('copilot__tap', 'wallet__cardBalance'), ok('copilot__tap')])).toBeUndefined();
+    expect(stepReasoning(DS, 'auto', [user, call('copilot__tap'), result('copilot__tap', { type: 'error-text', value: 'STALE' })])).toBeUndefined();
+    expect(stepReasoning(DS, 'auto', [call('copilot__tap'), ok('copilot__tap'), user])).toBeUndefined();
   });
 
   test('only for providers that take an effort', () => {
-    expect(stepReasoning('openai-compatible', [user, call('copilot__observe'), ok('copilot__observe')])).toBeUndefined();
+    expect(stepReasoning(undefined, 'auto', [user, call('copilot__observe'), ok('copilot__observe')])).toBeUndefined();
+    expect(stepReasoning([], 'high', [user])).toBeUndefined();
+  });
+
+  test('a level the user picked applies to every step', () => {
+    expect(stepReasoning(DS, 'max', [user])).toBe('max');
+    expect(stepReasoning(DS, 'high', [user, call('copilot__observe'), ok('copilot__observe')])).toBe('high');
+    // A level this provider doesn't take falls back to its default.
+    expect(stepReasoning(DS, 'medium', [user])).toBeUndefined();
   });
 });
