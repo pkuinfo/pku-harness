@@ -207,7 +207,7 @@ object PhoneRuntime {
 
     /** PKU harness came to the front or left it; mid-task the service follows (AccessibilityParking). */
     suspend fun hostVisibility(context: Context, inFront: Boolean) {
-        AccessibilityParking.hostInFront = inFront
+        AccessibilityParking.hostInFront.value = inFront
         if (sessionIdentity == null) return
         if (inFront) AccessibilityParking.holdForHost(context) else AccessibilityParking.releaseForHost(context)
     }

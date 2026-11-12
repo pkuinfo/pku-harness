@@ -42,7 +42,7 @@ internal object AccessibilityParking {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     @Volatile private var watching: Job? = null
     /** PKU harness has a resumed activity (set from the module's lifecycle hooks). */
-    @Volatile var hostInFront = false
+    val hostInFront = kotlinx.coroutines.flow.MutableStateFlow(false)
     /** Off because the user is in PKU harness mid-task; the session monitor leaves it off. */
     @Volatile var heldForHost = false
         private set
@@ -82,7 +82,7 @@ internal object AccessibilityParking {
 
     /** Mid-task, with PKU harness in front and no call running: off, so its keyboard types normally. */
     fun holdForHost(context: Context) {
-        if (!hostInFront || calls.get() > 0 || ScreenAccessibility.instance.value == null) return
+        if (!hostInFront.value || calls.get() > 0 || ScreenAccessibility.instance.value == null) return
         heldForHost = true
         if (!park(context)) heldForHost = false else Log.i(TAG, "held off while PKU harness is in front")
     }
