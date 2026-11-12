@@ -9,7 +9,6 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
-import android.graphics.Path
 import android.graphics.Rect
 import android.os.Bundle
 import android.os.SystemClock
@@ -20,7 +19,6 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import android.view.accessibility.AccessibilityWindowInfo
 import org.pkuinfo.harness.phone.platform.interaction.GesturePacing
-import org.pkuinfo.harness.phone.platform.interaction.TypingPacing
 import org.pkuinfo.harness.phone.platform.screen.ActionResult
 import org.pkuinfo.harness.phone.platform.screen.APP_IN_USE_BY_OTHER_TASK
 import org.pkuinfo.harness.phone.platform.screen.AppWait
@@ -112,8 +110,6 @@ class AndroidScreenDriver(
     private val handedOver: () -> Boolean = { false },
     /** 手势的节奏:落指前的停顿、按住时长、落点偏差、滑动的弧线和快慢(见 [GesturePacing])。 */
     private val pacing: GesturePacing = GesturePacing.human(),
-    /** 在这个包名的 App 里打字的节奏(见 [TypingPacing]);默认一次写入全文。 */
-    private val typing: (String?) -> TypingPacing = { TypingPacing.Instant },
     /** 发出启动之前:要开的是 [packageName](装在 [user] 那份用户里的;null 为本来那份)。任务服务据此先静上,开头就没声。 */
     private val beforeOpen: (packageName: String, user: Int?) -> Unit = { _, _ -> },
     /** 启动被拒、没开出来:撤回 [beforeOpen] 提前做的。 */
@@ -431,7 +427,7 @@ class AndroidScreenDriver(
         verified { doubleTapAt(pacing.near(x, y)) }
     }
 
-    // 双击只能是一次手势里的两笔:分两次下发,中间的回调延迟可能超过系统认双击的时限
+    // Two presses at one point, injected synchronously by the shell helper, so the gap between them is exactly the paced one.
     private suspend fun doubleTapAt(at: Pair<Int, Int>): Boolean {
         delay(pacing.approach())
         val press = pacing.doublePress()
@@ -540,10 +536,24 @@ class AndroidScreenDriver(
         // Use a touch on the visible control; never claim an exact value without readback.
         val fraction = (value - range.min) / (range.max - range.min)
         val x = rect.left + ((rect.width() - 1) * fraction).roundToInt()
-        val result = verified { shellPress(x to rect.centerY(), pacing.press()) }
-        if (result !is ActionResult.Ok) return@withContext result
-        val actual = if (node.refresh()) node.rangeInfo?.current else null
+        val first = verified { shellPress(x to rect.centerY(), pacing.press()) }
+        if (first !is ActionResult.Ok) return@withContext first
+        var result: ActionResult.Ok = first
+        var actual = if (node.refresh()) node.rangeInfo?.current else null
         val tolerance = maxOf((range.max - range.min) / 100f, 0.0001f)
+        // The track is inset by the thumb's padding, so the first touch lands a little off: shift by
+        // the measured miss and touch once more.
+        if (actual != null && kotlin.math.abs(actual - value) > tolerance) {
+            val corrected = (x + (rect.width() - 1) * (value - actual) / (range.max - range.min)).roundToInt()
+                .coerceIn(rect.left, rect.right - 1)
+            if (corrected != x) {
+                val again = verified { shellPress(corrected to rect.centerY(), pacing.press()) }
+                if (again is ActionResult.Ok) {
+                    result = again
+                    actual = if (node.refresh()) node.rangeInfo?.current else null
+                }
+            }
+        }
         result.copy(verification = when {
             actual == null -> Verification.UNKNOWN
             kotlin.math.abs(actual - value) <= tolerance -> Verification.MATCH
@@ -1863,17 +1873,6 @@ class AndroidScreenDriver(
         )
     }.getOrDefault(false)
 
-    private fun pathOf(points: List<Pair<Int, Int>>) = Path().apply {
-        moveTo(points.first().first.toFloat(), points.first().second.toFloat())
-        points.drop(1).forEach { lineTo(it.first.toFloat(), it.second.toFloat()) }
-    }
-
-    /**
-     * 网页里的编辑区(contenteditable)只认真实输入:SET_TEXT 只改了网页上的字,编辑器收不到 input 事件,
-     * App 会当作没输入(「完成」不亮、退出不保存)。这类输入框改用选中原内容再粘贴或按删除键。
-     */
-    private fun inWebView(node: AccessibilityNodeInfo) = ancestorOrSelf(node) { it.className == WEB_VIEW } != null
-
     /**
      * 选中原内容后粘贴(或按删除键清空)。返回 null 表示剪贴板不能安全使用(读不到用户原来的内容等),没有改动任何东西。
      * 剪贴板只在这一次粘贴期间是 Mika 的:App 读完(字变了)或超时就还原。
@@ -2035,13 +2034,11 @@ class AndroidScreenDriver(
         /** 慢拖拖不动时快划一下的时长(像人手划滚轮)。 */
         const val WHEEL_SWIPE_MS = 400L
         const val TYPE_ATTEMPTS = 2
-        const val WEB_VIEW = "android.webkit.WebView"
         const val PASTE_WAIT_MS = 1_500L
         const val HINT_PASTE_UNAVAILABLE = "This field only receives real input (it needs a paste), but the clipboard could not be used safely, " +
             "so the text may only be displayed and the app may not have received it. Check that the app reacted (e.g. its save button became enabled) " +
             "before relying on it; if it did not, call hand_to_user so the user can type it."
         const val HINT_TAPPED_TO_FOCUS = "The element you gave is not a text field itself, so it was tapped first and the text went into the field that got focus after the tap (often a separate search page). Check which field holds your text before submitting."
-        const val HINT_FOCUS_UNCONFIRMED = "The field did not confirm input focus after both focus and tap, so the text was written directly. Trust the readback verification, not the focus state."
         const val FOCUS_WAIT_MS = 2_000L
         const val SAME_FIELD_SIZE = 0.03
         val SEARCH_WORDS = listOf("搜索", "搜一搜", "查找", "search")

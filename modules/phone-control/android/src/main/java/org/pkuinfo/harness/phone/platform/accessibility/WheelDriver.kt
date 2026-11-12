@@ -243,24 +243,12 @@ internal class WheelDriver(
     private fun canStep(n: AccessibilityNodeInfo): Boolean = n.actionList.any {
         it.id == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD || it.id == AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
     }
-
-    /** 滚轮自己或里面一层的输入框(原版数字滚轮中间那一格就是)。 */
-    private fun editableOf(wheel: AccessibilityNodeInfo): AccessibilityNodeInfo? {
-        if (wheel.isEditable) return wheel
-        for (i in 0 until wheel.childCount) {
-            val c = wheel.getChild(i) ?: continue
-            if (c.isEditable && c.isVisibleToUser) return c
-        }
-        return null
-    }
-
     private fun px(n: Int, size: Int) = (n * (size - 1) / 999.0).roundToInt()
 
     private fun outcome(reached: Boolean, value: String?, from: String?, method: String, error: String? = null) =
         WheelOutcome(reached, WheelMath.clean(value), WheelMath.clean(from), attempts, method, if (reached) null else error ?: "not_reached")
 
     private companion object {
-        const val MAX_STEPS = 80
         const val MAX_UP = 5
         const val MAX_DOWN = 4
         /** 一项的名字常带着状态词(「已选中，21」「Selected, 21」),放宽一些。 */
@@ -274,8 +262,6 @@ internal class WheelDriver(
         const val SETTLE_MS = 350L
         const val MAX_SETTLE_READS = 5
         const val MAX_RECHECKS = 2
-        const val STEP_QUIET_MS = 150L
-        const val STEP_CAP_MS = 700L
         const val DRAG_QUIET_MS = 300L
         const val DRAG_CAP_MS = 1_500L
     }

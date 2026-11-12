@@ -3,11 +3,9 @@ package org.pkuinfo.harness.phone.platform.accessibility
 
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
-import android.accessibilityservice.GestureDescription
 import android.content.Intent
 import android.graphics.Bitmap
 import android.util.Log
-import android.graphics.Path
 import android.app.Notification
 import android.os.Build
 import android.view.Display
@@ -89,42 +87,6 @@ open class ScreenAccessibility : AccessibilityService() {
     /** 指定屏上的窗口;该屏没有窗口(或不存在)时为空列表。 */
     fun windowsOn(displayId: Int): List<AccessibilityWindowInfo> =
         instance.value?.windowsOnAllDisplays?.get(displayId).orEmpty()
-
-    /** 在指定屏上沿 [path] 做一次单指手势;完成返回 true,被取消或无法下发返回 false。 */
-    suspend fun gesture(displayId: Int, path: Path, durationMs: Long): Boolean {
-        return gesture(displayId, listOf(path), durationMs)
-    }
-
-    suspend fun gesture(displayId: Int, paths: List<Path>, durationMs: Long): Boolean =
-        dispatch(displayId, paths.map { GestureDescription.StrokeDescription(it, 0, durationMs.coerceAtLeast(1)) })
-
-    /** 在同一点上连点 [count] 下(一次手势里先后几笔):每下按住 [holdMs],两下之间隔 [gapMs]。 */
-    suspend fun taps(displayId: Int, x: Float, y: Float, count: Int, holdMs: Long, gapMs: Long): Boolean {
-        val at = Path().apply { moveTo(x, y) }
-        return dispatch(displayId, (0 until count).map { i -> GestureDescription.StrokeDescription(at, i * (holdMs + gapMs), holdMs.coerceAtLeast(1)) })
-    }
-
-    private suspend fun dispatch(displayId: Int, strokes: List<GestureDescription.StrokeDescription>): Boolean {
-        val service = instance.value ?: return false
-        val gesture = GestureDescription.Builder()
-            .setDisplayId(displayId)
-            .apply { strokes.forEach(::addStroke) }
-            .build()
-        suspend fun send(): Boolean = suspendCancellableCoroutine { cont ->
-            val callback = object : GestureResultCallback() {
-                override fun onCompleted(gestureDescription: GestureDescription) {
-                    if (cont.isActive) cont.resume(true)
-                }
-
-                override fun onCancelled(gestureDescription: GestureDescription) {
-                    if (cont.isActive) cont.resume(false)
-                }
-            }
-            if (!service.dispatchGesture(gesture, callback, null) && cont.isActive) cont.resume(false)
-        }
-        // 注入是在用户屏幕上操作别的 App,不是操作 Mika 自己的浮层;所有单点、双击和拖动统一隔离
-        return send()
-    }
 
     /** 截一张用户屏幕(主屏)的结果:画面,或屏上有防截屏窗口,或截不到(错误码)。 */
     sealed interface MainShot {
