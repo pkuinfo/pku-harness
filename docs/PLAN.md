@@ -3,6 +3,12 @@
 Status legend: `[ ]` todo · `[~]` in progress · `[x]` done (with date). Update this file as work lands.
 Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on the Android emulator.
 
+## Copilot shell input (2026-11-11)
+- [x] Route taps, double taps, swipes, scrolls, wheel drags, slider touches, text replacement and editor submission through the display-owned shell helper; add synchronized two-finger input. Remove semantic accessibility actions from the interaction driver. Preserve observation, policy checks and readback.
+- [x] Report rejected movement and release the touch at its last delivered position. Reject main-display task input. Add continuous-swipe and partial-failure regression tests.
+- [x] Latest-main snapshot passed typecheck/lint and 1,775 tests (3 skipped); release APK built, installed and launched on the original emulator. A probe running the release-compiled helper passed touch, scrolling, two-finger input, Unicode paste, submission, clearing, and main-display rejection checks against a dedicated test activity. This validates the input backend, not a complete LLM-driven WeChat task.
+- [ ] Verify signed-in WeChat on the affected physical phone. Neither injected input nor the service compatibility name guarantees undetectability.
+
 ## Copilot WeChat compatibility (2026-11-10)
 - [x] Built the combined TalkBack service and migration changes in release mode (1066 tasks, BUILD SUCCESSFUL). Verified the temporary APK signature/package identity, installed it on the original emulator-5554, and confirmed `received=true`, `hasBound=true` and no crashed accessibility services. Removed the temporary package and preserved the original installation and enabled service. This confirms release compilation and service binding; it does not replace the pending full agent-loop and physical-phone checks.
 - [x] Ran two consecutive DeepSeek chat tasks in the existing production installation on emulator-5554: open Clock and select World Clock, then return to Stopwatch without changing its value. Both agent runs completed; the first recovered from a stale-screen response. Screenshots verified both destinations and the unchanged paused value `00:48.87`. This installation still uses the legacy native service, so this is agent-loop regression evidence, not end-to-end verification of the new TalkBack service.

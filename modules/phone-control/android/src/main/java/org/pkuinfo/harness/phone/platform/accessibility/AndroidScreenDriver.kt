@@ -434,7 +434,10 @@ class AndroidScreenDriver(
     // 双击只能是一次手势里的两笔:分两次下发,中间的回调延迟可能超过系统认双击的时限
     private suspend fun doubleTapAt(at: Pair<Int, Int>): Boolean {
         delay(pacing.approach())
-        return a11y.taps(displayId, at.first.toFloat(), at.second.toFloat(), 2, pacing.doublePress(), pacing.doubleGap())
+        val press = pacing.doublePress()
+        if (!shellPress(at, press)) return false
+        delay(pacing.doubleGap())
+        return shellPress(at, press)
     }
 
     override suspend fun swipe(x1: Int, y1: Int, x2: Int, y2: Int, durationMs: Long): ActionResult = withContext(Dispatchers.IO) {
@@ -449,7 +452,19 @@ class AndroidScreenDriver(
             // 一根手指照着画好的路径走,按节奏排快慢;几根手指一起动的只让时长浮动一点
             if (paths.size == 1) return@verified drag(paths.single(), durationMs, bow = false)
             delay(pacing.approach())
-            a11y.gesture(displayId, paths.map(::pathOf), pacing.duration(durationMs))
+            val duration = pacing.duration(durationMs)
+            // Resample both fingers on the same clock before crossing Binder.
+            val count = maxOf(paths.maxOf { it.size - 1 }, ((duration + 15) / 16).toInt())
+            fun sample(path: List<Pair<Int, Int>>, i: Int): Pair<Int, Int> {
+                val position = i.toDouble() * (path.size - 1) / count
+                val segment = position.toInt().coerceAtMost(path.size - 2)
+                val fraction = position - segment
+                return (path[segment].first + (path[segment + 1].first - path[segment].first) * fraction).roundToInt() to
+                    (path[segment].second + (path[segment + 1].second - path[segment].second) * fraction).roundToInt()
+            }
+            val samples = (0..count).flatMap { i -> paths.map { sample(it, i) } }
+            shell.injectTwoFingerStroke(displayId, samples.map { it.first }.toIntArray(),
+                samples.map { it.second }.toIntArray(), LongArray(count + 1) { duration * it / count })
         }
     }
 
@@ -471,8 +486,15 @@ class AndroidScreenDriver(
             val r = swipe(cx, from, cx, to)
             return@withContext if (r is ActionResult.Ok && relocatedTo != null) r.copy(relocated = true, relocatedTo = relocatedTo) else r
         }
-        val action = if (down) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
-        verified(relocatedTo = relocatedTo) { node.performAction(action) }
+        val area = android.graphics.Rect().also(node::getBoundsInScreen)
+        if (!area.intersect(0, 0, screenWidth, screenHeight) || area.height() < 4)
+            return@withContext ActionResult.Failed("ref_expired")
+        val top = area.top + area.height() / 4
+        val bottom = area.bottom - area.height() / 4
+        val (from, to) = if (down) bottom to top else top to bottom
+        verified(relocatedTo = relocatedTo) {
+            drag(listOf(area.centerX() to from, area.centerX() to to), IDLE_SCROLL_MS, bow = true)
+        }
     }
 
     /**
@@ -512,10 +534,21 @@ class AndroidScreenDriver(
         val range = node.rangeInfo ?: return@withContext ActionResult.Failed("This control is not a slider")
         if (!value.isFinite() || value < range.min || value > range.max || node.isPassword)
             return@withContext ActionResult.Failed("Invalid slider value")
-        val action = AccessibilityNodeInfo.AccessibilityAction.ACTION_SET_PROGRESS
-        if (node.actionList.none { it.id == action.id }) return@withContext ActionResult.Failed("This slider does not support setting its value")
-        val args = Bundle().apply { putFloat(AccessibilityNodeInfo.ACTION_ARGUMENT_PROGRESS_VALUE, value) }
-        verified { node.performAction(action.id, args) }
+        val rect = android.graphics.Rect().also(node::getBoundsInScreen)
+        if (!rect.intersect(0, 0, screenWidth, screenHeight) || rect.isEmpty || range.max <= range.min)
+            return@withContext ActionResult.Failed("Slider bounds unavailable")
+        // Use a touch on the visible control; never claim an exact value without readback.
+        val fraction = (value - range.min) / (range.max - range.min)
+        val x = rect.left + ((rect.width() - 1) * fraction).roundToInt()
+        val result = verified { shellPress(x to rect.centerY(), pacing.press()) }
+        if (result !is ActionResult.Ok) return@withContext result
+        val actual = if (node.refresh()) node.rangeInfo?.current else null
+        val tolerance = maxOf((range.max - range.min) / 100f, 0.0001f)
+        result.copy(verification = when {
+            actual == null -> Verification.UNKNOWN
+            kotlin.math.abs(actual - value) <= tolerance -> Verification.MATCH
+            else -> Verification.MISMATCH
+        })
     }
 
     /** Field-bound editor action; never send a global key or retry an uncertain submission. */
@@ -528,11 +561,9 @@ class AndroidScreenDriver(
         if (found.isPassword || !found.isEditable || !found.isFocused) {
             return@withContext ActionResult.Failed("Select a focused non-password field before submitting")
         }
-        val action = AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER
-        if (found.actionList.none { it.id == action.id }) {
-            return@withContext ActionResult.Failed("This field does not expose an editor action; use an on-screen button or hand off")
-        }
-        verified { found.performAction(action.id) }
+        if (found.actionList.none { it.id == AccessibilityNodeInfo.AccessibilityAction.ACTION_IME_ENTER.id })
+            return@withContext ActionResult.Failed("Use the visible submit button for this field")
+        verified { shell.injectKey(displayId, KeyEvent.KEYCODE_ENTER) }
     }
 
     override suspend fun typeText(ref: String?, snapshotId: String?, text: String): ActionResult = withContext(Dispatchers.IO) {
@@ -548,24 +579,16 @@ class AndroidScreenDriver(
         }
         var field = found.node
         val original = FieldShape.of(field)
-        var focusUncertain = false
+        if (field.isPassword) return@withContext ActionResult.Failed("Password input requires user control")
         if (!field.isFocused) {
-            field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-            field.refresh()
-            // ACTION_FOCUS 的返回值和焦点标志都可能不可靠:没确认拿到焦点时,再按普通输入框点一下。
-            if (!field.isFocused) {
-                withEventClock { clock ->
-                    clock.mark()
-                    click(field).also { if (it) clock.awaitQuiet(QUIET_MS, FOCUS_WAIT_MS) }
-                }
-                focusedEditable()?.takeIf { sameField(original, it) }?.let { field = it }
+            withEventClock { clock ->
+                clock.mark()
+                if (click(field)) clock.awaitQuiet(QUIET_MS, FOCUS_WAIT_MS)
             }
-            // SET_TEXT 不要求焦点,仍可以尝试;最后以读回核对为准,但把焦点未确认如实带给调用方。
-            focusUncertain = !field.isFocused
+            focusedEditable()?.takeIf { sameField(original, it) }?.let { field = it }
+            if (!field.refresh() || !field.isFocused) return@withContext ActionResult.Failed(NO_FOCUS)
         }
-        val web = inWebView(field)
-        // 网页编辑区要粘贴才收得到输入;密码框不经剪贴板
-        var pasteUnavailable = web && field.isPassword
+        var pasteUnavailable = false
         val placeholder = ScreenReader.placeholderOf(field)
         val io = object : TextField {
             override fun read(): String? {
@@ -577,25 +600,13 @@ class AndroidScreenDriver(
                 return ScreenReader.fieldText(now, placeholder, text)
             }
             override fun write(text: String): Boolean {
-                if (!web || pasteUnavailable) return setText(field, text)
-                return when (val r = inputText(field, text)) {
-                    null -> { pasteUnavailable = true; setText(field, text) }
-                    else -> r
-                }
+                val result = inputText(field, text)
+                if (result == null) pasteUnavailable = true
+                return result == true
             }
-            override fun retry(text: String): Boolean {
-                if (web || pasteUnavailable) return write(text)
-                // 原生框第一次 SET_TEXT 没落地时,第二次改走选择加粘贴,让编辑器收到真实输入。
-                return when (val r = inputText(field, text)) {
-                    null -> { pasteUnavailable = true; setText(field, text) }
-                    else -> r
-                }
-            }
+            override fun retry(text: String): Boolean = write(text)
         }
         val textsBefore = read().texts.toSet()
-        // 像人一样一段一段打出来(见 TypingPacing);密码框、要粘贴才收得到的网页框照旧一次写入。
-        // 写不进、框不接受半截字时停下,下面照旧整段写入并读回核对
-        typing(field.packageName?.toString()).forField(web, field.isPassword).leadIn(io, text)
         var frozen = false
         val verification = typeAndVerify(
             io, text, TYPE_ATTEMPTS,
@@ -609,7 +620,6 @@ class AndroidScreenDriver(
         )
         val hint = listOfNotNull(
             HINT_TAPPED_TO_FOCUS.takeIf { found.tapped },
-            HINT_FOCUS_UNCONFIRMED.takeIf { focusUncertain },
             HINT_READBACK_FROZEN.takeIf { frozen },
             HINT_PASTE_UNAVAILABLE.takeIf { pasteUnavailable },
         ).joinToString(" ").ifEmpty { null }
@@ -628,8 +638,18 @@ class AndroidScreenDriver(
                 else -> clearUnseen()
             }
         }
-        val field = found.node
-        verified(relocatedTo = found.relocatedTo) { if (inWebView(field)) inputText(field, "") == true else setText(field, "") }
+        var field = found.node
+        if (field.isPassword) return@withContext ActionResult.Failed("Password input requires user control")
+        val original = FieldShape.of(field)
+        if (!field.isFocused) {
+            withEventClock { clock ->
+                clock.mark()
+                if (click(field)) clock.awaitQuiet(QUIET_MS, FOCUS_WAIT_MS)
+            }
+            focusedEditable()?.takeIf { sameField(original, it) }?.let { field = it }
+        }
+        if (!field.refresh() || !field.isFocused) return@withContext ActionResult.Failed(NO_FOCUS)
+        verified(relocatedTo = found.relocatedTo) { inputText(field, "") == true }
     }
 
     // ---------- 树里看不到的输入框 ----------
@@ -701,8 +721,7 @@ class AndroidScreenDriver(
         try {
             if (runCatching { shell.setClipText(text) }.getOrDefault(ShellService.CLIP_FAILED) != ShellService.CLIP_SET) return null
             runCatching { shell.savedClipText() }.getOrNull()?.let { clipSaved(it, text) }
-            ctrlKey(KeyEvent.KEYCODE_A)
-            if (!ctrlKey(KeyEvent.KEYCODE_V)) return false
+            if (!ctrlKey(KeyEvent.KEYCODE_A) || !ctrlKey(KeyEvent.KEYCODE_V)) return false
             // App 处理粘贴键时就读剪贴板:画面变了再还原,最多等一会儿
             val deadline = SystemClock.uptimeMillis() + PASTE_WAIT_MS
             while (SystemClock.uptimeMillis() < deadline && !FrameMath.differs(beforeFrame, frameSignature())) Thread.sleep(POLL_MS)
@@ -1169,8 +1188,6 @@ class AndroidScreenDriver(
             // 慢拖:按节奏走时末尾减速到停、松手不甩,免得转过头;慢拖拖不动时换成快快划一下
             drag = { points, slow -> drag(points, if (slow) WHEEL_DRAG_MS else WHEEL_SWIPE_MS, bow = false) },
             ocr = { readVisibleText() },
-            imeShown = { imeBox() != null },
-            back = { runCatching { shell.injectKey(displayId, KeyEvent.KEYCODE_BACK) }.getOrDefault(false) },
         )
         driver.set(node, value)
     }
@@ -1807,36 +1824,34 @@ class AndroidScreenDriver(
 
     // ---------- 底层操作 ----------
 
-    /** 优先对节点(或最近的可点祖先)发点击;不行再在其中心做手势,最后注入触摸。 */
+    /** Nodes locate the target; all pointer input is injected by the display-owned shell helper. */
     private suspend fun click(node: AccessibilityNodeInfo): Boolean {
-        val target = ancestorOrSelf(node) { it.isClickable && it.isEnabled }
-        if (target != null && target.performAction(AccessibilityNodeInfo.ACTION_CLICK)) return true
-        val rect = android.graphics.Rect().also { node.getBoundsInScreen(it) }
+        val target = ancestorOrSelf(node) { it.isClickable && it.isEnabled } ?: node
+        val rect = android.graphics.Rect().also { target.getBoundsInScreen(it) }
+        if (!rect.intersect(0, 0, screenWidth, screenHeight) || rect.isEmpty) return false
         return touch(pacing.within(rect.left, rect.top, rect.right, rect.bottom))
     }
 
     private suspend fun tapAt(x: Int, y: Int): Boolean = touch(pacing.near(x, y))
 
-    /** 在这一点上点一下:先停一会儿再落指,按住随机的一小会儿。无障碍手势不行时由内置助手注入触摸。 */
+    private fun shellPress(at: Pair<Int, Int>, durationMs: Long): Boolean = injectStroke(listOf(
+        GesturePacing.Point(at.first.toDouble(), at.second.toDouble(), 0),
+        GesturePacing.Point(at.first.toDouble(), at.second.toDouble(), durationMs),
+    ))
+
     private suspend fun touch(at: Pair<Int, Int>): Boolean {
-        val (x, y) = at
         delay(pacing.approach())
-        val press = pacing.press()
-        if (a11y.gesture(displayId, Path().apply { moveTo(x.toFloat(), y.toFloat()) }, press)) return true
-        if (pacing.paced && injectStroke(listOf(GesturePacing.Point(x.toDouble(), y.toDouble(), 0), GesturePacing.Point(x.toDouble(), y.toDouble(), press)))) return true
-        return shell.injectTap(displayId, x, y)
+        // Never retry through accessibility: a failed response may follow partially delivered input.
+        return shellPress(at, pacing.press())
     }
 
-    /**
-     * 一根手指沿 [points] 滑动。有节奏时按 [GesturePacing.stroke] 排好每个点的时刻,由内置助手逐点注入(App 看到先快后慢的真实速度);
-     * 助手注不了时退回无障碍手势沿同一条弧线走(系统按路径匀速走,只少了快慢)。不加节奏时和以前一样:无障碍手势按给定时长匀速走折线。
-     */
     private suspend fun drag(points: List<Pair<Int, Int>>, durationMs: Long, bow: Boolean): Boolean {
-        if (!pacing.paced) return a11y.gesture(displayId, pathOf(points), durationMs)
+        if (!pacing.paced) {
+            return injectStroke(org.pkuinfo.harness.phone.platform.interaction.ShellPointerPlan.linear(points, durationMs))
+        }
         delay(pacing.approach())
         val stroke = pacing.stroke(points.map { it.first.toDouble() to it.second.toDouble() }, durationMs, bow, screenWidth to screenHeight)
-        if (injectStroke(stroke.points)) return true
-        return a11y.gesture(displayId, pathOf(stroke.points.map { it.x.roundToInt() to it.y.roundToInt() }), stroke.durationMs)
+        return injectStroke(stroke.points)
     }
 
     private fun injectStroke(points: List<GesturePacing.Point>): Boolean = runCatching {
@@ -1864,27 +1879,19 @@ class AndroidScreenDriver(
      * 剪贴板只在这一次粘贴期间是 Mika 的:App 读完(字变了)或超时就还原。
      */
     private fun inputText(node: AccessibilityNodeInfo, text: String): Boolean? {
-        node.refresh()
+        if (!node.refresh()) return false
         val before = node.text?.toString().orEmpty()
-        fun selectAll() {
-            if (before.isEmpty()) return
-            val range = Bundle().apply {
-                putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_START_INT, 0)
-                putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_SELECTION_END_INT, before.length)
-            }
-            node.performAction(AccessibilityNodeInfo.ACTION_SET_SELECTION, range)
-        }
+        // Read accessibility only to confirm focus. Input itself uses shell-owned key events.
+        if (!node.isFocused || node.isPassword) return false
         if (text.isEmpty()) {
-            selectAll()
-            return before.isEmpty() || shell.injectKey(displayId, KeyEvent.KEYCODE_DEL)
+            return ctrlKey(KeyEvent.KEYCODE_A) && shell.injectKey(displayId, KeyEvent.KEYCODE_DEL)
         }
         clipLock.lock()
         clipHeld(true)
         try {
             if (runCatching { shell.setClipText(text) }.getOrDefault(ShellService.CLIP_FAILED) != ShellService.CLIP_SET) return null
             runCatching { shell.savedClipText() }.getOrNull()?.let { clipSaved(it, text) }
-            selectAll()
-            if (!node.performAction(AccessibilityNodeInfo.ACTION_PASTE)) return false
+            if (!ctrlKey(KeyEvent.KEYCODE_A) || !ctrlKey(KeyEvent.KEYCODE_V)) return false
             // App 是异步去读剪贴板的:等字变了再还原,最多等一会儿
             val deadline = SystemClock.uptimeMillis() + PASTE_WAIT_MS
             while (SystemClock.uptimeMillis() < deadline) {
@@ -1897,11 +1904,6 @@ class AndroidScreenDriver(
             clipHeld(false)
             clipLock.unlock()
         }
-    }
-
-    private fun setText(node: AccessibilityNodeInfo, text: String): Boolean {
-        val args = Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, text) }
-        return node.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
     }
 
     private inline fun ancestorOrSelf(node: AccessibilityNodeInfo, test: (AccessibilityNodeInfo) -> Boolean): AccessibilityNodeInfo? {

@@ -1085,6 +1085,7 @@ class ShellService(
     }
 
     override fun injectKey(displayId: Int, keyCode: Int): Boolean {
+        if (!ownDisplay(displayId)) return false
         // 与 press_key 同一张白名单:即便调用方出错,也不从这里发出音量、电源、Home 之类的整机按键
         if (!PressKeys.isAllowed(keyCode)) {
             Log.w(TAG, "refused key $keyCode")
@@ -1123,6 +1124,7 @@ class ShellService(
     }
 
     override fun injectTap(displayId: Int, x: Int, y: Int): Boolean {
+        if (!ownDisplay(displayId)) return false
         val now = SystemClock.uptimeMillis()
         val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x.toFloat(), y.toFloat(), 0)
         val up = MotionEvent.obtain(now, now + TAP_MS, MotionEvent.ACTION_UP, x.toFloat(), y.toFloat(), 0)
@@ -1159,9 +1161,51 @@ class ShellService(
             val e = event(i, action)
             return try { inject(e, displayId) } finally { e.recycle() }
         }
-        if (!send(0, MotionEvent.ACTION_DOWN)) return false
-        for (i in 1 until n) send(i, MotionEvent.ACTION_MOVE)
-        return send(n - 1, MotionEvent.ACTION_UP) || send(n - 1, MotionEvent.ACTION_UP)
+        var lastDelivered = 0
+        return StrokeDelivery.deliver(n,
+            down = { send(0, MotionEvent.ACTION_DOWN) },
+            move = { i -> send(i, MotionEvent.ACTION_MOVE).also { if (it) lastDelivered = i } },
+            up = { send(lastDelivered, MotionEvent.ACTION_UP) },
+        )
+    }
+
+    override fun injectTwoFingerStroke(displayId: Int, xs: IntArray, ys: IntArray, times: LongArray): Boolean {
+        val n = times.size
+        if (!ownDisplay(displayId) || n !in 2..STROKE_MAX_POINTS || xs.size != 2 * n || ys.size != 2 * n ||
+            times.first() != 0L || times.last() !in 1..STROKE_MAX_MS ||
+            (1 until n).any { times[it] < times[it - 1] }) return false
+        val down = SystemClock.uptimeMillis()
+        fun send(i: Int, action: Int, fingers: Int): Boolean {
+            val wait = down + times[i] - SystemClock.uptimeMillis()
+            if (wait > 0) SystemClock.sleep(wait)
+            val props = Array(fingers) { finger -> MotionEvent.PointerProperties().apply {
+                id = finger; toolType = MotionEvent.TOOL_TYPE_FINGER
+            } }
+            val coords = Array(fingers) { finger -> MotionEvent.PointerCoords().apply {
+                x = xs[2 * i + finger].toFloat(); y = ys[2 * i + finger].toFloat(); pressure = 1f; size = 1f
+            } }
+            val event = MotionEvent.obtain(down, SystemClock.uptimeMillis(), action, fingers, props, coords,
+                0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0)
+            return try { inject(event, displayId) } finally { event.recycle() }
+        }
+        if (!send(0, MotionEvent.ACTION_DOWN, 1)) return false
+        var complete = false
+        var fingers = 1
+        var last = 0
+        try {
+            if (!send(0, MotionEvent.ACTION_POINTER_DOWN or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 2)) return false
+            fingers = 2
+            for (i in 1 until n) {
+                last = i
+                if (!send(i, MotionEvent.ACTION_MOVE, 2)) return false
+            }
+            if (!send(n - 1, MotionEvent.ACTION_POINTER_UP or (1 shl MotionEvent.ACTION_POINTER_INDEX_SHIFT), 2)) return false
+            fingers = 1
+            complete = send(n - 1, MotionEvent.ACTION_UP, 1)
+            return complete
+        } finally {
+            if (!complete) send(last, MotionEvent.ACTION_CANCEL, fingers)
+        }
     }
 
     private inline fun injectPair(down: InputEvent, up: InputEvent, displayId: Int, fallback: () -> Boolean): Boolean =

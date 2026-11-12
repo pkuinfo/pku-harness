@@ -146,6 +146,11 @@ Harness is a student project and is not affiliated with or endorsed by Peking Un
 
 ## Acknowledgments
 
+Thanks to [Mobile Next mobile-mcp](https://github.com/mobile-next/mobile-mcp) and
+[mobilecli](https://github.com/mobile-next/mobilecli) for the reference architecture separating
+shell-backed pointer/key input from UI observation. Harness implements this through its own
+display-owned helper; neither project is a runtime dependency.
+
 Thanks to [Mika](https://github.com/wangzan101/Mika) and its contributors for their work on
 Android phone interaction. Copilot reuses and adapts portions of that work within
 Harness-owned native modules and plugin interfaces, with an independent session engine.

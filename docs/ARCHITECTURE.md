@@ -5,6 +5,16 @@
 
 ## 1. Product
 
+Copilot routes pointer and keyboard interaction through its display-owned shell helper.
+Accessibility nodes locate targets and verify results; they are not used to click, set text,
+scroll or submit fields. Unicode text uses select-all/paste keys with clipboard restoration.
+Wheel pickers use drag-and-readback. Slider touches report whether the observed value matches.
+Partial pointer failures release at the last delivered position and report failure; they do
+not replay through accessibility. Both single- and two-finger injection require an owned
+virtual display. The helper rejects main-display taps and keys through these task APIs.
+This separates input from observation, as in mobile-next/mobilecli, but does not make injected
+input indistinguishable from hardware input or guarantee WeChat compatibility.
+
 Copilot registers its Harness-owned accessibility implementation under
 `com.google.android.marvin.talkback.TalkBackService` for WeChat service-class compatibility.
 This is not Google's TalkBack implementation; the application ID, signature, Copilot label,

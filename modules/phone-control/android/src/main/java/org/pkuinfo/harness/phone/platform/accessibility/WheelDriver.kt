@@ -2,28 +2,16 @@
 package org.pkuinfo.harness.phone.platform.accessibility
 
 import android.graphics.Rect
-import android.os.Bundle
 import android.view.accessibility.AccessibilityNodeInfo
 import org.pkuinfo.harness.phone.platform.interaction.WheelDrags
 import org.pkuinfo.harness.phone.platform.interaction.WheelMath
-import org.pkuinfo.harness.phone.platform.interaction.WheelSteps
 import org.pkuinfo.harness.phone.platform.screen.VisibleTextLine
 import org.pkuinfo.harness.phone.platform.screen.WheelOutcome
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-/**
- * 把一个滚轮转到一个值,在一次调用里做完。按控件能做什么依次试(能做就做,做不到退到下一种):
- * 1. 滚轮里有输入框(原版的数字滚轮有):直接把值写进去,让它失去焦点确认,读回来;
- * 2. 滚轮能无障碍「往前/往后滚」(原版的数字滚轮一下一格):读出当前值,按 [WheelSteps] 定方向和下数,一批一批滚,每批读回;
- * 3. 都不行(App 自己画的滚轮):读这一列看得到的几项(无障碍读不到就认屏上的字)估一格多高和当前值,在这一列上慢慢拖
- *    (不甩,免得转过头),读回来再校正;拖了值不动就拖远一点、换快一点再试,还不动报 not_moving 交回模型。
- *
- * 给的编号可以是滚轮,也可以是它显示的某一项(常是选中的那一项):这时滚轮是和这一项横向对齐的那一列,
- * 同一块里并排的别的滚轮(时旁边的分)不读、不拖。
- * 读值、拖动、等界面安静都由 [AndroidScreenDriver] 注入,这里只管步骤。
- */
+/** Adjust a wheel through observed values and shell-backed drags, never semantic node actions. */
 internal class WheelDriver(
     private val width: Int,
     private val height: Int,
@@ -33,10 +21,6 @@ internal class WheelDriver(
     private val drag: suspend (points: List<Pair<Int, Int>>, slow: Boolean) -> Boolean,
     /** 认屏上的字(0–999 的坐标);没有为 null。 */
     private val ocr: suspend () -> List<VisibleTextLine>?,
-    /** 这块屏上弹着输入法。 */
-    private val imeShown: () -> Boolean,
-    /** 按一下返回(收起输入法)。 */
-    private val back: () -> Boolean,
 ) {
     private var attempts = 0
 
@@ -56,7 +40,7 @@ internal class WheelDriver(
         if (startBox.isEmpty) return outcome(false, null, null, "none", "not_a_wheel")
         val wheel = scrollableWheel(start, startBox)
         val col = columnOf(start, startBox, wheel)
-        var now = read(col)
+        val now = read(col)
         val from = now.current
         if (from == null && now.items.size < 2) {
             val scrollable = wheel != null || start.isScrollable
@@ -64,45 +48,6 @@ internal class WheelDriver(
         }
         if (WheelMath.matches(from, value)) return outcome(true, from, from, "none")
 
-        // 1. 直接输入
-        editableOf(wheel ?: start)?.let { field ->
-            if (typeInto(field, value)) {
-                now = settled(col)
-                if (WheelMath.matches(now.current, value)) return outcome(true, now.current, from, "text")
-            }
-        }
-
-        // 2. 无障碍滚动
-        if (wheel != null && canStep(wheel)) {
-            val steps = WheelSteps(value, cap = MAX_STEPS)
-            var stopped: String? = null
-            var rechecks = 0
-            loop@ while (true) {
-                when (val s = steps.next(now.current, now.texts)) {
-                    WheelSteps.Step.Done -> {
-                        // 读到目标时滚轮可能还在动:停稳了再核对一次,不对就接着滚
-                        now = settled(col)
-                        if (WheelMath.matches(now.current, value)) return outcome(true, now.current, from, "actions")
-                        if (++rechecks > MAX_RECHECKS) { stopped = "not_reached"; break@loop }
-                    }
-                    is WheelSteps.Step.Stop -> { stopped = s.reason; break@loop }
-                    is WheelSteps.Step.Act -> {
-                        val action = if (s.forward) AccessibilityNodeInfo.ACTION_SCROLL_FORWARD else AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD
-                        var done = 0
-                        repeat(s.count) { if (wheel.performAction(action)) done++ }
-                        attempts += s.count
-                        quiet(STEP_QUIET_MS, STEP_CAP_MS)
-                        wheel.refresh()
-                        now = settled(col)
-                        // 一下都没滚动:这一边到头了(或这一边不让滚)
-                        if (done == 0 && !WheelMath.matches(now.current, value)) { stopped = "at_end"; break@loop }
-                    }
-                }
-            }
-            if (stopped == "at_end" || stopped == "unknown_value") return outcome(false, now.current, from, "actions", stopped)
-        }
-
-        // 3. 拖动
         return dragTo(col, value, from, now)
     }
 
@@ -152,22 +97,6 @@ internal class WheelDriver(
             quiet(DRAG_QUIET_MS, DRAG_CAP_MS)
         }
         return dragged
-    }
-
-    /** 往滚轮里的输入框写值并确认(失去焦点时原版滚轮按写进去的值定下来);因此弹出的输入法收起来。 */
-    private suspend fun typeInto(field: AccessibilityNodeInfo, value: String): Boolean {
-        val imeBefore = imeShown()
-        field.performAction(AccessibilityNodeInfo.ACTION_FOCUS)
-        val args = Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, value) }
-        val set = field.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT, args)
-        attempts++
-        field.performAction(AccessibilityNodeInfo.ACTION_CLEAR_FOCUS)
-        quiet(STEP_QUIET_MS, STEP_CAP_MS)
-        if (!imeBefore && imeShown()) {
-            back()
-            quiet(STEP_QUIET_MS, STEP_CAP_MS)
-        }
-        return set
     }
 
     // ---------- 读 ----------
