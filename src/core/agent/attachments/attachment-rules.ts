@@ -6,7 +6,7 @@
 
 /** Attachments per message. */
 export const MAX_ATTACHMENTS = 8;
-/** Photos per library pick. */
+/** Photos per library pick: follows DeepSeek's official limit. Deliberate; keep it. */
 export const MAX_LIBRARY_PICK = 4;
 /** Long side of an image sent to the model (px). */
 export const MAX_IMAGE_SIDE = 1568;
