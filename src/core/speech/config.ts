@@ -1,6 +1,7 @@
 import { fetch as expoFetch } from 'expo/fetch';
 import { useSyncExternalStore } from 'react';
 
+import { aiConfig, ownProvider } from '@/core/agent/provider';
 import { pluginSettings } from '@/core/runtime/plugin-settings';
 import { registry, type SpeechProviderEntry } from '@/core/runtime/registry';
 import type { SpeechConfig } from '@/core/runtime/types';
@@ -11,7 +12,9 @@ import { subscribeLocale, t } from '@/i18n';
 /**
  * Voice input's speech-to-text service (bring your own key). Services come from plugins
  * (`PluginDef.speech`); this store remembers which one is active and its base URL / model. The
- * key lives in SecureStore. A recording goes from the phone straight to the service.
+ * key lives in SecureStore; a service with `credentialFrom` uses its plugin's AI provider key
+ * instead (DeepSeek voice input with the DeepSeek key). A recording goes from the phone straight
+ * to the service.
  */
 
 export const DEFAULT_SPEECH_PROVIDER = 'aliyun-bailian.realtime';
@@ -32,11 +35,17 @@ function settingsFor(entry: SpeechProviderEntry | undefined, providerId: string)
   return { baseURL: s?.baseURL || entry?.def.defaultBaseURL || '', model: s?.model || entry?.def.defaultModel || '' };
 }
 
+/** Whether a service has its key: its own, or its plugin's AI provider key (`credentialFrom`). */
+function hasKey(entry: SpeechProviderEntry | undefined, providerId: string): boolean {
+  const from = entry?.def.credentialFrom;
+  return from ? aiConfig.hasCredential(`${entry.pluginId}.${from}`) : !!keys[providerId];
+}
+
 function build() {
   const entry = registry.speechProvider(saved.active);
   const settings = settingsFor(entry, saved.active);
   // Ready: the service's plugin is on, it has a model, and a key (a custom endpoint may be keyless).
-  const ready = !!entry && pluginSettings.get(entry.pluginId).enabled && !!settings.model && (!!keys[saved.active] || !!entry.def.editableBaseURL && !!saved.providers[saved.active]);
+  const ready = !!entry && pluginSettings.get(entry.pluginId).enabled && !!settings.model && (hasKey(entry, saved.active) || !!entry.def.editableBaseURL && !!saved.providers[saved.active]);
   return { providerId: saved.active, provider: entry, settings, ready, loaded, keys };
 }
 
@@ -55,7 +64,7 @@ export const speechConfig = {
     emit();
   },
   settingsFor: (providerId: string) => settingsFor(registry.speechProvider(providerId), providerId),
-  hasCredential: (providerId: string) => !!keys[providerId],
+  hasCredential: (providerId: string) => hasKey(registry.speechProvider(providerId), providerId),
   /** Save a service's settings (and its key when given) and make it the active one. */
   async save(providerId: string, next: Partial<SpeechSettings>, opts: { credential?: string } = {}) {
     const cur = settingsFor(registry.speechProvider(providerId), providerId);
@@ -75,11 +84,14 @@ export const speechConfig = {
     const off = registry.subscribe(emit);
     const offSettings = pluginSettings.subscribe(emit);
     const offLocale = subscribeLocale(emit);
+    // A `credentialFrom` service is ready once the AI provider's key is saved.
+    const offAI = aiConfig.subscribe(emit);
     return () => {
       listeners.delete(l);
       off();
       offSettings();
       offLocale();
+      offAI();
     };
   },
   snapshot: () => snapshot,
@@ -94,7 +106,8 @@ export async function activeSpeech() {
   if (!loaded) await speechConfig.load();
   const { provider, settings, providerId } = snapshot;
   if (!provider) throw new Error(t('chat.voice.notSetUp'));
-  const credential = (await secrets.get(keyOf(providerId))) ?? undefined;
+  const from = provider.def.credentialFrom;
+  const credential = from ? (await ownProvider(provider.pluginId, from)).credential : ((await secrets.get(keyOf(providerId))) ?? undefined);
   if (!credential && !provider.def.editableBaseURL) throw new Error(t('chat.voice.noKey'));
   const config: SpeechConfig = {
     ...settings,

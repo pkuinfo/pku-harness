@@ -1,7 +1,11 @@
+import { fetch as expoFetch } from 'expo/fetch';
 import { Directory, File, Paths } from 'expo-file-system';
 
 import type { DocumentKind } from '@/core/agent/attachments/attachment-rules';
 import { newId, type AttachmentPart } from '@/core/agent/session/chat-store';
+import { aiConfig, ownProvider } from '@/core/agent/provider';
+import { pluginSettings } from '@/core/runtime/plugin-settings';
+import { registry } from '@/core/runtime/registry';
 import { activeSpeech } from '@/core/speech/config';
 import { t } from '@/i18n';
 
@@ -36,6 +40,25 @@ function readError(e: unknown): Error {
   return new Error(t('chat.attach.docFailed', { reason: e instanceof Error ? e.message : String(e) }));
 }
 
+/**
+ * A scanned PDF (no text layer) recognised by an OCR plugin (`PluginDef.ocr`, e.g. DeepSeek with
+ * the DeepSeek key). Null when none is usable: no such plugin on, or its provider has no key.
+ */
+async function recognise(file: File): Promise<string | null> {
+  const entry = registry
+    .ocrProviders()
+    .find((p) => pluginSettings.get(p.pluginId).enabled && aiConfig.hasCredential(`${p.pluginId}.${p.def.credentialFrom}`));
+  if (!entry) return null;
+  const { baseURL, credential } = await ownProvider(entry.pluginId, entry.def.credentialFrom);
+  if (!credential) return null;
+  const text = await entry.def
+    .recognize({ baseURL, credential, fetch: expoFetch as unknown as typeof fetch }, { file: file as unknown as Blob, uri: file.uri, name: file.name, mimeType: 'application/pdf' })
+    .catch((e: unknown) => {
+      throw new Error(t('chat.attach.ocrFailed', { name: entry.def.name, reason: e instanceof Error ? e.message : String(e) }));
+    });
+  return text.replace(/## Page \d+/g, '').trim() ? text : null;
+}
+
 async function extract(file: File, ext: string): Promise<{ kind: DocumentKind; text: string; units?: number }> {
   if (ext === 'pdf' || ext === 'docx' || ext === 'xlsx' || ext === 'pptx') {
     // Parsed natively (modules/doc-reader): system PDF engine / PdfBox, ZipFile + XmlPullParser.
@@ -45,8 +68,13 @@ async function extract(file: File, ext: string): Promise<{ kind: DocumentKind; t
         throw readError(e);
       },
     );
-    // Scanned PDFs have no text layer: only page headings come back.
-    if (ext === 'pdf' && !r.text.replace(/## Page \d+/g, '').trim()) throw new Error(t('chat.attach.scannedPdf'));
+    // Scanned PDFs have no text layer: only page headings come back. Recognise them if a
+    // plugin can (DeepSeek OCR), else say why the file can't be read.
+    if (ext === 'pdf' && !r.text.replace(/## Page \d+/g, '').trim()) {
+      const text = await recognise(file);
+      if (!text) throw new Error(t('chat.attach.scannedPdf'));
+      return { kind: ext, text, units: r.units ?? undefined };
+    }
     return { kind: ext, text: r.text, units: r.units ?? undefined };
   }
   // Audio: the voice-input service transcribes it (it must accept files, not only live audio).

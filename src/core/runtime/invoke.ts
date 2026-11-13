@@ -1,3 +1,4 @@
+import { ownProvider } from '@/core/agent/provider';
 import { cloudFor } from '@/core/cloud/bind';
 import { scrubOutput, scrubShareLinks } from '@/core/cloud/secret-link';
 import { kv } from '@/core/store/kv';
@@ -151,6 +152,7 @@ async function invokeNow(
       services,
       // Bound to this plugin; a person tapping may be shown the consent sheet, the agent may not.
       cloud: cloudFor(entry.pluginId, { interactive: opts.actor === 'user' }),
+      provider: (key) => ownProvider(entry.pluginId, key),
       signal: opts.signal,
     });
     if (entry.def.effect !== 'read' || effect !== 'read') writeListeners.forEach((l) => l(entry.pluginId, id));

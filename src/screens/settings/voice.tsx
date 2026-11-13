@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -101,7 +102,10 @@ export function VoiceSettings() {
     setModel(s.model);
   };
   const hasKey = !!keys[entry.id];
-  const canSave = !!model.trim() && (!!credential.trim() || !!entry.def.editableBaseURL);
+  // DeepSeek voice input uses the DeepSeek chat key: no key field of its own.
+  const shared = !!entry.def.credentialFrom;
+  const sharedReady = shared && speechConfig.hasCredential(entry.id);
+  const canSave = !!model.trim() && (shared || !!credential.trim() || !!entry.def.editableBaseURL);
 
   return (
     <SheetScreen
@@ -110,7 +114,7 @@ export function VoiceSettings() {
       primaryDisabled={!canSave}
       onPrimary={async () => {
         const next = credential.trim();
-        await speechConfig.save(entry.id, { baseURL: baseURL.trim(), model: model.trim() }, { credential: next !== savedCredential ? next : undefined });
+        await speechConfig.save(entry.id, { baseURL: baseURL.trim(), model: model.trim() }, { credential: !shared && next !== savedCredential ? next : undefined });
         haptics.success();
         dismiss('/');
       }}>
@@ -144,6 +148,14 @@ export function VoiceSettings() {
             {t('app.ai.endpoint', { url: baseURL })}
           </Text>
         )}
+        {shared ? (
+          <View className="gap-2">
+            <Text variant="callout" tone={sharedReady ? 'muted' : 'warn'}>
+              {t(sharedReady ? 'app.voice.sharedKey' : 'app.voice.sharedKeyMissing', { name: entry.def.name })}
+            </Text>
+            {sharedReady ? null : <Button title={t('app.voice.openAI')} variant="ghost" icon="key" onPress={() => router.push('/ai-settings')} />}
+          </View>
+        ) : (
         <View className="gap-2">
           <SecretField label="API Key" value={credential} onChangeText={setCredential} placeholder="sk-…" hint={entry.def.credentialHint} />
           {hasKey ? <Chip label={credential.trim() === savedCredential ? t('app.ai.keySaved') : t('app.ai.keyChanged')} tone={credential.trim() === savedCredential ? 'up' : 'warn'} icon="lock" /> : null}
@@ -151,6 +163,7 @@ export function VoiceSettings() {
             <Button title={t('app.voice.getKey')} variant="ghost" icon="key" onPress={() => void WebBrowser.openBrowserAsync(entry.def.keyURL!, { createTask: false })} />
           ) : null}
         </View>
+        )}
         <Text variant="caption" tone="faint">
           {t('app.voice.privacy', { name: entry.def.name })}
         </Text>

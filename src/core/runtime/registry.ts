@@ -9,7 +9,7 @@ import { unavailableReason } from './availability';
 import { hasDynamicCapability, subscribeCapabilities } from './capabilities';
 import { buildAliases, type LegacyAliases } from './legacy';
 import { modelText, providerText } from './localize';
-import type { Capability, CommandContribution, PluginDef, ProviderDef, SpeechProviderDef, ToolDef } from './types';
+import type { Capability, CommandContribution, OcrProviderDef, PluginDef, ProviderDef, SpeechProviderDef, ToolDef } from './types';
 
 export type ToolEntry = { id: string; pluginId: string; name: string; def: ToolDef };
 /**
@@ -36,6 +36,7 @@ export function hostHas(c: Capability): boolean {
 
 export type ProviderEntry = { id: string; pluginId: string; def: ProviderDef };
 export type SpeechProviderEntry = { id: string; pluginId: string; def: SpeechProviderDef };
+export type OcrProviderEntry = { id: string; pluginId: string; def: OcrProviderDef };
 /** A plugin's `contributes.commands` entry; the commands module names and filters them. */
 export type CommandEntry = { pluginId: string; name: string; def: CommandContribution };
 
@@ -129,6 +130,10 @@ export const registry = {
   },
   speechProvider(id: string): SpeechProviderEntry | undefined {
     return this.speechProviders().find((p) => p.id === id);
+  },
+  /** Text recognition for scanned documents (`PluginDef.ocr`); ids are `<plugin>.<key>`. */
+  ocrProviders(): OcrProviderEntry[] {
+    return this.list().flatMap((p) => Object.entries(p.ocr ?? {}).map(([key, def]) => ({ id: `${p.id}.${key}`, pluginId: p.id, def })));
   },
   subscribe(listener: () => void) {
     listeners.add(listener);

@@ -152,3 +152,15 @@ export async function getModel(providerId = saved.active): Promise<LanguageModel
   if (entry.def.auth === 'account' && !credential) throw new Error(t('chat.agent.signIn', { name: entry.def.name }));
   return entry.def.createModel({ ...s, credential, fetch: expoFetch as unknown as typeof fetch }) as LanguageModel;
 }
+
+/**
+ * A plugin's own model provider as its tools and services may use it (`ToolContext.provider`,
+ * `SpeechProviderDef.credentialFrom`): address and key of `<pluginId>.<key>`. Never another
+ * plugin's provider.
+ */
+export async function ownProvider(pluginId: string, key: string): Promise<{ baseURL: string; credential?: string }> {
+  const providerId = `${pluginId}.${key}`;
+  const entry = registry.provider(providerId);
+  if (!entry || entry.pluginId !== pluginId) throw new Error(t('chat.agent.providerMissing', { id: providerId }));
+  return { baseURL: settingsFor(entry, providerId).baseURL, credential: (await secrets.get(keyOf(providerId))) ?? undefined };
+}

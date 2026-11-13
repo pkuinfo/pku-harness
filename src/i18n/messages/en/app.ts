@@ -267,6 +267,9 @@ export const app: Messages['app'] = {
     modelId: 'Model ID',
     save: 'Save',
     getKey: 'Get an API key',
+    sharedKey: 'Uses your {name} API key from AI provider settings. No separate key needed.',
+    sharedKeyMissing: 'Add your {name} API key in AI provider settings first.',
+    openAI: 'Open AI provider settings',
     privacy: 'Recordings go straight from this phone to {name} and are deleted from the phone once transcribed. PKU harness never receives them.',
   },
   ai: {

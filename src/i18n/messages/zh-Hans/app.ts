@@ -268,6 +268,9 @@ export const app = {
     modelId: '模型 ID',
     save: '保存',
     getKey: '获取 API Key',
+    sharedKey: '使用你在 AI 服务设置中填写的 {name} API Key，无需另外申请。',
+    sharedKeyMissing: '请先在 AI 服务设置中填写 {name} API Key。',
+    openAI: '打开 AI 服务设置',
     privacy: '录音直接从这台手机发送给{name}，转成文字后即从手机上删除。PKU harness 不会收到录音。',
   },
   ai: {
