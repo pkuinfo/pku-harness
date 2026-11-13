@@ -16,7 +16,7 @@ import { installedVersion } from '@/core/update/app-update';
 import { useLocale, useT } from '@/i18n';
 import { useTheme } from '@/theme';
 
-const WEBSITE = 'https://harness.novadiffusion.com';
+const WEBSITE = 'https://pkuharness.com';
 const SOURCE = 'https://github.com/pkuinfo/pku-harness';
 const CONTRIBUTORS = `${SOURCE}/graphs/contributors`;
 const CONTRIBUTORS_API = 'https://api.github.com/repos/pkuinfo/pku-harness/contributors?per_page=24';

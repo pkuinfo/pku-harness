@@ -2,7 +2,7 @@
 
 The official APK is built and signed by GitHub Actions (`.github/workflows/release.yml`) from a
 tagged commit and published as a GitHub release. The website's download page
-(<https://harness.novadiffusion.com/download>) lists GitHub releases automatically, with size,
+(<https://pkuharness.com/download>) lists GitHub releases automatically, with size,
 SHA-256 and a QR code, so publishing a release is all it takes.
 
 JS and plugin changes reach installed apps **over the air** (docs/OTA.md); a new APK is only

@@ -2,7 +2,7 @@
 
 Effective date: 12 November 2026
 
-These terms apply to the PKU harness app, the website harness.novadiffusion.com, and the optional PKU harness Cloud service that the project runs (together, "PKU harness"). By using PKU harness you agree to them. If you don't agree, please don't use it.
+These terms apply to the PKU harness app, the website pkuharness.com, and the optional PKU harness Cloud service that the project runs (together, "PKU harness"). By using PKU harness you agree to them. If you don't agree, please don't use it.
 
 ## 1. Who we are
 

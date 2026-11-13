@@ -1,6 +1,6 @@
 /**
  * Marketplace search for the agent (`registry.marketplace(query)` in HostServices, used by
- * `plugins.search`). Searches the website's feed (harness.novadiffusion.com/marketplace.json:
+ * `plugins.search`). Searches the website's feed (pkuharness.com/marketplace.json:
  * official plugins plus community plugins indexed from other repositories), fetched at most once
  * an hour; when it is unreachable, the official registry the in-app marketplace loads (mirrored,
  * cached offline). Ranking is pure (`rankMarketplace`) so it is unit-tested.
@@ -12,7 +12,7 @@ import { loadMarketplace } from './marketplace';
 
 export { rankMarketplace } from './market-rank';
 
-export const MARKETPLACE_FEED = 'https://harness.novadiffusion.com/marketplace.json';
+export const MARKETPLACE_FEED = 'https://pkuharness.com/marketplace.json';
 const TTL_MS = 60 * 60_000;
 
 let cache: { at: number; feed: FeedPlugin[] } | null = null;

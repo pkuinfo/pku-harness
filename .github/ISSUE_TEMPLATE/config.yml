@@ -4,10 +4,10 @@ contact_links:
     url: https://github.com/pkuinfo/pku-harness/discussions
     about: Ask how something works, share an idea, or show what you built.
   - name: Documentation
-    url: https://harness.novadiffusion.com/en/docs
+    url: https://pkuharness.com/en/docs
     about: User guide, plugin language, SDK and Cloud docs (中文 at /docs).
   - name: Website and download
-    url: https://harness.novadiffusion.com/en
+    url: https://pkuharness.com/en
     about: Download the latest signed APK and browse the plugin marketplace.
   - name: A campus service broke, or a plugin question
     url: https://github.com/pkuinfo/pku-harness-plugins/issues/new/choose

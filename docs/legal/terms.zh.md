@@ -2,7 +2,7 @@
 
 生效日期：2026 年 11 月 12 日
 
-本协议适用于 PKU harness 应用、网站 harness.novadiffusion.com 以及本项目运营的可选服务 PKU harness Cloud（以下合称“PKU harness”）。使用 PKU harness 即表示你同意本协议。如不同意，请不要使用。
+本协议适用于 PKU harness 应用、网站 pkuharness.com 以及本项目运营的可选服务 PKU harness Cloud（以下合称“PKU harness”）。使用 PKU harness 即表示你同意本协议。如不同意，请不要使用。
 
 ## 1. 我们是谁
 

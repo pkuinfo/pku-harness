@@ -1,6 +1,6 @@
 name: Release APK
 # Builds the official, release-signed Android APK and publishes it as a GitHub release, which the
-# website's download page (harness.novadiffusion.com/download) lists automatically. See
+# website's download page (pkuharness.com/download) lists automatically. See
 # docs/RELEASE.md.
 #
 # - Tag push `v<version>` (version = app.json expo.version at that commit): build with the

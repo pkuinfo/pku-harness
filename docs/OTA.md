@@ -26,7 +26,7 @@ An update is code that runs inside the app holding the student's IAAA password, 
 ## Server
 
 Static files on the host (`ssh rainyun`), served by Caddy under
-`https://harness.novadiffusion.com/updates/` (the website's site block imports
+`https://pkuharness.com/updates/` (the website's site block imports
 `server/updates/Caddyfile`). No container or process: the host is small.
 
 ```
@@ -72,7 +72,7 @@ OTA_SSH=ota@154.36.164.211 OTA_SSH_KEY_FILE=~/.ssh/pkuharness-ota bun scripts/ot
 // app.json → expo
 "runtimeVersion": { "policy": "fingerprint" },
 "updates": {
-  "url": "https://harness.novadiffusion.com/updates/manifest",
+  "url": "https://pkuharness.com/updates/manifest",
   "checkAutomatically": "ON_LOAD",
   "codeSigningCertificate": "./certs/ota/certificate.pem",
   "codeSigningMetadata": { "keyid": "main", "alg": "rsa-v1_5-sha256" },

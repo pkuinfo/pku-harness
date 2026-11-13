@@ -1,7 +1,7 @@
 # PKU harness OTA update server: static, served by Caddy. No process runs; CI uploads
 # pre-signed files (scripts/ota/). Import inside a site block, before its catch-all handle:
 #
-#   harness.novadiffusion.com {
+#   pkuharness.com {
 #   	import /etc/caddy/pkuharness-updates.caddy
 #   	handle { reverse_proxy 127.0.0.1:3100 }
 #   }

@@ -2,7 +2,7 @@
 
 | You want to… | Go to |
 |---|---|
-| Learn how to use the app or write a plugin | [Docs](https://harness.novadiffusion.com/en/docs) (中文: [/docs](https://harness.novadiffusion.com/docs)) |
+| Learn how to use the app or write a plugin | [Docs](https://pkuharness.com/en/docs) (中文: [/docs](https://pkuharness.com/docs)) |
 | Ask a question, share an idea, show what you built | [GitHub Discussions](https://github.com/pkuinfo/pku-harness/discussions) |
 | Report a bug in the app (chat, dashboard, schedule, Copilot, settings) | [App issues](https://github.com/pkuinfo/pku-harness/issues/new/choose) |
 | Report a broken campus service, or ask for a new one | [Plugin issues](https://github.com/pkuinfo/pku-harness-plugins/issues/new/choose) |

@@ -27,7 +27,7 @@ const { values } = parseArgs({
     channel: { type: 'string', default: 'production' },
     platform: { type: 'string', default: 'android' },
     'runtime-version': { type: 'string' },
-    'base-url': { type: 'string', default: process.env.OTA_BASE_URL ?? 'https://harness.novadiffusion.com/updates' },
+    'base-url': { type: 'string', default: process.env.OTA_BASE_URL ?? 'https://pkuharness.com/updates' },
     out: { type: 'string', default: '.ota' },
     'skip-export': { type: 'boolean', default: false },
   },

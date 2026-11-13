@@ -14,21 +14,21 @@ An open-source, AI-native app for campus life at Peking University.
 [![Downloads](https://img.shields.io/github/downloads/pkuinfo/pku-harness/total?color=8B0012)](https://github.com/pkuinfo/pku-harness/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Expo SDK 58](https://img.shields.io/badge/Expo-SDK%2058-000020.svg)](https://docs.expo.dev/versions/v58.0.0/)
-[![Platform: Android](https://img.shields.io/badge/platform-Android%207%2B-3DDC84.svg)](https://harness.novadiffusion.com/en/download)
+[![Platform: Android](https://img.shields.io/badge/platform-Android%207%2B-3DDC84.svg)](https://pkuharness.com/en/download)
 [![Discussions](https://img.shields.io/github/discussions/pkuinfo/pku-harness)](https://github.com/pkuinfo/pku-harness/discussions)
 
-[Website](https://harness.novadiffusion.com/en) · [Download](https://harness.novadiffusion.com/en/download) · [Docs](https://harness.novadiffusion.com/en/docs) · [Marketplace](https://harness.novadiffusion.com/en/marketplace) · [Plugins](https://github.com/pkuinfo/pku-harness-plugins) · [Discussions](https://github.com/pkuinfo/pku-harness/discussions)
+[Website](https://pkuharness.com/en) · [Download](https://pkuharness.com/en/download) · [Docs](https://pkuharness.com/en/docs) · [Marketplace](https://pkuharness.com/en/marketplace) · [Plugins](https://github.com/pkuinfo/pku-harness-plugins) · [Discussions](https://github.com/pkuinfo/pku-harness/discussions)
 
 English · [简体中文](README.zh-CN.md)
 
 </div>
 
 <p align="center">
-  <img src="https://harness.novadiffusion.com/showcase/chat-dark.png" width="19%" alt="Chat" />
-  <img src="https://harness.novadiffusion.com/showcase/dashboard-widgets-dark.png" width="19%" alt="Dashboard" />
-  <img src="https://harness.novadiffusion.com/showcase/schedule-dark.png" width="19%" alt="Schedule" />
-  <img src="https://harness.novadiffusion.com/showcase/plugins-dark.png" width="19%" alt="Plugins" />
-  <img src="https://harness.novadiffusion.com/showcase/settings-dark.png" width="19%" alt="Settings" />
+  <img src="https://pkuharness.com/showcase/chat-dark.png" width="19%" alt="Chat" />
+  <img src="https://pkuharness.com/showcase/dashboard-widgets-dark.png" width="19%" alt="Dashboard" />
+  <img src="https://pkuharness.com/showcase/schedule-dark.png" width="19%" alt="Schedule" />
+  <img src="https://pkuharness.com/showcase/plugins-dark.png" width="19%" alt="Plugins" />
+  <img src="https://pkuharness.com/showcase/settings-dark.png" width="19%" alt="Settings" />
 </p>
 
 ---
@@ -97,7 +97,7 @@ PKU harness puts one agent in front of all of them:
   [docs/PLUGIN-LANGUAGE.md](docs/PLUGIN-LANGUAGE.md).
 - Remote plugins over MCP, and bundled TypeScript plugins for host features, all behind one
   contract.
-- A [marketplace](https://harness.novadiffusion.com/en/marketplace) that indexes plugin
+- A [marketplace](https://pkuharness.com/en/marketplace) that indexes plugin
   repositories on GitHub, with an access review before every install.
 - Official plugins cover the campus card and payment code, network fee, Blackboard courses,
   grades, course selection and catalogue, Treehole, library, room booking, finance, classrooms,
@@ -143,7 +143,7 @@ The full design is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ### Use the app
 
-Android 7.0 or later (arm64): **[harness.novadiffusion.com/download](https://harness.novadiffusion.com/en/download)**,
+Android 7.0 or later (arm64): **[pkuharness.com/download](https://pkuharness.com/en/download)**,
 or the [latest GitHub release](https://github.com/pkuinfo/pku-harness/releases/latest). Every APK
 is built by GitHub Actions from a tagged commit and signed with the same key; the release notes
 list the APK and certificate fingerprints. iOS support is being prepared ([docs/IOS.md](docs/IOS.md)).
@@ -185,7 +185,7 @@ Other useful commands: `bun run check` (typecheck + lint), `bun test`, `bunx exp
 Connecting a new campus service rarely needs this repository. Write a `PLUGIN.md` in the
 [plugins repository](https://github.com/pkuinfo/pku-harness-plugins), check it on your computer
 with `bun run plugin validate|run|test <dir>`, and install it in the app from its link. Start with
-the [plugin guide](https://harness.novadiffusion.com/en/docs) and the
+the [plugin guide](https://pkuharness.com/en/docs) and the
 [language reference](docs/PLUGIN-LANGUAGE.md).
 
 ## Documentation
@@ -203,7 +203,7 @@ the [plugin guide](https://harness.novadiffusion.com/en/docs) and the
 | Inspecting network traffic | [TRAFFIC-DEBUGGING.md](docs/TRAFFIC-DEBUGGING.md) |
 | Roadmap and task status | [PLAN.md](docs/PLAN.md) |
 | Code conventions (for people and AI coding agents) | [AGENTS.md](AGENTS.md) |
-| User and developer docs (Chinese and English) | [harness.novadiffusion.com/docs](https://harness.novadiffusion.com/en/docs) |
+| User and developer docs (Chinese and English) | [pkuharness.com/docs](https://pkuharness.com/en/docs) |
 
 ### Repository layout
 

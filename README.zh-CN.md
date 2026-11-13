@@ -14,18 +14,18 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Discussions](https://img.shields.io/github/discussions/pkuinfo/pku-harness)](https://github.com/pkuinfo/pku-harness/discussions)
 
-[官网](https://harness.novadiffusion.com) · [下载](https://harness.novadiffusion.com/download) · [文档](https://harness.novadiffusion.com/docs) · [插件市场](https://harness.novadiffusion.com/marketplace) · [插件仓库](https://github.com/pkuinfo/pku-harness-plugins) · [讨论区](https://github.com/pkuinfo/pku-harness/discussions)
+[官网](https://pkuharness.com) · [下载](https://pkuharness.com/download) · [文档](https://pkuharness.com/docs) · [插件市场](https://pkuharness.com/marketplace) · [插件仓库](https://github.com/pkuinfo/pku-harness-plugins) · [讨论区](https://github.com/pkuinfo/pku-harness/discussions)
 
 [English](README.md) · 简体中文
 
 </div>
 
 <p align="center">
-  <img src="https://harness.novadiffusion.com/showcase/chat-dark.zh.png" width="19%" alt="对话" />
-  <img src="https://harness.novadiffusion.com/showcase/dashboard-widgets-dark.zh.png" width="19%" alt="仪表盘" />
-  <img src="https://harness.novadiffusion.com/showcase/schedule-dark.zh.png" width="19%" alt="日程" />
-  <img src="https://harness.novadiffusion.com/showcase/plugins-dark.zh.png" width="19%" alt="插件" />
-  <img src="https://harness.novadiffusion.com/showcase/settings-dark.zh.png" width="19%" alt="设置" />
+  <img src="https://pkuharness.com/showcase/chat-dark.zh.png" width="19%" alt="对话" />
+  <img src="https://pkuharness.com/showcase/dashboard-widgets-dark.zh.png" width="19%" alt="仪表盘" />
+  <img src="https://pkuharness.com/showcase/schedule-dark.zh.png" width="19%" alt="日程" />
+  <img src="https://pkuharness.com/showcase/plugins-dark.zh.png" width="19%" alt="插件" />
+  <img src="https://pkuharness.com/showcase/settings-dark.zh.png" width="19%" alt="设置" />
 </p>
 
 ---
@@ -48,12 +48,12 @@
 - **仪表盘**：在对话里让助手搭建和维护小组件，实时显示校园卡余额、网费、食堂人流、截止日期等。
 - **日程**：从教务同步课表，加上待办和提醒。支持自由的重复规则（“两天后”“每 3 天一次，共 16 次”），由系统闹钟准点送达；助手还能在对话中为你创建定时检查，例如“每天早上检查校园卡，余额低于 ¥100 就提醒我”。
 - **Copilot（手机操控）**：可选插件，让智能体逐步操作你允许的其他 Android 应用，悬浮面板随时可暂停或接管。点按和按键通过 shell 输入完成，无障碍服务只用于观察屏幕和核验结果。支付等敏感步骤交还给你。见 [docs/COPILOT.md](docs/COPILOT.md)。
-- **插件与插件市场**：插件是带 `PLUGIN.md` 的文件夹，由应用解释执行的 YAML 步骤和安全表达式构成，不运行任意代码；通过链接（`pkuharness://plugin?src=…`）安装，更新即数据。另支持 MCP 远程插件。[插件市场](https://harness.novadiffusion.com/marketplace)会索引 GitHub 上的插件仓库，安装前展示其可访问的全部范围。
+- **插件与插件市场**：插件是带 `PLUGIN.md` 的文件夹，由应用解释执行的 YAML 步骤和安全表达式构成，不运行任意代码；通过链接（`pkuharness://plugin?src=…`）安装，更新即数据。另支持 MCP 远程插件。[插件市场](https://pkuharness.com/marketplace)会索引 GitHub 上的插件仓库，安装前展示其可访问的全部范围。
 - **隐私与安全**：每个工具都声明其效果（读取、修改、付款、公开发布），你可以按插件选择助手直接执行、先询问或禁止。插件只拿到限定范围的校园会话，拿不到密码。**PKU harness Cloud** 为可选服务，提供端到端加密的中继与存储，例如把校园卡付款码借给朋友（带消费上限和 PIN）。JavaScript 更新经签名后空中下发，原生版本以签名 APK 发布。
 
 ## 快速开始
 
-**使用**：Android 7.0 及以上（arm64），从 [harness.novadiffusion.com/download](https://harness.novadiffusion.com/download) 或 [GitHub Releases](https://github.com/pkuinfo/pku-harness/releases/latest) 下载。需要北大账号和一个模型服务的 API Key。
+**使用**：Android 7.0 及以上（arm64），从 [pkuharness.com/download](https://pkuharness.com/download) 或 [GitHub Releases](https://github.com/pkuinfo/pku-harness/releases/latest) 下载。需要北大账号和一个模型服务的 API Key。
 
 **开发**：需要 [Bun](https://bun.sh)、JDK 17、Android SDK 以及模拟器或真机。一律使用 bun / bunx，不要用 npm、npx、yarn 或 pnpm。
 
@@ -65,7 +65,7 @@ bun run verify     # 类型检查 + lint + 测试，与 CI 完全一致
 bun run android    # 在模拟器或真机上构建开发版
 ```
 
-**写插件**：接入新的校园服务一般不需要改动本仓库。在[插件仓库](https://github.com/pkuinfo/pku-harness-plugins)写一份 `PLUGIN.md`，用 `bun run plugin validate|run|test <目录>` 在电脑上检查，然后在应用里通过链接安装。参见[开发者文档](https://harness.novadiffusion.com/docs)和[插件语言规范](docs/PLUGIN-LANGUAGE.md)。
+**写插件**：接入新的校园服务一般不需要改动本仓库。在[插件仓库](https://github.com/pkuinfo/pku-harness-plugins)写一份 `PLUGIN.md`，用 `bun run plugin validate|run|test <目录>` 在电脑上检查，然后在应用里通过链接安装。参见[开发者文档](https://pkuharness.com/docs)和[插件语言规范](docs/PLUGIN-LANGUAGE.md)。
 
 ## 参与贡献
 

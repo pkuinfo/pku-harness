@@ -2,7 +2,7 @@
 
 Effective date: 12 November 2026
 
-This policy explains what data PKU harness handles, where it goes, and how you control it. It applies to the PKU harness app, the website harness.novadiffusion.com, and the optional PKU harness Cloud service run by the pkuinfo contributors ("we"). PKU harness is not affiliated with Peking University.
+This policy explains what data PKU harness handles, where it goes, and how you control it. It applies to the PKU harness app, the website pkuharness.com, and the optional PKU harness Cloud service run by the pkuinfo contributors ("we"). PKU harness is not affiliated with Peking University.
 
 ## In short
 
@@ -41,7 +41,7 @@ Plugins run inside the app. Each plugin declares which hosts it may contact and 
 
 ## 5. PKU harness Cloud (optional)
 
-The cloud service at harness.novadiffusion.com/cloud is used only when you turn on a cloud feature, such as sharing a campus card payment code. You can switch it off or use your own server in **Settings → Cloud**.
+The cloud service at pkuharness.com/cloud is used only when you turn on a cloud feature, such as sharing a campus card payment code. You can switch it off or use your own server in **Settings → Cloud**.
 - Your phone creates a key pair. The server sees only the public key, and uses it to recognise your device.
 - Shared content is encrypted on your phone before it is sent. The key needed to read it is in the part of the share link after `#`, which browsers never send to the server. The server can't read payment codes or other shared content.
 - The server stores encrypted data, its size, and expiry times. Share channels expire after at most 24 hours (15 minutes by default) and are deleted soon after. Stored items are deleted when they expire or when you delete them.
@@ -50,7 +50,7 @@ The cloud service at harness.novadiffusion.com/cloud is used only when you turn 
 ## 6. Updates and the website
 
 - **New versions:** the app asks GitHub (api.github.com) for the latest release about twice a day, and downloads the APK from GitHub when you choose to update. GitHub sees your IP address and handles it under its own privacy statement.
-- **Over-the-air updates:** the app downloads signed update files from harness.novadiffusion.com. These requests carry the app's version and platform and a random installation ID added by the update library. The server keeps no logs of them.
+- **Over-the-air updates:** the app downloads signed update files from pkuharness.com. These requests carry the app's version and platform and a random installation ID added by the update library. The server keeps no logs of them.
 - **Website:** the website uses no tracking cookies or analytics. The download page asks GitHub for release information from our server, not from your browser.
 
 ## 7. Permissions the app asks for

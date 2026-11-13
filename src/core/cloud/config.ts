@@ -15,7 +15,7 @@ export const DEFAULT_PROVIDER_CONFIG: ProviderConfig = { mode: 'off' };
  * /cloud (deployed 2026-11-08). TODO(cloud stage 5): move to a dedicated domain once one is
  * bought and tested inside WeChat (docs/CLOUD.md §5 decisions 1–2).
  */
-export const OFFICIAL_URL = 'https://harness.novadiffusion.com/cloud';
+export const OFFICIAL_URL = 'https://pkuharness.com/cloud';
 
 export type URLCheck = { ok: true; url: string } | { ok: false; reason: 'empty' | 'invalid' | 'insecure' | 'credentials' | 'query' };
 

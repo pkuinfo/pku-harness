@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        **Questions are answered faster in [GitHub Discussions → Q&A](https://github.com/pkuinfo/pku-harness/discussions/categories/q-a)**, where other students can find the answer later. The [docs](https://harness.novadiffusion.com/en/docs) cover setup, plugins and the cloud.
+        **Questions are answered faster in [GitHub Discussions → Q&A](https://github.com/pkuinfo/pku-harness/discussions/categories/q-a)**, where other students can find the answer later. The [docs](https://pkuharness.com/en/docs) cover setup, plugins and the cloud.
         Use this form only if Discussions doesn't work for you.
   - type: textarea
     id: question

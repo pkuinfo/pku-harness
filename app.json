@@ -132,7 +132,7 @@
       "policy": "fingerprint"
     },
     "updates": {
-      "url": "https://harness.novadiffusion.com/updates/manifest",
+      "url": "https://pkuharness.com/updates/manifest",
       "checkAutomatically": "ON_LOAD",
       "codeSigningCertificate": "./certs/ota/certificate.pem",
       "codeSigningMetadata": {
