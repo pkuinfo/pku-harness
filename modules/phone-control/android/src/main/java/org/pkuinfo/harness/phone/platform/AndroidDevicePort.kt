@@ -22,6 +22,9 @@ import org.pkuinfo.harness.phone.platform.screen.ActionResult
 import org.pkuinfo.harness.phone.platform.screen.ScreenSnapshot
 import org.pkuinfo.harness.phone.platform.screen.UiStates
 
+/** Display.FLAG_ALWAYS_UNLOCKED (hidden API constant, stable since Android 10). */
+private const val DISPLAY_FLAG_ALWAYS_UNLOCKED = 1 shl 9
+
 /** Long side of the screenshot shown to a vision model (the preview stays at 720). */
 private const val LOOK_MAX_PX = 1000.0
 
@@ -76,7 +79,20 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
                 PhoneScope.state = scope.copy(blocked = scope.blocked - packageName, revision = scope.revision + 1)
             }
 
-            override suspend fun isLocked() = context.getSystemService(KeyguardManager::class.java).isKeyguardLocked
+            override suspend fun isMainLocked() = context.getSystemService(KeyguardManager::class.java).isKeyguardLocked
+
+            /**
+             * Copilot's own display is created "always unlocked" when the helper may make a trusted
+             * display: its apps keep running behind the lock screen, so a task goes on with the
+             * screen off. Without that flag (or before the display exists and can't be checked)
+             * the lock screen stops it as before.
+             */
+            override suspend fun isLocked(): Boolean {
+                if (!isMainLocked()) return false
+                val id = display.current?.displayId ?: return false
+                val flags = context.getSystemService(DisplayManager::class.java).getDisplay(id)?.flags ?: return true
+                return flags and DISPLAY_FLAG_ALWAYS_UNLOCKED == 0
+            }
 
             private suspend fun scope(): Set<String?> {
                 // A window whose contents aren't readable yet (mid-transition) has no known owner;

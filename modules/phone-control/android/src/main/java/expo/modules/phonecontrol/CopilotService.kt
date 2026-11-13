@@ -28,6 +28,23 @@ class CopilotService : Service() {
 
     override fun onBind(intent: Intent?): IBinder? = null
 
+    private var attention: kotlinx.coroutines.Job? = null
+    /**
+     * Keeps the screen on (dimmed) while a task runs: Copilot's display sleeps with the phone's own
+     * screen, so a screen timeout would stop the task. Pressing power still turns it off; the task
+     * then waits until the screen is on again (PhoneRuntime.awaitScreen). Released when it ends.
+     */
+    private var cpu: android.os.PowerManager.WakeLock? = null
+    private var screen: android.os.PowerManager.WakeLock? = null
+
+    /** CPU (a turned-off screen must not stop the run) and a dimmed screen (no timeout mid-task). */
+    @Suppress("DEPRECATION")
+    private fun holdWakeLocks() {
+        val power = getSystemService(android.os.PowerManager::class.java)
+        if (cpu?.isHeld != true) cpu = power.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "PKUHarness:CopilotCpu").apply { acquire(60 * 60_000L) }
+        if (screen?.isHeld != true) screen = power.newWakeLock(android.os.PowerManager.SCREEN_DIM_WAKE_LOCK, "PKUHarness:CopilotScreen").apply { acquire(60 * 60_000L) }
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == STOP) {
             val stopped = intent.getStringExtra("sessionId")
@@ -63,6 +80,9 @@ class CopilotService : Service() {
             .addAction(Notification.Action.Builder(null, getString(R.string.copilot_stop), stop).build())
         if (launch != null) notification.setContentIntent(PendingIntent.getActivity(this, 1, launch, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
         startForeground(6801, notification.build())
+        attention?.cancel()
+        attention = CopilotAttention(applicationContext, started).watch(scope)
+        holdWakeLocks()
         monitor?.cancel()
         monitor = scope.launch {
             combine(PhonePlatform.of(applicationContext).hub.shell, ScreenAccessibility.instance, AccessibilityParking.hostInFront) { helper, accessibility, inFront ->
@@ -96,6 +116,9 @@ class CopilotService : Service() {
 
     override fun onDestroy() {
         monitor?.cancel()
+        attention?.cancel()
+        cpu?.takeIf { it.isHeld }?.release(); cpu = null
+        screen?.takeIf { it.isHeld }?.release(); screen = null
         overlay?.close(); overlay = null
         val ended = sessionId
         if (ended != null) {

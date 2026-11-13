@@ -151,6 +151,16 @@ While a task is open and the user types in PKU harness (its keyboard is open), t
 service is held off between calls, so keyboards such as Samsung Keyboard don't switch to
 screen-reader typing (`AccessibilityParking.holdForHost`); each call turns it back on first, and
 switching is serialized so a call never runs on a service that is unbinding.
+Background and screen off: a task goes on while the user is in another app or the phone is locked
+(Copilot's display is created "always unlocked", so `isLocked` only stops it when that flag is
+missing; steps on the phone's own screen, such as handoff, resume and brightness, use
+`isMainLocked`). The system keeps Copilot's display in the main power group, so it sleeps when the
+phone's screen does. During a task `CopilotService` holds a partial wake lock (CPU) and a dimmed
+screen wake lock (no screen timeout). If the user presses power, each call waits up to 30 minutes
+for the screen to be on again (`PhoneRuntime.awaitScreen`; the lock screen is enough) under a quiet
+"Copilot paused" notice. When the user is needed while the screen is off or locked (an approval or a
+handoff), `CopilotAttention` posts a lock-screen heads-up notification and turns the screen on; it
+stays until the request is settled. A waiting handoff lasts up to 30 minutes.
 
 Physical device brightness uses separate typed `readBrightness` and `setBrightness` operations.
 The virtual display's Settings page can omit hardware brightness controls, so this capability

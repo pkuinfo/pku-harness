@@ -191,6 +191,7 @@ object PhoneRuntime {
         val ticket = PhoneOverlayBridge.startOperation(id, operation)
         try {
             val result = AccessibilityParking.during {
+                awaitScreen()
                 requireAccessibility()
                 block()
             }
@@ -203,6 +204,31 @@ object PhoneRuntime {
             // The call ended while the user types in PKU harness.
             appContext?.let { AccessibilityParking.holdForHost(it) }
         }
+    }
+
+    /** True while a Copilot call waits for the phone's screen to come back on (CopilotAttention says so). */
+    @Volatile var waitingForScreen = false
+        private set
+
+    /**
+     * Copilot's display sleeps with the phone's own screen (the system keeps it in the main power
+     * group), so with the screen off its apps stop drawing. A call then waits, up to 30 minutes, for
+     * the user to turn the screen on; the lock screen is enough, since Copilot's display stays unlocked.
+     */
+    private suspend fun awaitScreen() {
+        val ctx = appContext ?: return
+        val power = ctx.getSystemService(android.os.PowerManager::class.java)
+        if (power.isInteractive) return
+        waitingForScreen = true
+        try {
+            val deadline = System.currentTimeMillis() + 30 * 60_000L
+            while (!power.isInteractive) {
+                if (System.currentTimeMillis() > deadline) throw PhoneException(PhoneFailure.LOCKED, "The phone's screen has been off for 30 minutes, so Copilot's display is asleep. Finish your reply and tell the user to turn the screen on and send a message to continue.")
+                kotlinx.coroutines.delay(500)
+            }
+            // The display and its apps need a moment to draw again.
+            kotlinx.coroutines.delay(1_000)
+        } finally { waitingForScreen = false }
     }
 
     /** PKU harness came to the front or left it; leaving mid-task brings the service back (AccessibilityParking). */

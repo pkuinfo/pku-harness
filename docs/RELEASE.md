@@ -75,10 +75,15 @@ workflow artifact for three days.
 - **A release with native changes needs the APK.** The app checks
   `api.github.com/repos/pkuinfo/pku-harness/releases/latest` at most every 12 hours after launch
   (`src/core/update/app-update.ts`). When the tag is newer than the installed version it asks
-  once and keeps an "update available" row at the top of Settings. "Update" downloads the APK
-  built for the phone's CPU into the cache with a progress dialog, then opens Android's package
-  installer (`src/core/update/install.ts`, `REQUEST_INSTALL_PACKAGES`), which installs it over
-  the app and keeps its data; the first time, Android asks to allow installs from PKU harness.
+  once and keeps an "update available" row at the top of Settings. The APK for the phone's CPU
+  downloads through Android's DownloadManager (`modules/app-updater`): it keeps going in the
+  background and with the screen off, its progress is in the system notification, and the app
+  posts "Tap to install" when it is done. With **Settings → Download updates on Wi-Fi** (on by
+  default; setting `app.autoUpdate`) the launch check downloads a new release by itself over Wi-Fi
+  without asking; otherwise the sheet asks, and "Update now" starts the download and closes the
+  sheet. Installing always waits for the user's tap: Android's package installer
+  (`src/core/update/install.ts`, `REQUEST_INSTALL_PACKAGES`) installs it over the app and keeps its
+  data; the first time, Android asks to allow installs from PKU harness.
   "Later" quiets that version for 3 days. Settings → About → Check for updates runs the check
   on demand. Builds before 1.0.6 don't check; 1.0.6 opens the APK link in the browser instead.
 

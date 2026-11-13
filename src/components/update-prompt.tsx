@@ -1,14 +1,14 @@
 import { RNHostView } from '@expo/ui';
 import { router } from 'expo-router';
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { ScrollView, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { isOnboarded } from '@/core/boot';
 import { legalNoticeDue, markLegalAccepted } from '@/core/legal';
-import { checkOnLaunch, installedVersion, snooze, type AppUpdate } from '@/core/update/app-update';
-import { cancelInstall, cleanUpdateDownloads, installUpdate, useInstallState, type InstallState } from '@/core/update/install';
+import { autoDownloadEnabled, checkOnLaunch, installedVersion, loadUpdatePrefs, snooze, type AppUpdate } from '@/core/update/app-update';
+import { cancelInstall, cleanUpdateDownloads, installDownloaded, installState, installUpdate, sync, useInstallState, type InstallState } from '@/core/update/install';
 import { useLocale, useT } from '@/i18n';
 import { curves, spacing, useTheme } from '@/theme';
 import { haptics } from '@/utils/haptics';
@@ -39,20 +39,23 @@ const useOffered = () =>
     () => offered,
   );
 
-/** Offer a newer release in the update sheet (Update downloads it and opens the installer; Later quiets it for a few days). */
+/** Offer a newer release in the update sheet (Download starts it in the background; Later quiets it for a few days). */
 export function promptAppUpdate(update: AppUpdate) {
+  // The download may have finished, failed or been cleared since the state was last read.
+  void sync();
   setOffered(update);
 }
 
 /**
  * Mounted once at the root: checks for a newer APK shortly after launch (not during the welcome)
  * (after a one-time notice about the terms, when due), and hosts the update sheet, which offers the
- * release and then shows its download in place until Android's installer takes over.
+ * release. The download itself runs in the background with a system notification (install.ts).
  */
 export function UpdatePrompt() {
   const [legal, setLegal] = useState<'new' | 'updated' | null>(null);
   useEffect(() => {
     cleanUpdateDownloads();
+    void loadUpdatePrefs();
     if (!isOnboarded()) return;
     const id = setTimeout(() => {
       void (async () => {
@@ -63,7 +66,15 @@ export function UpdatePrompt() {
           return setLegal(legal);
         }
         const u = await checkOnLaunch();
-        if (u) promptAppUpdate(u);
+        if (!u) return;
+        await loadUpdatePrefs();
+        await sync();
+        const s = installState();
+        // Downloaded already: offer the install. Otherwise, with automatic updates, download it
+        // quietly over Wi-Fi ("Tap to install" when ready); without them, ask.
+        if (s.phase === 'ready' && s.version === u.version) return promptAppUpdate(u);
+        if (autoDownloadEnabled()) return void installUpdate(u, { wifiOnly: true });
+        promptAppUpdate(u);
       })();
     }, 3000);
     return () => clearTimeout(id);
@@ -127,31 +138,18 @@ function UpdateSheet() {
   const width = Math.min(screenW, SHEET_MAX_WIDTH);
   const update = useOffered();
   const install = useInstallState();
-  // Swiped away during a download: the download goes on, the sheet stays closed (Material removes
-  // its window on dismiss, so it must not stay "open" behind the scenes). A new offer or a
-  // failure shows it again.
-  const downloadKey = install.phase === 'downloading' ? `download:${install.version}` : null;
-  const [hiddenFor, setHiddenFor] = useState<string | null>(null);
-  const open = (!!update || install.phase !== 'idle') && (downloadKey === null || hiddenFor !== downloadKey);
+  // The sheet only offers (and reports a failure); a download runs in the background.
+  const open = !!update || install.phase === 'failed';
   // Keep the last offer on screen while the sheet slides away.
   const [shown, setShown] = useState(update);
   if (update && update !== shown) setShown(update);
 
-  // A finished (or cancelled) download closes the sheet; Android's installer takes over from here.
-  const phase = useRef(install.phase);
-  useEffect(() => {
-    if (phase.current === 'downloading' && install.phase === 'idle') setOffered(null);
-    phase.current = install.phase;
-  }, [install.phase]);
-
-  // Swipe down, back or a tap outside: an unanswered offer counts as Later; a running download
-  // keeps going in the background (the installer still opens when it finishes); a failure is dismissed.
+  // Swipe down, back or a tap outside: an unanswered offer counts as Later; a failure is dismissed.
   const dismiss = useCallback(() => {
     if (install.phase === 'failed') cancelInstall();
     else if (install.phase === 'idle' && update) void snooze(update);
-    else if (downloadKey) setHiddenFor(downloadKey);
     setOffered(null);
-  }, [install.phase, update, downloadKey]);
+  }, [install.phase, update]);
 
   return (
     <NativeSheet open={open} onDismiss={dismiss} color={c.elevated}>
@@ -176,6 +174,13 @@ function Body({ update, install }: { update: AppUpdate | null; install: InstallS
     if (!update) return;
     haptics.tap();
     void installUpdate(update);
+    // Progress is in the system notification; the app stays usable.
+    setOffered(null);
+  };
+  const installNow = async () => {
+    haptics.tap();
+    // Gone (cleared from Downloads): the sheet stays, now offering the download again.
+    if (await installDownloaded()) setOffered(null);
   };
   const later = () => {
     if (update) void snooze(update);
@@ -230,14 +235,24 @@ function Body({ update, install }: { update: AppUpdate | null; install: InstallS
       ) : null}
 
       <View className="flex-row items-center gap-2.5 rounded-lg bg-surface-3 px-4 py-3" style={CURVE}>
-        <Icon name={install.phase === 'downloading' ? 'shield' : 'check'} size={16} color={c.textMuted} />
+        <Icon name={install.phase === 'downloading' ? 'download' : 'check'} size={16} color={c.textMuted} />
         <Text variant="caption" tone="muted" className="flex-1">
-          {t(install.phase === 'downloading' ? 'app.settings.updateInstallHint' : 'app.settings.updateKeeps')}
+          {install.phase === 'downloading'
+            ? t(install.waitingForNetwork ? 'app.settings.updateWaitingWifi' : 'app.settings.updateBackground')
+            : t(install.phase === 'ready' ? 'app.settings.updateReadyHint' : 'app.settings.updateKeeps')}
         </Text>
       </View>
 
       {install.phase === 'downloading' ? (
-        <Button size="lg" variant="secondary" title={t('app.settings.updateCancel')} onPress={cancel} />
+        <View className="gap-2">
+          <Button size="lg" variant="secondary" title={t('app.settings.updateClose')} onPress={() => setOffered(null)} />
+          <Button size="lg" variant="ghost" title={t('app.settings.updateCancel')} onPress={cancel} />
+        </View>
+      ) : install.phase === 'ready' ? (
+        <View className="gap-2">
+          <Button size="lg" icon="download" title={t('app.settings.updateInstall')} onPress={installNow} />
+          <Button size="lg" variant="ghost" title={t('app.settings.updateLater')} onPress={later} />
+        </View>
       ) : install.phase === 'failed' ? (
         <View className="gap-2">
           {update ? <Button size="lg" icon="refresh" title={t('app.settings.updateRetry')} onPress={start} /> : null}

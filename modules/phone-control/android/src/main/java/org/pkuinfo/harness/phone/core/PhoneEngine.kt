@@ -280,7 +280,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
                 val settings = session.device.settingsPackage
                 if (settings == null || settings !in session.packages) fail(PhoneFailure.APP_SCOPE, "Select Android Settings before controlling device brightness")
                 if (session.handedOver) fail(PhoneFailure.HANDOFF, "The user has control")
-                if (session.device.isLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to control brightness")
+                if (session.device.isMainLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to control brightness")
                 if (session.pauseGate != null) return@withLock null
                 live(session)
                 currentCoroutineContext().ensureActive()
@@ -329,7 +329,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
 
     suspend fun resume(id: String) = mutex.withLock {
         val session = active(id)
-        if (session.device.isLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to resume")
+        if (session.device.isMainLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to resume")
         if (session.handedOver) {
             session.device.resume()
             session.handedOver = false

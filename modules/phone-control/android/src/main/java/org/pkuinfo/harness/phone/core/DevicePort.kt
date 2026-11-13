@@ -12,7 +12,13 @@ interface DeviceSession {
     suspend fun setBrightness(percent: Float, adaptive: Boolean?): DeviceBrightnessChange = throw UnsupportedOperationException("Physical brightness is unavailable")
     /** Widen this session's app scope by one installed app the user granted. */
     suspend fun allow(packageName: String): Unit = throw UnsupportedOperationException("This session's app scope is fixed")
+    /**
+     * Copilot can't act right now because of the lock screen: the phone is locked and the apps it
+     * operates are affected (its own display is not one that stays unlocked).
+     */
     suspend fun isLocked(): Boolean
+    /** The phone's own screen is locked: steps on it (handoff, resume, brightness) need the user. */
+    suspend fun isMainLocked(): Boolean = isLocked()
     suspend fun read(): DeviceFrame
     suspend fun perform(action: PhoneAction, target: DeviceElement?): DeviceOutcome
     suspend fun awaitChange(timeoutMs: Long)

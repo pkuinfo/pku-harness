@@ -11,6 +11,7 @@ import { router } from 'expo-router';
 import { z } from 'zod';
 
 import { aiConfig } from '@/core/agent/provider';
+import { autoDownloadEnabled, setAutoDownload } from '@/core/update/app-update';
 import { getTimezonePreference, setTimezonePreference } from '@/core/clock/preference';
 import { services } from '@/core/runtime/invoke';
 import { pluginName } from '@/core/runtime/localize';
@@ -76,6 +77,7 @@ function appEntries(): Entry[] {
       },
     },
     { key: 'app.haptics', group, title: t('app.settings.haptics'), screen: '/settings', read: hapticsEnabled, ...boolean(setHapticsEnabled) },
+    { key: 'app.autoUpdate', group, title: t('app.settings.autoUpdate'), screen: '/settings', read: autoDownloadEnabled, ...boolean(setAutoDownload) },
     {
       key: 'ai.provider', group: t('app.prefs.groupAI'), title: t('app.prefs.aiProvider'), screen: '/ai-settings', read: () => ai.providerId,
       ...choice(registry.providers().map((p) => p.id), (id) => registry.provider(id)?.def.name ?? id, (id) => aiConfig.activate(id)),

@@ -61,4 +61,10 @@
 <string name="copilot_open_panel">打开 Copilot 控制面板</string>
 <string name="copilot_handoff_hint">请在应用中完成这一步，然后点「完成」。</string>
 <string name="copilot_handback_done">完成 · 继续</string>
+<string name="copilot_attention_channel">Copilot 需要你</string>
+<string name="copilot_attention_approval">Copilot 需要你确认</string>
+<string name="copilot_attention_handoff">Copilot 需要你：解锁后继续</string>
+<string name="copilot_attention_screen">Copilot 已暂停：屏幕已关闭</string>
+<string name="copilot_attention_screen_text">点亮屏幕即可继续，无需解锁。</string>
+<string name="copilot_attention_quiet_channel">Copilot 状态</string>
 </resources>

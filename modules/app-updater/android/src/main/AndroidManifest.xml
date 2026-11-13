@@ -1,0 +1,10 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <!-- DownloadManager tells the app that enqueued a download when it finishes (explicit broadcast). -->
+    <receiver android:name="expo.modules.appupdater.DownloadDoneReceiver" android:exported="true">
+      <intent-filter>
+        <action android:name="android.intent.action.DOWNLOAD_COMPLETE" />
+      </intent-filter>
+    </receiver>
+  </application>
+</manifest>

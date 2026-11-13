@@ -62,4 +62,10 @@
 <string name="copilot_open_panel">Open Copilot controls</string>
 <string name="copilot_handoff_hint">Finish this step in the app, then tap Done.</string>
 <string name="copilot_handback_done">Done · continue</string>
+<string name="copilot_attention_channel">Copilot needs you</string>
+<string name="copilot_attention_approval">Copilot needs your approval</string>
+<string name="copilot_attention_handoff">Copilot needs you: unlock to continue</string>
+<string name="copilot_attention_screen">Copilot paused: the screen is off</string>
+<string name="copilot_attention_screen_text">Turn the screen on to let it continue. No need to unlock.</string>
+<string name="copilot_attention_quiet_channel">Copilot status</string>
 </resources>

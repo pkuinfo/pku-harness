@@ -17,7 +17,8 @@ import { useCampusAccount } from '@/core/campus/account';
 import { displayHost } from '@/core/cloud/config';
 import { useCloudProvider } from '@/core/cloud/provider';
 import { exportData, resetData } from '@/core/data';
-import { fetchAppUpdate, installedVersion, useAppUpdate } from '@/core/update/app-update';
+import { fetchAppUpdate, installedVersion, setAutoDownload, useAppUpdate, useAutoDownload } from '@/core/update/app-update';
+import { useInstallState } from '@/core/update/install';
 import { promptAppUpdate } from '@/components/update-prompt';
 import { haptics, setHapticsEnabled, useHapticsEnabled } from '@/utils/haptics';
 import { systemZoneId, useTimezonePreference } from '@/core/clock/preference';
@@ -60,6 +61,8 @@ export function Settings() {
   const cloud = useCloudProvider();
   const cloudHost = displayHost(cloud.baseURL);
   const update = useAppUpdate();
+  const install = useInstallState();
+  const autoUpdate = useAutoDownload();
   const [checking, setChecking] = useState<string | null>(null);
   const checkNow = async () => {
     setChecking(t('app.settings.checking'));
@@ -76,7 +79,23 @@ export function Settings() {
       {update ? (
         <FadeIn index={0}>
           <ListGroup>
-            <ListRow icon="download" iconTint={c.accent} title={t('app.settings.updateRow', { version: update.version })} subtitle={t('app.settings.updateRowSubtitle')} onPress={() => promptAppUpdate(update)} />
+            <ListRow
+              icon="download"
+              iconTint={c.accent}
+              title={t(install.phase === 'ready' ? 'app.settings.updateRowReady' : install.phase === 'downloading' ? 'app.settings.updateRowDownloading' : 'app.settings.updateRow', { version: update.version })}
+              subtitle={
+                install.phase === 'ready'
+                  ? t('app.settings.updateRowReadySubtitle')
+                  : install.phase === 'downloading'
+                    ? install.waitingForNetwork
+                      ? t('app.settings.updateWaitingWifi')
+                      : install.total > 0
+                        ? `${Math.round((install.written / install.total) * 100)}%`
+                        : t('app.settings.updateBackground')
+                    : t('app.settings.updateRowSubtitle')
+              }
+              onPress={() => promptAppUpdate(update)}
+            />
           </ListGroup>
         </FadeIn>
       ) : null}
@@ -189,6 +208,12 @@ export function Settings() {
       </FadeIn>
       <FadeIn index={6}>
         <ListGroup title={t('app.settings.about')}>
+          <ListRow
+            icon="download"
+            title={t('app.settings.autoUpdate')}
+            subtitle={t('app.settings.autoUpdateSubtitle')}
+            accessory={<NativeSwitch value={autoUpdate} onValueChange={(v) => void setAutoDownload(v)} label={t('app.settings.autoUpdate')} />}
+          />
           <ListRow icon="refresh" title={t('app.settings.checkUpdates')} subtitle={checking ?? t('app.settings.version', { version: installedVersion() })} onPress={() => void checkNow()} />
           <ListRow icon="help" title={t('app.settings.aboutRow')} subtitle={t('app.settings.aboutRowSubtitle')} onPress={() => router.push('/about')} />
         </ListGroup>

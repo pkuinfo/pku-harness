@@ -75,6 +75,30 @@ export async function snooze(update: AppUpdate, now = Date.now()) {
   await kv('prefs').set('update.snooze', { version: update.version, until: now + SNOOZE_MS });
 }
 
+/**
+ * Automatic updates: a newer release downloads on its own over Wi-Fi (no prompt; "Tap to install"
+ * when it is ready). On by default; installing always waits for the user's tap. OTA updates (JS
+ * fixes) are separate and always automatic.
+ */
+let autoDownload = true;
+const autoListeners = new Set<() => void>();
+export async function loadUpdatePrefs() {
+  autoDownload = (await kv('prefs').get<boolean>('update.autoWifi')) ?? true;
+  autoListeners.forEach((l) => l());
+}
+export const autoDownloadEnabled = () => autoDownload;
+export async function setAutoDownload(on: boolean) {
+  autoDownload = on;
+  autoListeners.forEach((l) => l());
+  await kv('prefs').set('update.autoWifi', on);
+}
+export function useAutoDownload(): boolean {
+  return useSyncExternalStore(
+    (l) => (autoListeners.add(l), () => autoListeners.delete(l)),
+    () => autoDownload,
+  );
+}
+
 /** The newer release found by the last check (null when none / not checked). */
 export function useAppUpdate(): AppUpdate | null {
   return useSyncExternalStore(
