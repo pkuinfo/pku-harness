@@ -33,7 +33,9 @@ The assistant works by sending a conversation to the AI provider you configured 
 
 Your campus password and authenticator secret are never sent to the AI. The provider processes this data under its own terms and privacy policy, so choose one you trust. We don't receive this data.
 
-**Voice input (optional).** If you set up voice input, a recording you make with the microphone button is sent from your phone to the speech-to-text service you chose (for example SiliconFlow or Alibaba Cloud Bailian), with your own API key, to be turned into text. The service processes it under its own terms. The recording is deleted from your phone once it has been transcribed, and we never receive it. The microphone is used only while you are recording.
+**Voice input (optional).** If you set up voice input, a recording you make with the microphone button is sent from your phone to the speech-to-text service you chose (for example SiliconFlow, Alibaba Cloud Bailian or DeepSeek), with your own API key, to be turned into text. If you choose DeepSeek, it uses the DeepSeek API key from your AI settings. The service processes it under its own terms. The recording is deleted from your phone once it has been transcribed, and we never receive it. The microphone is used only while you are recording.
+
+**DeepSeek web search and scanned PDFs.** If you have saved a DeepSeek API key, the assistant can search the web and read web pages through DeepSeek: the search terms and page addresses it chooses are sent to DeepSeek with your key. When you attach a scanned PDF that has no text, the app sends the file to DeepSeek with your key to recognise its text. DeepSeek processes this data under its own terms, and we don't receive it.
 
 ## 4. Plugins
 
