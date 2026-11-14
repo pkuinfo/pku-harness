@@ -349,11 +349,16 @@ object PhoneRuntime {
         "sessionId" to snapshot.sessionId, "snapshotId" to snapshot.snapshotId,
         "packageName" to snapshot.packageName, "width" to snapshot.width, "height" to snapshot.height,
         "protected" to snapshot.protected, "changedDuringRead" to snapshot.unstable, "handoff" to snapshot.needsUser,
-        "elements" to snapshot.targets.map { target -> target.element.let { e -> mapOf(
-            "ref" to target.ref, "role" to e.role, "text" to e.text, "bounds" to e.bounds,
-            "resourceId" to e.resourceId, "clickable" to e.clickable, "editable" to e.editable,
-            "scrollable" to e.scrollable, "secret" to e.secret,
-            "range" to e.rangeMin?.let { mapOf("min" to it, "max" to e.rangeMax, "current" to e.rangeCurrent) },
-        ) } },
+        // Every screen goes to the model: only the fields that say something (a false flag, an empty
+        // id or no range is left out) and the id without its package prefix. About half the tokens.
+        "elements" to snapshot.targets.map { target -> target.element.let { e -> buildMap {
+            put("ref", target.ref); put("role", e.role); put("text", e.text); put("bounds", e.bounds)
+            e.resourceId?.substringAfter(":id/")?.takeIf { it.isNotEmpty() }?.let { put("resourceId", it) }
+            if (e.clickable) put("clickable", true)
+            if (e.editable) put("editable", true)
+            if (e.scrollable) put("scrollable", true)
+            if (e.secret) put("secret", true)
+            e.rangeMin?.let { put("range", mapOf("min" to it, "max" to e.rangeMax, "current" to e.rangeCurrent)) }
+        } } },
     )
 }

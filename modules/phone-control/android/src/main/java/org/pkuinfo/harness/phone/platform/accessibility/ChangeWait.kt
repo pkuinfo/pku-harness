@@ -9,7 +9,9 @@ import org.pkuinfo.harness.phone.platform.display.FrameMath
  *
  * - 无障碍事件安静 [QUIET_MS] 且控件树变了:立即判为变了,不等画面停(视频、直播的画面永远在动)。
  * - 只有画面变了(自绘界面):还要前后两帧相近,才判为变了,免得把画到一半的过渡当结果。
- * - 判「没变」要事件安静且画面稳定,在此之前一直等到 [CAP_MS]。
+ * - 事件一直不停(轮播、计时器)但控件树变了、画面稳定:过了 [BUSY_MS] 就判为变了,不等到上限。
+ * - 判「没变」要事件安静、画面稳定,且动作后已过 [UNCHANGED_MS]:反应慢的页面也该开始动了。
+ *   以前一直等到 [CAP_MS],点了没反应的动作每次白等 2.5 秒。
  * - 到 [CAP_MS] 时不管事件是否还在来、画面是否还在动,都按当时的状态下结论:
  *   控件树或画面与动作前不同就是变了。事件一直不停的页面(进度条、计时器)也不会让动作卡住超过上限。
  *
@@ -17,8 +19,10 @@ import org.pkuinfo.harness.phone.platform.display.FrameMath
  * 时钟、等待、取帧都由调用方注入,便于在 JVM 上测。
  */
 internal object ChangeWait {
-    const val POLL_MS = 150L
-    const val QUIET_MS = 400L
+    const val POLL_MS = 120L
+    const val QUIET_MS = 300L
+    const val BUSY_MS = 700L
+    const val UNCHANGED_MS = 1_000L
     const val CAP_MS = 2_500L
     private const val MIN_SLEEP_MS = 10L
 
@@ -36,7 +40,8 @@ internal object ChangeWait {
         treeChanged: () -> Boolean,
         beforeFrame: IntArray?,
     ): Boolean {
-        val deadline = now() + CAP_MS
+        val start = now()
+        val deadline = start + CAP_MS
         var prev = frame()
         var wait = POLL_MS
         while (true) {
@@ -44,11 +49,15 @@ internal object ChangeWait {
             val cur = frame()
             val quietFor = quietForMs()
             val quiet = quietFor >= QUIET_MS
-            if (quiet && treeChanged()) return true
+            val tree = treeChanged()
+            val elapsed = now() - start
+            if (quiet && tree) return true
             val stable = if (prev == null || cur == null) prev == null && cur == null else !FrameMath.differs(prev, cur)
             val frameChanged = FrameMath.differs(beforeFrame, cur)
             if (quiet && stable && frameChanged) return true
-            if (now() >= deadline) return frameChanged || treeChanged()
+            if (tree && stable && elapsed >= BUSY_MS) return true
+            if (quiet && stable && elapsed >= UNCHANGED_MS) return false
+            if (now() >= deadline) return frameChanged || tree
             wait = if (quiet) POLL_MS else minOf(POLL_MS, QUIET_MS - quietFor).coerceAtLeast(MIN_SLEEP_MS)
             prev = cur
         }

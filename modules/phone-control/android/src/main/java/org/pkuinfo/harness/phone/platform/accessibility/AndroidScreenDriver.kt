@@ -2005,7 +2005,8 @@ class AndroidScreenDriver(
             "and the clipboard could not be used safely right now. Call hand_to_user so the user can type it."
         val IN_USE_BY_OTHER = ActionResult.Failed(APP_IN_USE_BY_OTHER_TASK)
 
-        const val QUIET_MS = 500L
+        /** No screen event for this long counts as settled (after a launch, before typing). Was 500 ms. */
+        const val QUIET_MS = 350L
 
         /** 停留里轻轻滚的那块可滚动内容至少占屏幕这么大。 */
         const val IDLE_MIN_AREA = 0.5

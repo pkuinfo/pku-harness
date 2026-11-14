@@ -177,16 +177,30 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
                 } finally { frame.recycle() }
             }
 
+            /** The task on the user's screen during a handoff, returned to Copilot's display on resume. */
+            private var handedTask = -1
+
+            /**
+             * Hands over what is on top of Copilot's display, not only the app it opened: a WeChat mini
+             * program runs in a task of its own above WeChat's, and a payment app opened by a shop is
+             * its own task too. Handing over WeChat's task showed the chat from before the mini program.
+             */
             override suspend fun handoff() {
                 val task = checkNotNull(screen.target.value) { "No app is open" }
-                check(helper.moveTask(task.taskId, Display.DEFAULT_DISPLAY)) { "Could not hand the app to the user" }
+                val top = runCatching { helper.topTaskId(display.get().displayId) }.getOrDefault(-1)
+                val topPackage = if (top >= 0) runCatching { helper.packageOfTask(top) }.getOrNull() else null
+                val moving = if (topPackage != null && PhoneScope.policy.current().denial(topPackage) == null) top else task.taskId
+                check(helper.moveTask(moving, Display.DEFAULT_DISPLAY)) { "Could not hand the app to the user" }
+                handedTask = moving
                 handedOver = true
                 latest = null
             }
 
             override suspend fun resume() {
                 val task = checkNotNull(screen.target.value) { "No app is open" }
-                check(helper.moveTask(task.taskId, display.get().displayId)) { "Could not return the app to Copilot" }
+                val moving = handedTask.takeIf { it >= 0 } ?: task.taskId
+                check(helper.moveTask(moving, display.get().displayId)) { "Could not return the app to Copilot" }
+                handedTask = -1
                 handedOver = false
                 latest = null
             }
