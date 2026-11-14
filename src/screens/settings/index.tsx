@@ -30,8 +30,9 @@ import { PluginsEntry } from './plugins-entry';
 
 
 /**
- * Settings tab, kept minimal (docs/ARCHITECTURE.md §2): account, one entry into plugins (their
- * own settings live on each plugin's page), reminders, appearance and language, data.
+ * Settings tab, kept minimal (docs/ARCHITECTURE.md §2): Copilot first (the headline feature; its
+ * page belongs to the copilot plugin), account, one entry into plugins (their own settings live on
+ * each plugin's page), reminders, appearance and language, data.
  */
 export function Settings() {
   const c = useTheme();
@@ -99,6 +100,11 @@ export function Settings() {
           </ListGroup>
         </FadeIn>
       ) : null}
+      <FadeIn index={0}>
+        <ListGroup>
+          <ListRow icon="phone" iconTint={c.accent} title={t('app.settings.copilot')} subtitle={t('app.settings.copilotSubtitle')} onPress={() => router.push('/p/copilot/home')} />
+        </ListGroup>
+      </FadeIn>
       <FadeIn index={0}>
         <ListGroup title={t('app.settings.account')}>
           <ListRow

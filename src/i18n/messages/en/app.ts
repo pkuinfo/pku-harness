@@ -68,6 +68,8 @@ export const app: Messages['app'] = {
     voiceOff: 'Off · use your own speech-to-text key',
     aiNotConnected: 'Not connected · DeepSeek by default',
     usage: 'Usage',
+    copilot: 'Copilot',
+    copilotSubtitle: 'The AI operates apps on your phone · permissions and allowed apps',
     usageSubtitle: 'Tokens, active hours and top tools',
     timezone: 'Time zone',
     timezoneSystem: 'System',

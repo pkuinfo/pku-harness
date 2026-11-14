@@ -69,6 +69,8 @@ export const app = {
     voiceOff: '未开启 · 使用你自己的语音识别 Key',
     aiNotConnected: '未连接 · 默认 DeepSeek',
     usage: '用量',
+    copilot: 'Copilot',
+    copilotSubtitle: '让 AI 替你操作手机上的 App · 权限与允许的应用',
     usageSubtitle: 'Token 用量、活跃时段与常用工具',
     timezone: '时区',
     timezoneSystem: '跟随系统',
