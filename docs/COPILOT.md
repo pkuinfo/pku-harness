@@ -152,7 +152,10 @@ The floating window is an accessibility overlay. When the user allowed "Display 
 (an optional setup step), it is an application overlay instead, because Samsung's screen recorder
 leaves accessibility overlays out of its videos (stock Android records both). While the user has
 control it is an accessibility overlay again, since payment apps may hide application overlays
-(`CopilotOverlay.windowType`). Steps that follow only Copilot screen operations think at low
+(`CopilotOverlay.windowType`). The application overlay is added through the app's own window
+manager, not the accessibility service's: Samsung's recorder also leaves out windows Android files
+under an accessibility service. A handoff moves the top task of Copilot's display (a WeChat mini
+program or a payment app runs in its own task), and Done returns that task. Steps that follow only Copilot screen operations think at low
 effort (`src/core/agent/step-reasoning.ts`); planning keeps the provider default.
 While a task is open and the user types in PKU harness (its keyboard is open), the accessibility
 service is held off between calls, so keyboards such as Samsung Keyboard don't switch to

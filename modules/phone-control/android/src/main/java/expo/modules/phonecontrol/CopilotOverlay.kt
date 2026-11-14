@@ -46,7 +46,11 @@ private const val PREVIEW_SHARE_KEY = "previewShare"
  * Mika's OverlayHost (see module NOTICE).
  */
 class CopilotOverlay(private val service: ScreenAccessibility, private val sessionId: String) {
-    private val manager = service.getSystemService(WindowManager::class.java)
+    // An application overlay goes through the app's own window manager: added through the accessibility
+    // service's, Android files it under that service, and Samsung's screen recorder leaves those out.
+    private val serviceWindows = service.getSystemService(WindowManager::class.java)
+    private val appWindows = service.applicationContext.getSystemService(WindowManager::class.java)
+    private var manager = serviceWindows
 
     /** False once Android has rebound the accessibility service: this panel's window is gone with the old one. */
     fun belongsTo(current: ScreenAccessibility) = current === service
@@ -125,6 +129,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
             attached = false
         }
         params.type = type
+        manager = if (type == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) appWindows else serviceWindows
         attached = runCatching { manager.addView(root, params); true }.getOrDefault(false)
         if (!attached && type != WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) return attach(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
         return attached
