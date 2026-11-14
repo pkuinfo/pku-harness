@@ -141,7 +141,7 @@ export const app: Messages['app'] = {
     updateNotifReadyTitle: 'PKU harness {version} is ready',
     updateNotifReadyText: 'Tap to install. Your data stays.',
     updateNotifChannel: 'App updates',
-    updateBackground: 'Downloading in the background; progress is in the notification',
+    updateBackground: 'You can close this: the download goes on in the background, with progress in the notification',
     updateWaitingWifi: 'Waiting for Wi-Fi to download',
     updateRowReady: 'Version {version} is downloaded',
     updateRowReadySubtitle: 'Tap to install it over this one. Your data stays.',

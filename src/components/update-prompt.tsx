@@ -1,7 +1,7 @@
 import { RNHostView } from '@expo/ui';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
-import { ScrollView, useWindowDimensions, View } from 'react-native';
+import { AppState, ScrollView, useWindowDimensions, View } from 'react-native';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -26,11 +26,14 @@ const mb = (bytes: number) => `${Math.max(1, Math.round(bytes / 1_048_576))} MB`
 /** Progress counts from 0 (`mb` rounds a tiny size up to 1 MB). */
 const mbDone = (bytes: number) => `${Math.round(bytes / 1_048_576)} MB`;
 
-// The release the sheet is offering (set by the launch check or Settings; cleared by Later / Update).
+// The release the sheet is offering (set by the launch check or Settings; cleared by Later / Close).
 let offered: AppUpdate | null = null;
+// The user tapped Download and the sheet is still open: open the installer when the download ends.
+let watching = false;
 const listeners = new Set<() => void>();
 const setOffered = (u: AppUpdate | null) => {
   offered = u;
+  if (!u) watching = false;
   listeners.forEach((l) => l());
 };
 const useOffered = () =>
@@ -39,7 +42,7 @@ const useOffered = () =>
     () => offered,
   );
 
-/** Offer a newer release in the update sheet (Download starts it in the background; Later quiets it for a few days). */
+/** Offer a newer release in the update sheet (Download shows its progress there and in the notification; Later quiets it for a few days). */
 export function promptAppUpdate(update: AppUpdate) {
   // The download may have finished, failed or been cleared since the state was last read.
   void sync();
@@ -49,7 +52,8 @@ export function promptAppUpdate(update: AppUpdate) {
 /**
  * Mounted once at the root: checks for a newer APK shortly after launch (not during the welcome)
  * (after a one-time notice about the terms, when due), and hosts the update sheet, which offers the
- * release. The download itself runs in the background with a system notification (install.ts).
+ * release. A download the user starts shows its progress in the sheet and in a system notification,
+ * and keeps going when the sheet closes; an automatic one (Wi-Fi) shows only the notification (install.ts).
  */
 export function UpdatePrompt() {
   const [legal, setLegal] = useState<'new' | 'updated' | null>(null);
@@ -138,7 +142,7 @@ function UpdateSheet() {
   const width = Math.min(screenW, SHEET_MAX_WIDTH);
   const update = useOffered();
   const install = useInstallState();
-  // The sheet only offers (and reports a failure); a download runs in the background.
+  // The sheet offers, follows a download the user started (it keeps running when the sheet closes) and reports a failure.
   const open = !!update || install.phase === 'failed';
   // Keep the last offer on screen while the sheet slides away.
   const [shown, setShown] = useState(update);
@@ -173,10 +177,15 @@ function Body({ update, install }: { update: AppUpdate | null; install: InstallS
   const start = () => {
     if (!update) return;
     haptics.tap();
+    watching = true;
     void installUpdate(update);
-    // Progress is in the system notification; the app stays usable.
-    setOffered(null);
   };
+  // Still watching when the download ends: straight to Android's installer (it asks to confirm).
+  useEffect(() => {
+    if (install.phase !== 'ready' || !watching || AppState.currentState !== 'active') return;
+    watching = false;
+    void installDownloaded();
+  }, [install.phase]);
   const installNow = async () => {
     haptics.tap();
     // Gone (cleared from Downloads): the sheet stays, now offering the download again.

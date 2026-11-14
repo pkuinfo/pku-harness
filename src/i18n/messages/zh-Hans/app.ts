@@ -145,7 +145,7 @@ export const app = {
     updateNotifReadyTitle: 'PKU harness {version} 已下载',
     updateNotifReadyText: '点按安装，数据会保留。',
     updateNotifChannel: '应用更新',
-    updateBackground: '正在后台下载，进度见通知',
+    updateBackground: '可以关闭此窗口：下载会在后台继续，进度也显示在通知栏',
     updateWaitingWifi: '等待连接 Wi-Fi 后下载',
     updateRowReady: '新版本 {version} 已下载',
     updateRowReadySubtitle: '点按安装，覆盖当前版本，数据会保留。',
