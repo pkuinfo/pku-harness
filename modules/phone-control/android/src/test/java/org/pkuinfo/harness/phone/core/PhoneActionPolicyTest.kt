@@ -16,11 +16,11 @@ class PhoneActionPolicyTest {
         }
     }
 
-    @Test fun orderAndPayButtonsBeforeThePaymentSheetArePublicActions() {
-        // Copilot places the order itself; the payment sheet that opens is the user's.
+    @Test fun orderAndPayButtonsOnTheCheckoutPageRequireTheMoneyGate() {
+        // Copilot stops on the checkout page; the user submits and pays on their own screen.
         for (label in listOf("Pay", "Buy now", "付款", "下单", "提交订单", "立即支付")) {
             val target = button(label)
-            assertEquals(PhoneEffect.PUBLIC, policy.assess(frame(target), target))
+            assertEquals(PhoneEffect.MONEY, policy.assess(frame(target), target))
         }
     }
 

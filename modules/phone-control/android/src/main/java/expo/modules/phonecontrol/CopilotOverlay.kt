@@ -279,7 +279,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         if (expanded) header.addView(iconButton(R.string.copilot_more, R.drawable.copilot_more) { anchor ->
             PopupMenu(ui, anchor).apply {
                 menu.add(service.getString(if (handed) R.string.copilot_handback else R.string.copilot_takeover)).setOnMenuItemClickListener {
-                    action { if (handed) PhoneRuntime.handback(service, sessionId) else PhoneRuntime.takeover(service, sessionId) }; true
+                    if (handed) handBack() else action { PhoneRuntime.takeover(service, sessionId) }; true
                 }
                 menu.add(service.getString(R.string.copilot_panel)).setOnMenuItemClickListener {
                     service.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("pkuharness://p/copilot/home"))
@@ -346,7 +346,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
             if (approval != null) row(
                 button(R.string.copilot_deny) { PhoneOverlayBridge.answer(approval, false); rendered = "" },
                 button(R.string.copilot_allow, filled = true) { PhoneOverlayBridge.answer(approval, true); rendered = "" })
-            else if (handed) row(button(R.string.copilot_handback_done, filled = true) { action { PhoneRuntime.handback(service, sessionId) } })
+            else if (handed) row(button(R.string.copilot_handback_done, filled = true) { handBack() })
             root.addView(LinearLayout(ui).apply {
                 gravity = Gravity.END
                 addView(iconButton(if (paused) R.string.copilot_resume else R.string.copilot_pause,
@@ -365,6 +365,17 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
     private fun toggle() {
         if (open()) { expanded = false; openInFront = false } else { expanded = true; if (inFront) openInFront = true }
         rendered = ""
+    }
+
+    /**
+     * The user is done with a handed-over step (a payment, a login): the app goes back to Copilot
+     * and PKU harness comes to the front, where the task goes on in the chat, instead of leaving
+     * the user wherever the handoff happened.
+     */
+    private fun handBack() = action {
+        PhoneRuntime.handback(service, sessionId)
+        service.packageManager.getLaunchIntentForPackage(service.packageName)
+            ?.let { service.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 
     private fun action(block: suspend () -> Unit) {

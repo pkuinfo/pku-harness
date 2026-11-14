@@ -142,10 +142,12 @@ reference and is not retried by the session engine. Unknown or unselected app wi
 operations. Reopening a selected app is permitted for recovery; an explicit restart can reset
 an agent-owned app task when ordinary launch restores the blocked screen, but must not discard
 unsaved user work. Passwords, protected screens, and payment confirmation require user handoff.
-The user only pays: Copilot places the order itself, including the submit-order or pay-now tap
-(a public action, asked like any other). Every tap on the payment sheet that opens (choosing
-Alipay or WeChat Pay, the cashier, password or fingerprint) is MONEY and hands over
-(`PhoneActionPolicy.assess`). Steps that follow only Copilot screen operations think at low
+Copilot stops on the checkout page: it fills in the order, but the submit-order, pay-now or
+buy-now tap and every tap on a payment sheet (choosing Alipay or WeChat Pay, the cashier,
+password or fingerprint) are MONEY and hand over (`PhoneActionPolicy.assess`). The user submits
+and pays on their own screen: payment SDKs fail on Copilot's virtual display (Meituan's cashier
+reports a parameter error there). The panel's Done hands the app back to Copilot and brings PKU harness to the
+front (`CopilotOverlay.handBack`), where the task goes on in the chat. Steps that follow only Copilot screen operations think at low
 effort (`src/core/agent/step-reasoning.ts`); planning keeps the provider default.
 While a task is open and the user types in PKU harness (its keyboard is open), the accessibility
 service is held off between calls, so keyboards such as Samsung Keyboard don't switch to

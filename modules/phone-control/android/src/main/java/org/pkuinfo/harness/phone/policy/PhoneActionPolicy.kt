@@ -25,9 +25,10 @@ class PhoneActionPolicy : ActionPolicy {
         if (IrreversibleDetector.paymentPage(screen(frame)) != null) PhoneEffect.MONEY else super.assessPoint(frame, x, y)
 
     /**
-     * The user only pays: Copilot places the order and taps "Pay" or "Submit order" itself (asked
-     * like any public action), and the payment sheet that opens (method choice, cashier, password,
-     * fingerprint) is the user's. Every tap on such a sheet needs the money gate, which hands over.
+     * Copilot fills in the order up to the checkout page and stops there: "Submit order" / "Pay" and
+     * every tap on the payment sheet need the money gate, which hands over. The user taps the
+     * button on their own screen, because payment SDKs fail on Copilot's virtual display (Meituan's
+     * cashier opened there reports a parameter error).
      */
     override fun assess(frame: DeviceFrame, target: DeviceElement): PhoneEffect {
         val screen = screen(frame)
@@ -37,7 +38,8 @@ class PhoneActionPolicy : ActionPolicy {
             put("snapshotId", screen.snapshotId)
         }, screen)
         return when (risk?.action) {
-            IrrevAction.pay, IrrevAction.order, IrrevAction.send, IrrevAction.submit -> PhoneEffect.PUBLIC
+            IrrevAction.pay, IrrevAction.order -> PhoneEffect.MONEY
+            IrrevAction.send, IrrevAction.submit -> PhoneEffect.PUBLIC
             else -> PhoneEffect.WRITE
         }
     }
