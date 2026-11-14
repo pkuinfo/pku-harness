@@ -11,6 +11,7 @@ import android.graphics.drawable.RippleDrawable
 import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
+import android.provider.Settings
 import android.util.Base64
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
@@ -41,7 +42,8 @@ private const val PREVIEW_SHARE_KEY = "previewShare"
 
 /** Harness-owned controls on the main display; the controlled apps remain on a separate display.
  * Non-focusable, content-sized windows leave the user's keyboard and outside touches alone.
- * Uses Android accessibility overlays, inspired by Mika's OverlayHost (see module NOTICE).
+ * An accessibility overlay, or an application overlay when allowed (windowType); inspired by
+ * Mika's OverlayHost (see module NOTICE).
  */
 class CopilotOverlay(private val service: ScreenAccessibility, private val sessionId: String) {
     private val manager = service.getSystemService(WindowManager::class.java)
@@ -105,11 +107,33 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
     /** A resize drag in progress: the status loop must not rebuild the panel under the finger. */
     private var resizing = false
 
+    /**
+     * "Display over other apps", when the user allowed it: Samsung's screen recorder leaves
+     * accessibility overlays out of its videos but records application overlays (stock Android
+     * records both). While the user has control the panel is an accessibility overlay again: payment
+     * and banking apps may hide application overlays (HIDE_OVERLAY_WINDOWS), and Done must stay.
+     */
+    private fun windowType(handed: Boolean) =
+        if (!handed && Settings.canDrawOverlays(service)) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        else WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
+
+    /** Android can't change a window's type in place: the panel is added again, where it was. */
+    private fun attach(type: Int): Boolean {
+        if (attached) {
+            if (params.type == type) return true
+            runCatching { manager.removeViewImmediate(root) }
+            attached = false
+        }
+        params.type = type
+        attached = runCatching { manager.addView(root, params); true }.getOrDefault(false)
+        if (!attached && type != WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) return attach(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
+        return attached
+    }
+
     fun show(): Boolean {
         if (attached) return true
         render(false, false, null)
-        attached = runCatching { manager.addView(root, params); true }.getOrDefault(false)
-        if (!attached) { close(); return false }
+        if (!attach(windowType(false))) { close(); return false }
         scope.launch {
             while (isActive && !closed) {
                 if (PhoneRuntime.activeId() != sessionId) { close(); break }
@@ -126,6 +150,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                     // A handoff opens the panel too: it says what to do and holds the Done button.
                     if (handed && !wasHanded) expanded = true
                     wasHanded = handed
+                    if (!attach(windowType(handed))) { close(); break }
                     val front = harnessInFront() ?: inFront
                     if (front != inFront) { inFront = front; if (!front) openInFront = false }
                     val activity = operationStatus()

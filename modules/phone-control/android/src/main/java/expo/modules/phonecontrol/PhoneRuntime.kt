@@ -91,6 +91,9 @@ object PhoneRuntime {
             "accessibilityAuto" to platform.recovery.accessibilityPending(),
             "locked" to context.getSystemService(KeyguardManager::class.java).isKeyguardLocked,
             "restricted" to restricted(context),
+            // "Display over other apps": the floating window can then be an application overlay,
+            // which Samsung's screen recorder records (CopilotOverlay.windowType).
+            "overlays" to android.provider.Settings.canDrawOverlays(context),
             "sessionId" to session?.id,
             "packages" to (session?.packages?.toList() ?: emptyList<String>()),
             "handedOver" to (session?.handedOver == true),

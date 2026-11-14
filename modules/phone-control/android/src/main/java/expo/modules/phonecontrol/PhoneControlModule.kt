@@ -101,6 +101,8 @@ class PhoneControlModule : Module() {
                 }
                 // App info, where the ⋮ menu has "Allow restricted settings".
                 "appInfo" -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
+                // "Display over other apps", for the floating window in screen recordings.
+                "overlays" -> Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.fromParts("package", context.packageName, null))
                 else -> error("Unknown setup step")
             }
             // A fresh Settings task: otherwise Android may just bring back whatever Settings page was left open.

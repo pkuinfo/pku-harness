@@ -147,7 +147,12 @@ buy-now tap and every tap on a payment sheet (choosing Alipay or WeChat Pay, the
 password or fingerprint) are MONEY and hand over (`PhoneActionPolicy.assess`). The user submits
 and pays on their own screen: payment SDKs fail on Copilot's virtual display (Meituan's cashier
 reports a parameter error there). The panel's Done hands the app back to Copilot and brings PKU harness to the
-front (`CopilotOverlay.handBack`), where the task goes on in the chat. Steps that follow only Copilot screen operations think at low
+front (`CopilotOverlay.handBack`), where the task goes on in the chat.
+The floating window is an accessibility overlay. When the user allowed "Display over other apps"
+(an optional setup step), it is an application overlay instead, because Samsung's screen recorder
+leaves accessibility overlays out of its videos (stock Android records both). While the user has
+control it is an accessibility overlay again, since payment apps may hide application overlays
+(`CopilotOverlay.windowType`). Steps that follow only Copilot screen operations think at low
 effort (`src/core/agent/step-reasoning.ts`); planning keeps the provider default.
 While a task is open and the user types in PKU harness (its keyboard is open), the accessibility
 service is held off between calls, so keyboards such as Samsung Keyboard don't switch to
