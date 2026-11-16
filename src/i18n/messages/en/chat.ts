@@ -26,6 +26,7 @@ export const chat: Messages['chat'] = {
   reply: {
     interrupted: 'The reply was interrupted',
     stopped: 'Stopped',
+    steered: 'Stopped for your new message',
     error: 'Something went wrong',
     cutOff: 'Interrupted',
     copy: 'Copy reply',
@@ -208,6 +209,8 @@ export const chat: Messages['chat'] = {
     queued: 'Queued',
     itemA11y: '{state}: {text}',
     pullHint: 'Tap to move back into the message box',
+    steer: 'Steer',
+    steerA11y: 'Send now: stop the current reply and send this message next',
     remove: 'Remove from queue',
     attachments: '{count} attachments',
     attachments_one: '1 attachment',

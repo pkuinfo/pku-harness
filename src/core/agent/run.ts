@@ -2,7 +2,7 @@ import { streamText, type LanguageModel, type ModelMessage, type StepResult, typ
 import { AppState } from 'react-native';
 
 import { notifyNow } from '@/core/notify';
-import { registerRunCancellation, releaseRunResources } from '@/core/runtime/run-resources';
+import { dropHeldRunResources, holdRunResources, registerRunCancellation, releaseRunResources, transferRunResources } from '@/core/runtime/run-resources';
 import { recordStep, type ToolCallUsage } from '@/core/usage';
 import { t as tr } from '@/i18n';
 
@@ -127,6 +127,11 @@ async function runTurn(sid: string, text: string, attachments: AttachmentPart[])
   controllers.set(sid, controller);
   const signal = controller.signal;
   registerRunCancellation(signal, () => controller.abort());
+  const steeredFrom = carried.get(sid);
+  if (steeredFrom) {
+    carried.delete(sid);
+    transferRunResources(steeredFrom, signal);
+  }
 
   const sessionMeta = sessionStore.meta(sid);
   const providerId = sessionMeta?.providerId ?? aiConfig.get().providerId;
@@ -340,8 +345,10 @@ function finishTurn(
 ) {
   const s = sessionStore.get(sid);
   if (!s) return; // deleted meanwhile
+  // Stopped because the user steered with a queued message: that message goes out now.
+  const steered = t.ended === 'stopped' && !!s.steering;
   const tail: ModelMessage[] = t.partial.trim() ? [{ role: 'assistant', content: t.partial }] : [];
-  const terminalToolLabel = t.ended === 'stopped' ? tr('chat.reply.stopped')
+  const terminalToolLabel = steered ? tr('chat.reply.steered') : t.ended === 'stopped' ? tr('chat.reply.stopped')
     : t.error ?? tr(t.ended === 'interrupted' ? 'chat.reply.interrupted' : 'chat.reply.error');
   sessionStore.updateMessage(sid, assistantId, (m) => ({
     ...m,
@@ -354,15 +361,25 @@ function finishTurn(
     running: undefined,
     history: [...after.history, ...t.produced, ...tail],
     error: t.error,
-    // A stop or an error pauses the queue (§4.4).
-    queuePaused: t.ended && after.queue?.length ? true : after.queuePaused,
+    // A stop or an error pauses the queue (§4.4); steering doesn't.
+    queuePaused: steered ? false : t.ended && after.queue?.length ? true : after.queuePaused,
+    steering: undefined,
   });
   sessionStore.touch(sid);
   // A turn that ended over the budget (a long task that just finished, say) is compacted
   // now, not when the next message is sent.
   void compactIfIdle(sid);
 
-  if (t.ended === 'stopped') return;
+  if (t.ended === 'stopped') {
+    if (steered) kick(sid);
+    // No next run took the steered run's resources (its message was removed meanwhile): release them.
+    const left = carried.get(sid);
+    if (left) {
+      carried.delete(sid);
+      void dropHeldRunResources(left);
+    }
+    return;
+  }
   const meta = sessionStore.meta(sid);
   if (sid !== sessionStore.activeId()) sessionStore.setMeta(sid, { unread: true });
   if (AppState.currentState !== 'active') {
@@ -405,7 +422,21 @@ function kick(sid: string) {
   void startTurn(sid, next.text.trim(), next.attachments);
 }
 
-installRunHooks({ stop: (id) => controllers.get(id)?.abort(), kick });
+/** A steered run's signal, until the chat's next run takes its resources over (runTurn). */
+const carried = new Map<string, AbortSignal>();
+
+installRunHooks({
+  stop: (id) => controllers.get(id)?.abort(),
+  // The Copilot session stays open for the steered message instead of closing with this run.
+  steer: (id) => {
+    const controller = controllers.get(id);
+    if (!controller) return;
+    holdRunResources(controller.signal);
+    carried.set(id, controller.signal);
+    controller.abort();
+  },
+  kick,
+});
 
 /** Stop a session's reply (default: active). Keeps the partial reply, marked 已停止. */
 export function stopGeneration(sessionId?: string) {

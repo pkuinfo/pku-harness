@@ -86,6 +86,22 @@ export const sessions = {
     const queue = (s.queue ?? []).filter((q) => q.id !== id);
     sessionStore.patch(sid, { queue, queuePaused: queue.length ? s.queuePaused : false });
   },
+  /**
+   * Steer: send a queued message now. A reply in progress stops where it is (its work so far stays
+   * in the chat and the model's history) and this message goes out next, ahead of the rest of
+   * the queue; an idle session sends it at once, even when the queue was paused.
+   */
+  steer: (id: string): void => {
+    const sid = sessionOfQueued(id);
+    if (!sid) return;
+    const s = sessionStore.get(sid)!;
+    const queue = s.queue ?? [];
+    const item = queue.find((q) => q.id === id)!;
+    const streaming = s.status === 'streaming';
+    sessionStore.patch(sid, { queue: [item, ...queue.filter((q) => q.id !== id)], queuePaused: false, steering: streaming });
+    if (streaming) runHook.steer(sid);
+    else runHook.kick(sid);
+  },
   subscribe: (l: () => void) => sessionStore.subscribe(l),
 
   // --- Additions (stage 1, sessions agent) -----------------------------------------------

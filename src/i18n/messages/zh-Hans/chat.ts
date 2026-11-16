@@ -26,6 +26,7 @@ export const chat = {
   reply: {
     interrupted: '回复中断了',
     stopped: '已停止',
+    steered: '已停下，先处理你的新消息',
     error: '出错了',
     cutOff: '已中断',
     copy: '复制回答',
@@ -211,6 +212,8 @@ export const chat = {
     queued: '排队中',
     itemA11y: '{state}：{text}',
     pullHint: '点按放回输入框',
+    steer: '立即发送',
+    steerA11y: '立即发送：停下当前回复，先处理这条消息',
     remove: '移出队列',
     attachments: '{count} 个附件',
     attachments_one: '{count} 个附件',

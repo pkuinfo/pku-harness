@@ -36,11 +36,22 @@ export class PhoneSessionLease {
     if (used && used !== id) throw new Error('This run cannot replace its earlier phone session. Wait for a new user message.');
     this.usedSessions.set(signal, id);
     if (this.owners.has(id)) return;
+    this.own(id, signal);
+  }
+
+  private own(id: string, signal: AbortSignal) {
     const unregister = registerRunResource(signal, async () => {
       this.assertOwner(id, signal);
       if (this.finish) await this.finish(id, signal);
       else await this.close(id);
       this.releaseOwner(id, signal);
+    }, (to) => {
+      // Steered: the chat's next run takes the open session over.
+      if (this.owners.get(id)?.signal !== signal) return;
+      this.owners.delete(id);
+      this.usedSessions.set(to, id);
+      if (this.liveSessions.get(signal) === id) this.liveSessions.set(to, id);
+      this.own(id, to);
     });
     this.owners.set(id, { signal, unregister });
   }

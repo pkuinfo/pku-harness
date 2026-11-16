@@ -106,6 +106,8 @@ export type ChatState = {
   queue?: QueuedMessage[];
   /** A stop or an error paused the queue until 继续发送. */
   queuePaused?: boolean;
+  /** The user steered with a queued message: the reply is stopping so it goes out next (not saved). */
+  steering?: boolean;
   /** Assistant message being streamed (persisted so a killed turn is marked interrupted on load). */
   running?: string;
   /** User message being edited (编辑): the next send truncates the session from it (§2). */
@@ -286,13 +288,15 @@ function deriveMeta(id: string, prev: ChatState | undefined, next: ChatState) {
 // ---------------------------------------------------------------------------------------------
 // Hooks the run loop installs (avoids an import cycle run.ts ↔ sessions.ts).
 
-type RunHooks = { stop: (sessionId: string) => void; kick: (sessionId: string) => void };
-let runHooks: RunHooks = { stop: () => {}, kick: () => {} };
+type RunHooks = { stop: (sessionId: string) => void; steer: (sessionId: string) => void; kick: (sessionId: string) => void };
+let runHooks: RunHooks = { stop: () => {}, steer: () => {}, kick: () => {} };
 export function installRunHooks(h: RunHooks) {
   runHooks = h;
 }
 export const runHook = {
   stop: (id: string) => runHooks.stop(id),
+  /** Stop for a steer: like stop, but the run's open resources (a Copilot session) pass to the next run. */
+  steer: (id: string) => runHooks.steer(id),
   kick: (id: string) => runHooks.kick(id),
 };
 

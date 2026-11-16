@@ -56,3 +56,29 @@ test('native resource cancellation cannot abort a completed or unrelated run', a
   expect(b.signal.aborted).toBe(true);
   await releaseRunResources(b.signal);
 });
+
+test('a steered run hands its resources to the next run instead of releasing them', async () => {
+  const { holdRunResources, transferRunResources } = await import('./run-resources');
+  const steered = new AbortController();
+  const next = new AbortController();
+  let closed = 0;
+  let movedTo: AbortSignal | undefined;
+  const move = (to: AbortSignal) => {
+    movedTo = to;
+    registerRunResource(to, async () => { closed++; }, move);
+  };
+  registerRunResource(steered.signal, async () => { closed++; }, move);
+  let plain = 0;
+  registerRunResource(steered.signal, async () => { plain++; });
+  holdRunResources(steered.signal);
+  steered.abort();
+  await releaseRunResources(steered.signal);
+  expect(closed).toBe(0);
+  transferRunResources(steered.signal, next.signal);
+  await Promise.resolve();
+  expect(movedTo).toBe(next.signal);
+  // A resource that can't move is released by the steer.
+  expect(plain).toBe(1);
+  await releaseRunResources(next.signal);
+  expect(closed).toBe(1);
+});

@@ -22,20 +22,22 @@ function preview(m: QueuedMessage, t: Tr): string {
 
 /**
  * Messages sent while a reply streams wait here, above the composer (§4.4): "排队中 · …", ✕ to
- * remove, tap to pull back into the composer. Stopped or failed replies pause the queue:
- * "已暂停 · …" and 继续发送.
+ * remove, tap to pull back into the composer, 立即发送 (steer) to stop the reply and send it
+ * next, as in Codex and Claude. Stopped or failed replies pause the queue: "已暂停 · …" and 继续发送.
  */
 export function QueueChips({
   queue,
   paused,
   onPull,
   onRemove,
+  onSteer,
   onResume,
 }: {
   queue: QueuedMessage[];
   paused: boolean;
   onPull: (m: QueuedMessage) => void;
   onRemove: (m: QueuedMessage) => void;
+  onSteer: (m: QueuedMessage) => void;
   onResume: () => void;
 }) {
   const c = useTheme();
@@ -72,6 +74,17 @@ export function QueueChips({
               {preview(m, t)}
             </Text>
             {m.attachments.length > 0 && m.text.trim() ? <Icon name="image" size={14} color={c.textFaint} /> : null}
+            <PressableScale
+              accessibilityRole="button"
+              accessibilityLabel={t('chat.queue.steerA11y')}
+              onPress={() => onSteer(m)}
+              hitSlop={4}
+              scaleTo={0.92}
+              className="h-8 flex-row items-center gap-1 rounded-sm bg-surface px-2"
+              style={CURVE}>
+              <Icon name="send" size={14} color={c.text} />
+              <Text variant="caption">{t('chat.queue.steer')}</Text>
+            </PressableScale>
             <PressableScale accessibilityRole="button" accessibilityLabel={t('chat.queue.remove')} onPress={() => onRemove(m)} hitSlop={6} scaleTo={0.85} className="size-8 items-center justify-center rounded-sm">
               <Icon name="close" size={14} color={c.textMuted} />
             </PressableScale>

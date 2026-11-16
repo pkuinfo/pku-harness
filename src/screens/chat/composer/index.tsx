@@ -307,7 +307,7 @@ export function Composer() {
   return (
     <View className="gap-2 px-3 pb-2 pt-1">
       <ComposerToast />
-      <QueueChips queue={queue} paused={paused} onPull={pullBack} onRemove={removeQueued} onResume={onResume} />
+      <QueueChips queue={queue} paused={paused} onPull={pullBack} onRemove={removeQueued} onSteer={(m) => sessions.steer(m.id)} onResume={onResume} />
       <CommandMenu draft={text} busy={busy} onRun={runCommand} onComplete={completeCommand} />
       <Animated.View
         layout={reduced ? undefined : growFromBottom}

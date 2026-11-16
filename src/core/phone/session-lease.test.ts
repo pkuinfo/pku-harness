@@ -156,3 +156,21 @@ test('a session this run saw alive still blocks a restart after it ends', async 
   await releaseRunResources(run.signal);
   await releaseRunResources(opened.signal);
 });
+
+test('a steer passes the open session to the next run of the chat', async () => {
+  const { holdRunResources, transferRunResources, releaseRunResources } = await import('../runtime/run-resources');
+  const closed: string[] = [];
+  const lease = new PhoneSessionLease(async (id) => { closed.push(id); });
+  const first = new AbortController();
+  const next = new AbortController();
+  await lease.begin(async () => ({ sessionId: 's1' }), first.signal);
+  holdRunResources(first.signal);
+  first.abort();
+  await releaseRunResources(first.signal);
+  transferRunResources(first.signal, next.signal);
+  // The next run keeps using it; nothing was closed.
+  lease.claim('s1', next.signal);
+  expect(closed).toEqual([]);
+  await releaseRunResources(next.signal);
+  expect(closed).toEqual(['s1']);
+});
