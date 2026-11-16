@@ -11,6 +11,7 @@ import android.os.Build
 import android.view.Display
 import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.pkuinfo.harness.phone.core.*
 import org.pkuinfo.harness.phone.platform.accessibility.AndroidScreenDriver
@@ -199,16 +200,22 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
              * program runs in a task of its own above WeChat's, and a payment app opened by a shop is
              * its own task too. Handing over WeChat's task showed the chat from before the mini program.
              */
-            override suspend fun handoff() {
+            override suspend fun handoff(): Boolean {
                 val task = checkNotNull(screen.target.value) { "No app is open" }
                 val top = runCatching { helper.topTaskId(display.get().displayId) }.getOrDefault(-1)
                 val topPackage = if (top >= 0) runCatching { helper.packageOfTask(top) }.getOrNull() else null
                 val moving = if (topPackage != null && PhoneScope.policy.current().denial(topPackage) == null) top else task.taskId
                 logConfigurationGap(display.get().displayId)
+                val movedAt = System.currentTimeMillis()
                 check(helper.moveTask(moving, Display.DEFAULT_DISPLAY)) { "Could not hand the app to the user" }
                 handedTask = moving
                 handedOver = true
                 latest = null
+                delay(HandoffRestart.SETTLE_MS)
+                val log = runCatching { helper.runCommand(HandoffRestart.COMMAND)?.getString("output") }.getOrNull().orEmpty()
+                return HandoffRestart.restarted(log, moving, movedAt).also {
+                    if (it) android.util.Log.i("CopilotHandoff", "task $moving restarted on the user's screen")
+                }
             }
 
             override suspend fun resume() {

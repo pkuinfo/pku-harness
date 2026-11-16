@@ -60,6 +60,7 @@
 <string name="copilot_resize">调整预览大小</string>
 <string name="copilot_open_panel">打开 Copilot 控制面板</string>
 <string name="copilot_handoff_hint">请在应用中完成这一步，然后点「完成」。</string>
+<string name="copilot_handoff_restarted">应用来到你的屏幕时重新加载了，回到了首页。可以在购物车里找到你的订单。</string>
 <string name="copilot_handback_done">完成 · 继续</string>
 <string name="copilot_attention_channel">Copilot 需要你</string>
 <string name="copilot_attention_approval">Copilot 需要你确认</string>

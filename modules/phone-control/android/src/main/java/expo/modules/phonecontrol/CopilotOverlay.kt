@@ -221,7 +221,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                     val front = harnessInFront() ?: inFront
                     if (front != inFront) { inFront = front; if (!front) openInFront = false }
                     val activity = operationStatus()
-                    val key = "${service.resources.configuration.uiMode}:$activity:${open()}:$paused:$handed:${PhoneRuntime.handoffNote}:${approval?.id}:$busy:$error"
+                    val key = "${service.resources.configuration.uiMode}:$activity:${open()}:$paused:$handed:${PhoneRuntime.handoffNote}:${PhoneRuntime.handoffRestarted}:${approval?.id}:$busy:$error"
                     if (key != rendered && menu == null && !resizing) { rendered = key; render(paused, handed, approval) }
                     if (open() && !handed && !paused && !busy && approval == null && previewJob?.isActive != true) {
                         val revision = previewRevision
@@ -408,6 +408,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                 content.addView(label(approval.detail))
             } else if (handed) {
                 content.addView(label(PhoneRuntime.handoffNote ?: service.getString(R.string.copilot_handoff_hint)).apply { setTypeface(typeface, Typeface.BOLD) })
+                if (PhoneRuntime.handoffRestarted) content.addView(label(service.getString(R.string.copilot_handoff_restarted)))
             } else if (!paused) {
                 val preview = FrameLayout(ui).apply {
                     background = surface(R.color.copilot_overlay_preview_surface, R.dimen.copilot_overlay_inner_corner)

@@ -318,13 +318,14 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         image.takeIf { !after.protected && after.packageName == before.packageName && after.windowPackages == before.windowPackages }
     }
 
-    suspend fun handoff(id: String) = mutex.withLock {
+    /** True when the app was recreated on its way to the user's screen (see [DeviceSession.handoff]). */
+    suspend fun handoff(id: String): Boolean = mutex.withLock {
         val session = active(id)
-        if (!session.handedOver) {
-            session.invalidate()
-            session.device.handoff()
-            session.handedOver = true
-        }
+        if (session.handedOver) return@withLock false
+        session.invalidate()
+        val restarted = session.device.handoff()
+        session.handedOver = true
+        restarted
     }
 
     suspend fun resume(id: String) = mutex.withLock {

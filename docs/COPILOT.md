@@ -158,7 +158,12 @@ under an accessibility service. Samsung can accept that window and never draw it
 hide overlays hide it later, so the panel checks that Android lists it among the windows; when it
 doesn't, the panel falls back to the service's window manager, then to the accessibility overlay
 (`CopilotOverlay.checkOverlayShown`). A handoff moves the top task of Copilot's display (a WeChat mini
-program or a payment app runs in its own task), and Done returns that task. Steps that follow only Copilot screen operations think at low
+program or a payment app runs in its own task), and Done returns that task. Android recreates an
+activity that doesn't handle a configuration change between the two displays; on Samsung a WeChat
+mini program then comes back on its home page (the emulator's displays match, so it doesn't happen
+there). Android can't skip that recreation, so after the move the handoff reads the system event log
+(`HandoffRestart`): when the moved task was recreated, the floating window says the app reloaded and
+the order is in the cart, and the agent keeps mini program orders in the shop's cart. Steps that follow only Copilot screen operations think at low
 effort (`src/core/agent/step-reasoning.ts`); planning keeps the provider default.
 While a task is open and the user types in PKU harness (its keyboard is open), the accessibility
 service is held off between calls, so keyboards such as Samsung Keyboard don't switch to

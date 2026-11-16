@@ -97,6 +97,7 @@ object PhoneRuntime {
             "sessionId" to session?.id,
             "packages" to (session?.packages?.toList() ?: emptyList<String>()),
             "handedOver" to (session?.handedOver == true),
+            "handoffRestarted" to (session?.handedOver == true && handoffRestarted),
             "paused" to (session?.paused == true),
         )
     }
@@ -316,13 +317,19 @@ object PhoneRuntime {
     @Volatile var handoffNote: String? = null
         private set
 
+    /** The app was recreated on its way to the user's screen, so its page was reset; the panel says so. */
+    @Volatile var handoffRestarted = false
+        private set
+
     suspend fun takeover(context: Context, id: String, note: String? = null) {
-        engine(context).handoff(id)
+        val restarted = engine(context).handoff(id)
         handoffNote = note?.trim()?.take(200)?.ifEmpty { null }
+        handoffRestarted = restarted
     }
     suspend fun handback(context: Context, id: String) {
         engine(context).resume(id)
         handoffNote = null
+        handoffRestarted = false
     }
 
     /**

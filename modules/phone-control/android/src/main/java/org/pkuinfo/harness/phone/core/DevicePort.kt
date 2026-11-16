@@ -25,7 +25,8 @@ interface DeviceSession {
     suspend fun preview(): DevicePreview?
     /** The screenshot a vision model reads for point actions; its pixel size is the coordinate space. */
     suspend fun lookImage(): DevicePreview? = preview()
-    suspend fun handoff()
+    /** Puts the app on the user's screen; true when Android recreated it on the way (its page was reset). */
+    suspend fun handoff(): Boolean
     suspend fun resume()
     /** Return owned app tasks appropriately and release display/input resources. Idempotent. */
     suspend fun close()

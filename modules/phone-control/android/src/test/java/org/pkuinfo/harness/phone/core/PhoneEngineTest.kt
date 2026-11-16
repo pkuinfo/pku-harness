@@ -55,7 +55,7 @@ class PhoneEngineTest {
         }
         override suspend fun awaitChange(timeoutMs: Long) { entered?.complete(Unit); finish?.await() }
         override suspend fun preview(): DevicePreview? { previews++; return image }
-        override suspend fun handoff() {}
+        override suspend fun handoff() = false
         override suspend fun resume() {}
         override suspend fun close() { closes++ }
         fun engine() = PhoneEngine(this, ActionPolicy { _, target -> effectFor?.invoke(target) ?: effect }, "org.pkuinfo.harness")
