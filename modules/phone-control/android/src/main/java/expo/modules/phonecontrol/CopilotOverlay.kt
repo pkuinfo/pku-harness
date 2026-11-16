@@ -113,6 +113,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         render(false, false, null)
         attached = runCatching { manager.addView(root, params); true }.getOrDefault(false)
         if (!attached) { close(); return false }
+        current = this
         scope.launch {
             while (isActive && !closed) {
                 if (PhoneRuntime.activeId() != sessionId) { close(); break }
@@ -123,15 +124,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                     val state = PhoneRuntime.readiness(service)
                     val paused = state["paused"] == true
                     // Restoring: handed over, but Copilot is still tapping the reloaded app back on the user's screen.
-                    val nowRestoring = state["restoring"] == true
-                    if (nowRestoring != restoring) {
-                        // Copilot's taps land on the user's screen while it restores: they must reach
-                        // the app under the panel, not the panel.
-                        params.flags = if (nowRestoring) params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
-                            else params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
-                        if (attached) runCatching { manager.updateViewLayout(root, params) }
-                    }
-                    restoring = nowRestoring
+                    passTouches(state["restoring"] == true)
                     val handed = state["handedOver"] == true && !restoring
                     val approval = PhoneOverlayBridge.approval?.takeIf { it.sessionId == sessionId }
                     // A new approval opens the panel, so a minimized ball never leaves a task waiting unseen.
@@ -554,7 +547,21 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         params.y = params.y.coerceIn(inset.top, maxOf(inset.top, area.bounds.height() - root.height - inset.bottom))
     }
     private fun size(id: Int) = service.resources.getDimensionPixelSize(id)
+    /**
+     * Copilot's taps land on the user's screen while it restores: they must reach the app under the
+     * panel, not the panel. Called by the handoff itself too ([PhoneRuntime.takeover]), because its
+     * first tap comes before this loop's next look at the state.
+     */
+    fun passTouches(on: Boolean) {
+        if (on == restoring) return
+        params.flags = if (on) params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            else params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+        if (attached) runCatching { manager.updateViewLayout(root, params) }
+        restoring = on
+    }
+
     fun close() {
+        if (current === this) current = null
         if (closed) return
         closed = true
         menu?.dismiss(); menu = null
@@ -562,5 +569,10 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         attached = false; clearPreview(); picture = null
         scope.cancel()
         PhoneOverlayBridge.clear(sessionId)
+    }
+
+    companion object {
+        /** The panel on screen, for [PhoneRuntime.takeover]. */
+        @Volatile var current: CopilotOverlay? = null
     }
 }

@@ -24,6 +24,19 @@ class PhoneActionPolicyTest {
         }
     }
 
+    @Test fun buttonsThatOnlyOpenTheOrderPageAreNotTheMoneyGate() {
+        // The cart's 去结算 leads to the order page with the price and 去支付: Copilot goes on to it.
+        val total = DeviceElement("@e2", "text", "合计 ¥18.50", listOf(100, 100, 900, 200))
+        for (label in listOf("去结算", "结算(2)", "去结算 ¥18.5", "立即购买", "去下单", "Checkout", "Go to checkout")) {
+            val target = button(label)
+            assertEquals(label, PhoneEffect.WRITE, policy.assess(frame(target, total), target))
+        }
+        for (label in listOf("结账", "购买", "确认购买", "去支付", "提交订单 ¥18.5")) {
+            val target = button(label)
+            assertEquals(label, PhoneEffect.MONEY, policy.assess(frame(target, total), target))
+        }
+    }
+
     @Test fun everyTapOnAPaymentSheetRequiresTheMoneyGate() {
         val amount = DeviceElement("@e2", "text", "实付 ¥23.50", listOf(100, 100, 900, 200))
         val method = DeviceElement("@e3", "text", "选择支付方式", listOf(100, 300, 900, 400))

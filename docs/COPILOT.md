@@ -161,9 +161,17 @@ a virtual display isn't; WeChat's mini program activity handles neither change. 
 that recreation, so after the move the handoff reads the system event log (`HandoffRestart`). When
 the moved task was recreated, the session is restoring (`PhoneEngine.handoff`): reads and actions go
 to the user's screen (`AndroidScreenDriver.onUserScreen`, application windows only, no virtual-display
-frames), the floating window says Copilot is bringing the app back, and the handoff tool returns
-`restarted` so the agent taps back to the checkout page (the cart keeps the order). Its next handoff
-moves nothing and gives the user control. Steps that follow only Copilot screen operations think at low
+frames) and the floating window says Copilot is bringing the app back; the handoff makes the panel
+pass touches through before it returns (`CopilotOverlay.passTouches`), since the first restore tap
+comes at once. The agent passes `restore` to handoff up front, the labels of the buttons it tapped to
+reach the order page, and the copilot plugin taps its way back itself with no model call
+(`replayRestore`, about 1.5 s on the emulator against 13 s for the model): each tap is the furthest
+label on the screen, add-to-cart steps are never repeated, the cart opens when no step shows (the
+cart keeps the order), only ordinary taps go, and each step reads the screen afresh. Then it hands
+over again. Only when a step is missing does the tool return `restarted`, and the agent taps the rest.
+The second handoff moves nothing and gives the user control. Orders go up to the order page (items,
+amount, 提交订单 / 去支付): buttons that only open it (去结算, 立即购买, 去下单) are ordinary taps
+(`PhoneActionPolicy.opensOrderPage`), and the submit or pay button is the money gate the user taps. Steps that follow only Copilot screen operations think at low
 effort (`src/core/agent/step-reasoning.ts`); planning keeps the provider default.
 While a task is open and the user types in PKU harness (its keyboard is open), the accessibility
 service is held off between calls, so keyboards such as Samsung Keyboard don't switch to

@@ -24,6 +24,8 @@ import org.pkuinfo.harness.phone.policy.PhoneActionPolicy
 /** Expo-facing adapter. Session rules live in the Harness core; Android details live in DevicePort. */
 object PhoneRuntime {
     private const val TAG = "CopilotRuntime"
+    /** How long a window change takes to reach input dispatch, so the next tap goes through the panel. */
+    private const val PANEL_SETTLE_MS = 150L
     @Volatile private var control: PhoneEngine? = null
     @Volatile private var sessionIdentity: String? = null
     @Volatile private var appContext: Context? = null
@@ -329,6 +331,11 @@ object PhoneRuntime {
     suspend fun takeover(context: Context, id: String, note: String? = null): Boolean {
         val restarted = engine(context).handoff(id)
         handoffNote = note?.trim()?.take(200)?.ifEmpty { null }
+        if (restarted) {
+            // The restore's first tap may come right away, where the panel sits: let touches through first.
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) { CopilotOverlay.current?.passTouches(true) }
+            kotlinx.coroutines.delay(PANEL_SETTLE_MS)
+        }
         return restarted
     }
     suspend fun handback(context: Context, id: String) {
