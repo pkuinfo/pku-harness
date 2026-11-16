@@ -23,6 +23,12 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         val stopped = AtomicBoolean(false)
         val stop = CompletableDeferred<Unit>()
         @Volatile var handedOver = false
+        /**
+         * Handed over, but the app reloaded on its way to the user's screen: Copilot may still act,
+         * on the user's screen, to bring it back to the page it left; the next handoff gives the
+         * user control.
+         */
+        @Volatile var restoring = false
         @Volatile var pauseGate: CompletableDeferred<Unit>? = null
         /**
          * The last few published observations, oldest first: a ref from any of them still resolves,
@@ -41,7 +47,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
     private class Shot(val snapshotId: String, val width: Int, val height: Int)
 
     fun state(): PhoneSessionState? = current?.takeUnless { it.stopped.get() }?.let {
-        PhoneSessionState(it.id, it.packages.toSet(), it.handedOver, it.pauseGate != null)
+        PhoneSessionState(it.id, it.packages.toSet(), it.handedOver, it.pauseGate != null, it.restoring)
     }
 
     suspend fun begin(packages: Set<String>): PhoneSessionState = mutex.withLock {
@@ -318,13 +324,21 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         image.takeIf { !after.protected && after.packageName == before.packageName && after.windowPackages == before.windowPackages }
     }
 
-    /** True when the app was recreated on its way to the user's screen (see [DeviceSession.handoff]). */
+    /**
+     * True when the app was recreated on its way to the user's screen (see [DeviceSession.handoff]):
+     * the session is then restoring, and actions go on there until the next handoff, which gives
+     * the user control without moving anything.
+     */
     suspend fun handoff(id: String): Boolean = mutex.withLock {
         val session = active(id)
-        if (session.handedOver) return@withLock false
+        if (session.handedOver) {
+            if (session.restoring) { session.restoring = false; session.invalidate(); session.device.endRestore() }
+            return@withLock false
+        }
         session.invalidate()
         val restarted = session.device.handoff()
         session.handedOver = true
+        session.restoring = restarted
         restarted
     }
 
@@ -334,6 +348,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
         if (session.handedOver) {
             session.device.resume()
             session.handedOver = false
+            session.restoring = false
             session.invalidate()
         }
     }
@@ -356,7 +371,7 @@ class PhoneEngine(private val device: DevicePort, private val policy: ActionPoli
 
     private suspend fun checkedFrame(session: Session): DeviceFrame {
         live(session)
-        if (session.handedOver) fail(PhoneFailure.HANDOFF, "The user has control")
+        if (session.handedOver && !session.restoring) fail(PhoneFailure.HANDOFF, "The user has control")
         if (session.device.isLocked()) fail(PhoneFailure.LOCKED, "Unlock the phone to continue")
         val frame = session.device.read()
         live(session)

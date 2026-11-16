@@ -148,22 +148,22 @@ password or fingerprint) are MONEY and hand over (`PhoneActionPolicy.assess`). T
 and pays on their own screen: payment SDKs fail on Copilot's virtual display (Meituan's cashier
 reports a parameter error there). The panel's Done hands the app back to Copilot and brings PKU harness to the
 front (`CopilotOverlay.handBack`), where the task goes on in the chat.
-The floating window is an accessibility overlay. When the user allowed "Display over other apps"
-(an optional setup step), it is an application overlay instead, because Samsung's screen recorder
-leaves accessibility overlays out of its videos (stock Android records both). While the user has
-control it is an accessibility overlay again, since payment apps may hide application overlays
-(`CopilotOverlay.windowType`). The application overlay is added through the app's own window
-manager, not the accessibility service's: Samsung's recorder also leaves out windows Android files
-under an accessibility service. Samsung can accept that window and never draw it, and screens that
-hide overlays hide it later, so the panel checks that Android lists it among the windows; when it
-doesn't, the panel falls back to the service's window manager, then to the accessibility overlay
-(`CopilotOverlay.checkOverlayShown`). A handoff moves the top task of Copilot's display (a WeChat mini
+The floating window is an accessibility overlay, which no screen can hide. 1.0.26 to 1.0.28 made it an
+application overlay when "Display over other apps" was allowed, so Samsung's screen recorder would
+record it, but Samsung accepted that window and never drew it, and screens that hide overlays hid
+it, so it is an accessibility overlay again and that setup step is gone. A handoff moves the top task of Copilot's display (a WeChat mini
 program or a payment app runs in its own task), and Done returns that task. Android recreates an
 activity that doesn't handle a configuration change between the two displays; on Samsung a WeChat
 mini program then comes back on its home page (the emulator's displays match, so it doesn't happen
-there). Android can't skip that recreation, so after the move the handoff reads the system event log
-(`HandoffRestart`): when the moved task was recreated, the floating window says the app reloaded and
-the order is in the cart, and the agent keeps mini program orders in the shop's cart. Steps that follow only Copilot screen operations think at low
+there). The likely difference is the display configuration: a phone's touchscreen is tied to its own
+display (the virtual display reports no touchscreen), and Samsung's screen is wide-gamut/HDR while
+a virtual display isn't; WeChat's mini program activity handles neither change. Android can't skip
+that recreation, so after the move the handoff reads the system event log (`HandoffRestart`). When
+the moved task was recreated, the session is restoring (`PhoneEngine.handoff`): reads and actions go
+to the user's screen (`AndroidScreenDriver.onUserScreen`, application windows only, no virtual-display
+frames), the floating window says Copilot is bringing the app back, and the handoff tool returns
+`restarted` so the agent taps back to the checkout page (the cart keeps the order). Its next handoff
+moves nothing and gives the user control. Steps that follow only Copilot screen operations think at low
 effort (`src/core/agent/step-reasoning.ts`); planning keeps the provider default.
 While a task is open and the user types in PKU harness (its keyboard is open), the accessibility
 service is held off between calls, so keyboards such as Samsung Keyboard don't switch to

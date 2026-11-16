@@ -66,8 +66,7 @@ class CopilotService : Service() {
         }
         sessionId = started
         overlay?.close()
-        overlay = ScreenAccessibility.instance.value?.takeUnless { AccessibilityParking.hostInFront.value }
-            ?.let { CopilotOverlay(it, started).also { panel -> panel.show() } }
+        overlay = ScreenAccessibility.instance.value?.let { CopilotOverlay(it, started).also { panel -> panel.show() } }
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(NotificationChannel(CHANNEL, getString(R.string.copilot_name), NotificationManager.IMPORTANCE_LOW))
         val stop = PendingIntent.getService(this, 0, Intent(this, CopilotService::class.java).setAction(STOP).putExtra("sessionId", sessionId), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
@@ -85,9 +84,9 @@ class CopilotService : Service() {
         holdWakeLocks()
         monitor?.cancel()
         monitor = scope.launch {
-            combine(PhonePlatform.of(applicationContext).hub.shell, ScreenAccessibility.instance, AccessibilityParking.hostInFront) { helper, accessibility, inFront ->
-                Triple(helper, accessibility, inFront)
-            }.collectLatest { (helper, accessibility, inFront) ->
+            combine(PhonePlatform.of(applicationContext).hub.shell, ScreenAccessibility.instance) { helper, accessibility ->
+                helper to accessibility
+            }.collectLatest { (helper, accessibility) ->
                 when {
                     helper == null -> stopControl(started)
                     // Switched off by the user or the system mid-task: turn it back on first, and
@@ -95,9 +94,8 @@ class CopilotService : Service() {
                     // Held off on purpose while the user is in PKU harness; the next call turns it on.
                     accessibility == null && AccessibilityParking.heldForHost -> Unit
                     accessibility == null -> if (!AccessibilityParking.ensureOn(applicationContext)) stopControl(started)
-                    // In PKU harness the chat shows the task: no floating panel there.
-                    inFront -> withContext(Dispatchers.Main) { overlay?.close(); overlay = null }
-                    // Back on as a new service instance, or back from PKU harness: a new panel.
+                    // Also in PKU harness, where the panel stays a ball (CopilotOverlay.inFront): without it
+                    // the user saw no sign of the task there. Back on as a new service instance: a new panel.
                     overlay?.belongsTo(accessibility) != true -> withContext(Dispatchers.Main) {
                         overlay?.close()
                         overlay = CopilotOverlay(accessibility, started).also { it.show() }

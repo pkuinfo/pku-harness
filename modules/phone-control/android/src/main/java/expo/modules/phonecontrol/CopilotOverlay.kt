@@ -6,16 +6,12 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
-import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.RippleDrawable
 import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
-import android.os.SystemClock
-import android.provider.Settings
 import android.util.Base64
-import android.util.Log
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
@@ -23,7 +19,6 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
-import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -41,32 +36,17 @@ private const val PREVIEW_SHARE_MIN = 0.22f
 private const val PREVIEW_SHARE_MAX = 0.62f
 private const val PREFS = "copilot_overlay"
 private const val PREVIEW_SHARE_KEY = "previewShare"
-/** How long an application overlay gets to appear on screen before the panel is added another way. */
-private const val OVERLAY_CHECK_MS = 1200L
-
-/**
- * Window managers whose application overlay this phone accepted but never showed (Samsung, with the
- * app's own window manager): skipped for the rest of the process, so later panels don't blink.
- */
-private val hiddenOverlayHosts: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
-private val OVERLAY_HOSTS = listOf("app", "service")
-/** The panel's window title; Android lists an accessibility overlay under it once it is on screen. */
-private const val WINDOW_TITLE = "Harness Copilot controls"
-private const val TAG = "CopilotOverlay"
 /** The task whose panel the user minimized; survives the panel being rebuilt. */
 @Volatile private var minimizedTask: String? = null
 
 /** Harness-owned controls on the main display; the controlled apps remain on a separate display.
  * Non-focusable, content-sized windows leave the user's keyboard and outside touches alone.
- * An accessibility overlay, or an application overlay when allowed (windowType); inspired by
- * Mika's OverlayHost (see module NOTICE).
+ * An accessibility overlay, inspired by Mika's OverlayHost (see module NOTICE): nothing hides it.
+ * An application overlay was tried for Samsung's screen recorder (1.0.26–1.0.28), but Samsung
+ * accepted it and never drew it, and screens that hide overlays (Settings) hid it.
  */
 class CopilotOverlay(private val service: ScreenAccessibility, private val sessionId: String) {
-    // An application overlay goes through the app's own window manager: added through the accessibility
-    // service's, Android files it under that service, and Samsung's screen recorder leaves those out.
-    private val serviceWindows = service.getSystemService(WindowManager::class.java)
-    private val appWindows = service.applicationContext.getSystemService(WindowManager::class.java)
-    private var manager = serviceWindows
+    private val manager = service.getSystemService(WindowManager::class.java)
 
     /** False once Android has rebound the accessibility service: this panel's window is gone with the old one. */
     fun belongsTo(current: ScreenAccessibility) = current === service
@@ -84,7 +64,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
         PixelFormat.TRANSLUCENT,
-    ).apply { gravity = Gravity.TOP or Gravity.START; x = gap; y = size(R.dimen.copilot_overlay_touch) * 2; title = WINDOW_TITLE }
+    ).apply { gravity = Gravity.TOP or Gravity.START; x = gap; y = size(R.dimen.copilot_overlay_touch) * 2; title = "Harness Copilot controls" }
     private var attached = false
     // The full window by default; Minimize turns it into the ball, and tapping the ball brings it back.
     // Kept per task across panel instances: the panel is rebuilt whenever the accessibility service
@@ -124,81 +104,15 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
     private var previewShare = prefs.getFloat(PREVIEW_SHARE_KEY, PREVIEW_SHARE_DEFAULT).coerceIn(PREVIEW_SHARE_MIN, PREVIEW_SHARE_MAX)
     private var lastApproval: Int? = null
     private var wasHanded = false
+    /** The app reloaded on the user's screen and Copilot is tapping it back there (no preview, no Done yet). */
+    private var restoring = false
     /** A resize drag in progress: the status loop must not rebuild the panel under the finger. */
     private var resizing = false
-    /** Which window manager holds the application overlay ("app" or "service"); null for an accessibility overlay. */
-    private var overlayHost: String? = null
-    private var overlaySince = 0L
-    private var overlaySeen = false
-    /** Checks in a row that didn't find the panel; one alone can be a drag moving it between reads. */
-    private var overlayMisses = 0
-    /** This panel's application overlay was on screen and then hidden (a screen that hides overlays): accessibility from now on. */
-    private var overlayHidden = false
-
-    /**
-     * "Display over other apps", when the user allowed it: Samsung's screen recorder leaves
-     * accessibility overlays out of its videos but records application overlays (stock Android
-     * records both). While the user has control the panel is an accessibility overlay again: payment
-     * and banking apps may hide application overlays (HIDE_OVERLAY_WINDOWS), and Done must stay.
-     */
-    private fun windowType(handed: Boolean) =
-        if (!handed && !overlayHidden && OVERLAY_HOSTS.any { it !in hiddenOverlayHosts } && Settings.canDrawOverlays(service)) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-        else WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
-
-    /** Android can't change a window's type in place: the panel is added again, where it was. */
-    private fun attach(type: Int): Boolean {
-        if (attached) {
-            if (params.type == type) return true
-            runCatching { manager.removeViewImmediate(root) }
-            attached = false
-        }
-        val host = if (type == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) {
-            OVERLAY_HOSTS.firstOrNull { it !in hiddenOverlayHosts }
-                ?: return attach(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
-        } else null
-        params.type = type
-        manager = if (host == "app") appWindows else serviceWindows
-        overlayHost = host; overlaySince = SystemClock.uptimeMillis(); overlaySeen = false; overlayMisses = 0
-        attached = runCatching { manager.addView(root, params); true }
-            .onFailure { Log.w(TAG, "adding the panel (${host ?: "accessibility"}) failed", it) }.getOrDefault(false)
-        Log.i(TAG, "panel added as ${host ?: "accessibility"} overlay: $attached")
-        if (!attached && host != null) { hiddenOverlayHosts += host; return attach(type) }
-        return attached
-    }
-
-    /**
-     * A phone can take an application overlay without an error and still never draw it (Samsung did,
-     * with the app's window manager), and a screen that hides overlays hides it later. The panel is on
-     * screen when Android lists it among the windows; if not, it is added the next way, ending with
-     * the accessibility overlay, which nothing hides.
-     */
-    private fun checkOverlayShown(handed: Boolean) {
-        val host = overlayHost ?: return
-        if (SystemClock.uptimeMillis() - overlaySince < OVERLAY_CHECK_MS) return
-        if (!root.isLaidOut || root.width == 0) return
-        val at = IntArray(2).also(root::getLocationOnScreen)
-        val panel = Rect(at[0], at[1], at[0] + root.width, at[1] + root.height)
-        // An application overlay is listed without its title: matched by where it is.
-        val shown = runCatching {
-            val bounds = Rect()
-            service.windows.any {
-                it.type != AccessibilityWindowInfo.TYPE_APPLICATION &&
-                    (it.title?.toString() == WINDOW_TITLE || bounds.also(it::getBoundsInScreen) == panel)
-            }
-        }.getOrDefault(true)
-        if (shown) { overlaySeen = true; overlayMisses = 0; return }
-        if (++overlayMisses < 2) return
-        Log.i(TAG, "$host overlay not on screen (${if (overlaySeen) "hidden by a screen" else "never shown"}): adding it another way")
-        if (overlaySeen) overlayHidden = true else hiddenOverlayHosts += host
-        attached = false
-        runCatching { manager.removeViewImmediate(root) }
-        if (!attach(windowType(handed))) close()
-    }
-
     fun show(): Boolean {
         if (attached) return true
         render(false, false, null)
-        if (!attach(windowType(false))) { close(); return false }
+        attached = runCatching { manager.addView(root, params); true }.getOrDefault(false)
+        if (!attached) { close(); return false }
         scope.launch {
             while (isActive && !closed) {
                 if (PhoneRuntime.activeId() != sessionId) { close(); break }
@@ -208,22 +122,29 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                 if (!locked) {
                     val state = PhoneRuntime.readiness(service)
                     val paused = state["paused"] == true
-                    val handed = state["handedOver"] == true
+                    // Restoring: handed over, but Copilot is still tapping the reloaded app back on the user's screen.
+                    val nowRestoring = state["restoring"] == true
+                    if (nowRestoring != restoring) {
+                        // Copilot's taps land on the user's screen while it restores: they must reach
+                        // the app under the panel, not the panel.
+                        params.flags = if (nowRestoring) params.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                            else params.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()
+                        if (attached) runCatching { manager.updateViewLayout(root, params) }
+                    }
+                    restoring = nowRestoring
+                    val handed = state["handedOver"] == true && !restoring
                     val approval = PhoneOverlayBridge.approval?.takeIf { it.sessionId == sessionId }
                     // A new approval opens the panel, so a minimized ball never leaves a task waiting unseen.
                     if (approval != null && approval.id != lastApproval) { lastApproval = approval.id; expanded = true }
                     // A handoff opens the panel too: it says what to do and holds the Done button.
                     if (handed && !wasHanded) expanded = true
                     wasHanded = handed
-                    if (!attach(windowType(handed))) { close(); break }
-                    checkOverlayShown(handed)
-                    if (closed) break
                     val front = harnessInFront() ?: inFront
                     if (front != inFront) { inFront = front; if (!front) openInFront = false }
                     val activity = operationStatus()
-                    val key = "${service.resources.configuration.uiMode}:$activity:${open()}:$paused:$handed:${PhoneRuntime.handoffNote}:${PhoneRuntime.handoffRestarted}:${approval?.id}:$busy:$error"
+                    val key = "${service.resources.configuration.uiMode}:$activity:${open()}:$paused:$handed:${PhoneRuntime.handoffNote}:$restoring:${approval?.id}:$busy:$error"
                     if (key != rendered && menu == null && !resizing) { rendered = key; render(paused, handed, approval) }
-                    if (open() && !handed && !paused && !busy && approval == null && previewJob?.isActive != true) {
+                    if (open() && !handed && !restoring && !paused && !busy && approval == null && previewJob?.isActive != true) {
                         val revision = previewRevision
                         previewJob = scope.launch {
                             val read = withTimeoutOrNull(2500) {
@@ -390,6 +311,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         if (expanded) {
             val phase = when {
                 paused -> R.string.copilot_paused
+                restoring -> R.string.copilot_restoring
                 handed -> R.string.copilot_user_control
                 approval != null -> R.string.copilot_review
                 activity?.phase == "working" -> R.string.copilot_running
@@ -398,7 +320,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                 else -> R.string.copilot_ready
             }
             val content = LinearLayout(ui).apply { orientation = LinearLayout.VERTICAL }
-            val detail = if (!paused && !handed && approval == null) activity?.title?.takeIf { it.isNotBlank() } else null
+            val detail = if (!paused && !handed && !restoring && approval == null) activity?.title?.takeIf { it.isNotBlank() } else null
             content.addView(label(error ?: detail ?: service.getString(phase)).apply {
                 setTextColor(service.getColor(if (error != null) R.color.copilot_overlay_error else R.color.copilot_overlay_text_muted))
                 maxLines = 2; ellipsize = android.text.TextUtils.TruncateAt.END
@@ -408,8 +330,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                 content.addView(label(approval.detail))
             } else if (handed) {
                 content.addView(label(PhoneRuntime.handoffNote ?: service.getString(R.string.copilot_handoff_hint)).apply { setTypeface(typeface, Typeface.BOLD) })
-                if (PhoneRuntime.handoffRestarted) content.addView(label(service.getString(R.string.copilot_handoff_restarted)))
-            } else if (!paused) {
+            } else if (!paused && !restoring) {
                 val preview = FrameLayout(ui).apply {
                     background = surface(R.color.copilot_overlay_preview_surface, R.dimen.copilot_overlay_inner_corner)
                     clipToOutline = true

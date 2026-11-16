@@ -14,6 +14,8 @@ class ChangeWaitTest {
         val before = IntArray(64)
         /** Events keep coming (a carousel, a timer). */
         var busy = false
+        /** How often the wait looked at the tree. */
+        var walks = 0
 
         fun await(): Boolean = runBlocking {
             ChangeWait.awaitStableChange(
@@ -21,7 +23,7 @@ class ChangeWaitTest {
                 sleep = { now += it; if (busy) lastEvent = now; onTick(now) },
                 frame = { frame },
                 quietForMs = { now - lastEvent },
-                treeChanged = { tree },
+                treeChanged = { walks++; tree },
                 beforeFrame = before,
             )
         }
@@ -54,5 +56,14 @@ class ChangeWaitTest {
         // Nothing for 800 ms, then the page reacts with events and a new tree.
         s.onTick = { if (it in 800..1000) { s.lastEvent = it; s.tree = true } }
         assertEquals(true, s.await())
+    }
+
+    @Test fun aPageStillMovingIsNotWalkedUntilItCanEndTheWait() {
+        val s = Screen()
+        s.busy = true
+        // Events keep coming and every frame differs: only the cap ends it, and the tree is read once, there.
+        s.onTick = { s.frame = IntArray(64) { i -> (it.toInt() * 31 + i) % 255 } }
+        s.await()
+        assertEquals(1, s.walks)
     }
 }

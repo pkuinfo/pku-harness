@@ -55,7 +55,11 @@ class PhoneEngineTest {
         }
         override suspend fun awaitChange(timeoutMs: Long) { entered?.complete(Unit); finish?.await() }
         override suspend fun preview(): DevicePreview? { previews++; return image }
-        override suspend fun handoff() = false
+        /** The app reloads on its way to the user's screen (a WeChat mini program on Samsung). */
+        var reloads = false
+        var restoreEnded = 0
+        override suspend fun handoff() = reloads
+        override suspend fun endRestore() { restoreEnded++ }
         override suspend fun resume() {}
         override suspend fun close() { closes++ }
         fun engine() = PhoneEngine(this, ActionPolicy { _, target -> effectFor?.invoke(target) ?: effect }, "org.pkuinfo.harness")
@@ -505,6 +509,25 @@ class PhoneEngineTest {
         waiting.await()
         engine.end(id)
         assertEquals(1, device.closes)
+    }
+
+    @Test fun aReloadedHandoffLetsCopilotRestoreThePageUntilTheNextHandoff() = runBlocking {
+        val device = FakeDevice()
+        device.reloads = true
+        val engine = device.engine()
+        val id = engine.begin(setOf("org.example.notes")).id
+        assertTrue(engine.handoff(id))
+        assertTrue(engine.state()!!.restoring)
+        // Copilot taps the app back to its page, on the user's screen.
+        val screen = engine.observe(id)
+        engine.execute(id, PhoneAction.Tap, screen.snapshotId, "e1", engine.assess(id, screen.snapshotId, "e1"))
+        assertEquals(PhoneAction.Tap, device.performed)
+        // The second handoff moves nothing and gives the user control.
+        assertFalse(engine.handoff(id))
+        assertEquals(1, device.restoreEnded)
+        assertFalse(engine.state()!!.restoring)
+        assertTrue(engine.state()!!.handedOver)
+        expectFailure(PhoneFailure.HANDOFF) { engine.observe(id) }
     }
 
     @Test fun handoffRequiresExplicitResumeAndAStoppedIdCannotCloseAReplacement() = runBlocking {

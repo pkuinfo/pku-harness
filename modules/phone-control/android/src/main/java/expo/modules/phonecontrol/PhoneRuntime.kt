@@ -6,6 +6,7 @@ import android.content.Context
 import android.os.Build
 import android.os.Process
 import android.util.Base64
+import android.util.Log
 import org.pkuinfo.harness.phone.core.*
 import org.pkuinfo.harness.phone.connection.DeveloperSettings
 import org.pkuinfo.harness.phone.connection.protocol.BuiltinShellStatus
@@ -22,6 +23,7 @@ import org.pkuinfo.harness.phone.policy.PhoneActionPolicy
 
 /** Expo-facing adapter. Session rules live in the Harness core; Android details live in DevicePort. */
 object PhoneRuntime {
+    private const val TAG = "CopilotRuntime"
     @Volatile private var control: PhoneEngine? = null
     @Volatile private var sessionIdentity: String? = null
     @Volatile private var appContext: Context? = null
@@ -91,13 +93,11 @@ object PhoneRuntime {
             "accessibilityAuto" to platform.recovery.accessibilityPending(),
             "locked" to context.getSystemService(KeyguardManager::class.java).isKeyguardLocked,
             "restricted" to restricted(context),
-            // "Display over other apps": the floating window can then be an application overlay,
-            // which Samsung's screen recorder records (CopilotOverlay.windowType).
-            "overlays" to android.provider.Settings.canDrawOverlays(context),
             "sessionId" to session?.id,
             "packages" to (session?.packages?.toList() ?: emptyList<String>()),
             "handedOver" to (session?.handedOver == true),
-            "handoffRestarted" to (session?.handedOver == true && handoffRestarted),
+            // Handed over, but Copilot is still tapping the reloaded app back on the user's screen.
+            "restoring" to (session?.restoring == true),
             "paused" to (session?.paused == true),
         )
     }
@@ -194,11 +194,16 @@ object PhoneRuntime {
     private suspend fun trackOperation(id: String, operation: String, block: suspend () -> Map<String, Any?>): Map<String, Any?> {
         val ticket = PhoneOverlayBridge.startOperation(id, operation)
         try {
+            val started = android.os.SystemClock.uptimeMillis()
+            var ready = started
             val result = AccessibilityParking.during {
                 awaitScreen()
                 requireAccessibility()
+                ready = android.os.SystemClock.uptimeMillis()
                 block()
             }
+            // Where a slow step's time went: getting the service ready, or the operation itself.
+            Log.i(TAG, "$operation: ${ready - started} ms ready, ${android.os.SystemClock.uptimeMillis() - ready} ms run")
             PhoneOverlayBridge.finishOperation(ticket, result["ok"] == false)
             return result
         } catch (error: Throwable) {
@@ -317,19 +322,18 @@ object PhoneRuntime {
     @Volatile var handoffNote: String? = null
         private set
 
-    /** The app was recreated on its way to the user's screen, so its page was reset; the panel says so. */
-    @Volatile var handoffRestarted = false
-        private set
-
-    suspend fun takeover(context: Context, id: String, note: String? = null) {
+    /**
+     * True when the app reloaded on its way to the user's screen: Copilot then brings it back to
+     * its page there, and a second call gives the user control (PhoneEngine.handoff).
+     */
+    suspend fun takeover(context: Context, id: String, note: String? = null): Boolean {
         val restarted = engine(context).handoff(id)
         handoffNote = note?.trim()?.take(200)?.ifEmpty { null }
-        handoffRestarted = restarted
+        return restarted
     }
     suspend fun handback(context: Context, id: String) {
         engine(context).resume(id)
         handoffNote = null
-        handoffRestarted = false
     }
 
     /**

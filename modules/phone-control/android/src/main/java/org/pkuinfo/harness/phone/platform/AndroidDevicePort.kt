@@ -166,6 +166,8 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
             override suspend fun awaitChange(timeoutMs: Long) { screen.awaitChange(timeoutMs) }
 
             override suspend fun preview(): DevicePreview? {
+                // Restoring on the user's screen: Copilot's display doesn't show the app.
+                if (screen.onUserScreen) return null
                 val frame = display.current?.latestFrameBitmap() ?: return null
                 try {
                     val scale = minOf(1.0, 720.0 / maxOf(frame.width, frame.height))
@@ -178,6 +180,7 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
             }
 
             override suspend fun lookImage(): DevicePreview? {
+                if (screen.onUserScreen) return null
                 val frame = display.current?.latestFrameBitmap() ?: return null
                 try {
                     // Larger than the preview, with labelled rulers: models place points by reading the grid.
@@ -215,12 +218,24 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
                 val log = runCatching { helper.runCommand(HandoffRestart.COMMAND)?.getString("output") }.getOrNull().orEmpty()
                 return HandoffRestart.restarted(log, moving, movedAt).also {
                     if (it) android.util.Log.i("CopilotHandoff", "task $moving restarted on the user's screen")
+                    // Copilot taps it back to the page it left, on the user's screen, until endRestore;
+                    // the helper takes those taps there only while this task is on top.
+                    if (it) runCatching { helper.setRestoreTask(moving) }
+                    screen.onUserScreen = it
                 }
+            }
+
+            override suspend fun endRestore() {
+                screen.onUserScreen = false
+                latest = null
+                runCatching { helper.setRestoreTask(-1) }
             }
 
             override suspend fun resume() {
                 val task = checkNotNull(screen.target.value) { "No app is open" }
                 val moving = handedTask.takeIf { it >= 0 } ?: task.taskId
+                screen.onUserScreen = false
+                runCatching { helper.setRestoreTask(-1) }
                 check(helper.moveTask(moving, display.get().displayId)) { "Could not return the app to Copilot" }
                 handedTask = -1
                 handedOver = false
@@ -232,6 +247,7 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
                 closed = true
                 PhoneScope.state = AppAccessState(available = false, revision = PhoneScope.state.revision + 1)
                 withContext(Dispatchers.IO) {
+                    runCatching { helper.setRestoreTask(-1) }
                     runCatching { helper.restoreClip() }
                     display.current?.let { runCatching { helper.finishDisplay(it.displayId, emptyArray(), emptyArray()) } }
                 }

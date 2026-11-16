@@ -118,8 +118,10 @@ export const phoneService: PhoneService = {
     leases.claim(id, signal);
     const module = native();
     if (typeof module.handoff !== 'function' || typeof module.awaitHandback !== 'function') throw new Error('This app version cannot wait for a handoff. Use handoff without wait, and tell the user to update PKU harness.');
-    await module.handoff(id, note);
+    const restarted = (await module.handoff(id, note)) === true;
     signal?.throwIfAborted();
+    // The app reloaded on the user's screen: Copilot brings it back to its page there first.
+    if (restarted) return { handedBack: false, ended: false, restarted: true };
     // The wait stops with the run: Stop in chat or the panel cancels it (the session then ends,
     // which also ends the native wait).
     let onAbort: (() => void) | undefined;

@@ -31,7 +31,7 @@ data class PhoneAssessment(
 data class PhoneExecution(val outcome: DeviceOutcome, val observation: PhoneObservation)
 /** A screenshot for the model (opt-in vision fallback) and the observation it belongs to. */
 data class PhoneLook(val observation: PhoneObservation, val image: DevicePreview)
-data class PhoneSessionState(val id: String, val packages: Set<String>, val handedOver: Boolean, val paused: Boolean = false)
+data class PhoneSessionState(val id: String, val packages: Set<String>, val handedOver: Boolean, val paused: Boolean = false, val restoring: Boolean = false)
 
 fun interface ActionPolicy {
     fun assess(frame: DeviceFrame, target: DeviceElement): PhoneEffect

@@ -124,8 +124,14 @@ class AndroidScreenDriver(
     private val awaitApp: suspend (packageName: String, user: Int?, timeoutMs: Long, free: suspend () -> Boolean) -> AppWait =
         { _, _, _, _ -> AppWait.Unsupported },
 ) : ScreenPort {
+    /**
+     * 交给用户时 App 在用户屏上重新加载了(三星上的微信小程序):Copilot 在用户屏上把它点回原来那一页,
+     * 这期间读屏、点按都对着主屏,只看 App 窗口,不用虚拟屏的画面。见 AndroidDevicePort.handoff。
+     */
+    @Volatile var onUserScreen = false
+
     /** 屏还没建时为 -1;只在确认屏已建好之后用。 */
-    private val displayId get() = display.current?.displayId ?: -1
+    private val displayId get() = if (onUserScreen) Display.DEFAULT_DISPLAY else display.current?.displayId ?: -1
     /** 屏已经建好(不等于打开过 App)。 */
     private val hasDisplay get() = display.current != null
     private val screenWidth get() = display.current?.width ?: display.width
@@ -154,7 +160,10 @@ class AndroidScreenDriver(
     /** 系统设置所在的包(按 Settings.ACTION_SETTINGS 解析):目标 App 在自己任务里打开的设置页不算被切走。 */
     private val settingsPackage: String? by lazy { SystemPickers.settingsPackage(a11y.packageManager) }
 
-    private fun windows() = a11y.windowsOn(displayId)
+    private fun windows() = a11y.windowsOn(displayId).let { all ->
+        // 用户屏上还有状态栏、导航栏、输入法和 Copilot 自己的悬浮窗:只看 App 的窗口
+        if (onUserScreen) all.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION } else all
+    }
     /**
      * 应用访问的窗口探针:屏上各 App 窗口的归属,只读根节点的包名、不读内容。读不到根节点的那一项为 null(归属未知);
      * 没有 App 窗口时是最上面任务的 App,也没有就是空屏(空列表)。规则和读屏结果里的窗口归属一致。
@@ -186,8 +195,10 @@ class AndroidScreenDriver(
         if (!hasDisplay) return@withContext ScreenSnapshot(snapshotId(), null, emptyList(), screenWidth, screenHeight, hasWindow = false)
         // 上一个动作过了一会儿才开到用户主屏上的:先挪回来再读(只在模型要读的这一屏上做,不在判效果的那一眼里做)
         val late = if (recoverTask) lateSpill() else null
+        val started = SystemClock.uptimeMillis()
         val r = read()
         val after = treeHash()
+        Log.i(TAG, "read ${r.entries.size} elements in ${SystemClock.uptimeMillis() - started} ms")
         val snap = NodeSnapshot(snapshotId(), r.entries)
         if (register) ids.put(snap)
         ScreenSnapshot(
@@ -233,7 +244,7 @@ class AndroidScreenDriver(
     }.distinctUntilChanged { a, b -> a.packageName == b.packageName && a.userId == b.userId }
 
     override suspend fun screenshotPng(): ByteArray? = withContext(Dispatchers.IO) {
-        if (!frameServable()) return@withContext null
+        if (onUserScreen || !frameServable()) return@withContext null
         display.current?.latestFramePng()
     }
 
@@ -268,7 +279,7 @@ class AndroidScreenDriver(
     override suspend fun readVisibleText(): List<VisibleTextLine>? = null
 
     override suspend fun frameGrid(): FrameGrid? = withContext(Dispatchers.IO) {
-        if (!frameServable()) return@withContext null
+        if (onUserScreen || !frameServable()) return@withContext null
         val bmp = display.current?.frames?.value ?: return@withContext null
         runCatching { FrameGrid.sample(bmp.width, bmp.height, bmp::getPixel) }.getOrNull()
     }
@@ -1647,15 +1658,33 @@ class AndroidScreenDriver(
     }
 
     /** 等界面稳定后比对指纹(规则见 [ChangeWait]);确认变了立即返回 true。 */
-    private suspend fun awaitChange(clock: EventClock, beforeTree: Long, beforeFrame: IntArray?): Boolean =
-        ChangeWait.awaitStableChange(
+    private suspend fun awaitChange(clock: EventClock, beforeTree: Long, beforeFrame: IntArray?): Boolean {
+        // 走一遍控件树要分批跨进程问 App,微信、小程序页面大、主线程忙时很慢:
+        // 上次走过之后没有新的界面事件,树就没变,不再走
+        var walkedAt = -1L
+        var changed = false
+        var walks = 0
+        var walkMs = 0L
+        val started = SystemClock.uptimeMillis()
+        val result = ChangeWait.awaitStableChange(
             now = SystemClock::uptimeMillis,
             sleep = { delay(it) },
             frame = ::frameSignature,
             quietForMs = clock::quietForMs,
-            treeChanged = { treeHash() != beforeTree },
+            treeChanged = {
+                if (walkedAt < 0 || clock.lastEventAt() >= walkedAt) {
+                    walkedAt = SystemClock.uptimeMillis()
+                    changed = treeHash() != beforeTree
+                    walks++
+                    walkMs += SystemClock.uptimeMillis() - walkedAt
+                }
+                changed
+            },
             beforeFrame = beforeFrame,
         )
+        Log.i(TAG, "change wait ${SystemClock.uptimeMillis() - started} ms, $walks tree walks ($walkMs ms), changed=$result")
+        return result
+    }
 
     /** 前台不是目标 App、也不是它调起的系统页面或系统选择器时,返回当前前台包名及是否由目标 App 打开。 */
     private fun switchedTo(): AppSwitch.Switch? {
@@ -1931,12 +1960,14 @@ class AndroidScreenDriver(
 
     /** 预览帧的粗粒度亮度格子;没有画面时为 null。 */
     private fun frameSignature(): IntArray? {
+        if (onUserScreen) return null
         val bmp = display.current?.frames?.value ?: return null
         return runCatching { FrameMath.lumaGrid(bmp.width, bmp.height, bmp::getPixel) }.getOrNull()
     }
 
     /** 画面是否全黑(防截屏窗口在虚拟屏上画成黑色);没有画面时为 null。 */
     private fun frameBlack(): Boolean? {
+        if (onUserScreen) return null
         val bmp = display.current?.frames?.value ?: return null
         return runCatching { FrameMath.isBlack(bmp.width, bmp.height, bmp::getPixel) }.getOrNull()
     }
@@ -1948,6 +1979,7 @@ class AndroidScreenDriver(
         private val last = AtomicLong(SystemClock.uptimeMillis())
         fun mark() = last.set(SystemClock.uptimeMillis())
         fun quietForMs() = SystemClock.uptimeMillis() - last.get()
+        fun lastEventAt() = last.get()
 
         /** 等到连续 [quietMs] 没有界面事件;[capMs] 内等到返回 true。 */
         suspend fun awaitQuiet(quietMs: Long, capMs: Long): Boolean {

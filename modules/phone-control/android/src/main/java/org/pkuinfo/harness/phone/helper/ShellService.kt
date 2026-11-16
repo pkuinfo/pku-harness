@@ -164,6 +164,15 @@ class ShellService(
     /** 只往这个服务自己建的虚拟屏上启动,调用方传错屏号(比如主屏)也不会打扰用户。 */
     private fun ownDisplay(displayId: Int): Boolean = synchronized(displays) { displayId in displays }
 
+    /** 交给用户时在主屏上重新加载了的任务(见 setRestoreTask);-1 为没有。 */
+    @Volatile private var restoreTask = -1
+
+    override fun setRestoreTask(taskId: Int) { restoreTask = taskId }
+
+    /** 触摸和返回键能发到这块屏:Mika 自己的屏;或主屏,只在重新加载的那个任务还在主屏最上面时。 */
+    private fun canTouch(displayId: Int): Boolean = ownDisplay(displayId) ||
+        displayId == Display.DEFAULT_DISPLAY && restoreTask >= 0 && topTaskId(Display.DEFAULT_DISPLAY) == restoreTask
+
     override fun releaseDisplay(displayId: Int) {
         awake.stop(displayId)
         // 锁里只摘下来,关监听(binder)和放屏在锁外做
@@ -1085,7 +1094,7 @@ class ShellService(
     }
 
     override fun injectKey(displayId: Int, keyCode: Int): Boolean {
-        if (!ownDisplay(displayId)) return false
+        if (!canTouch(displayId)) return false
         // 与 press_key 同一张白名单:即便调用方出错,也不从这里发出音量、电源、Home 之类的整机按键
         if (!PressKeys.isAllowed(keyCode)) {
             Log.w(TAG, "refused key $keyCode")
@@ -1124,7 +1133,7 @@ class ShellService(
     }
 
     override fun injectTap(displayId: Int, x: Int, y: Int): Boolean {
-        if (!ownDisplay(displayId)) return false
+        if (!canTouch(displayId)) return false
         val now = SystemClock.uptimeMillis()
         val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x.toFloat(), y.toFloat(), 0)
         val up = MotionEvent.obtain(now, now + TAP_MS, MotionEvent.ACTION_UP, x.toFloat(), y.toFloat(), 0)
@@ -1144,7 +1153,7 @@ class ShellService(
      * 按下之后中途哪个点没注入成功也照样往下走,最后一定补发抬起,不让手指一直按着。
      */
     override fun injectStroke(displayId: Int, xs: IntArray, ys: IntArray, times: LongArray): Boolean {
-        if (!ownDisplay(displayId)) return false
+        if (!canTouch(displayId)) return false
         val n = times.size
         if (n < 2 || n > STROKE_MAX_POINTS || xs.size != n || ys.size != n || times[0] != 0L ||
             times.last() > STROKE_MAX_MS || (1 until n).any { times[it] < times[it - 1] }

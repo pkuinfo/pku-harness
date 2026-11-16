@@ -121,6 +121,9 @@ interface IPhoneController {
     // Two synchronized fingers on an owned display; packed x/y arrays are [finger0, finger1] per sample.
     boolean injectTwoFingerStroke(int displayId, in int[] xs, in int[] ys, in long[] times) = 52;
 
+    // 交给用户时这个任务在主屏上重新加载了:它在主屏最上面时,允许往主屏发触摸和返回键,好把它点回原来那一页。-1 关掉
+    void setRestoreTask(int taskId) = 53;
+
     // 沿用早先定下的销毁事务号;AIDL 要求要么全部方法编号要么都不编号
     void destroy() = 16777114;
 }

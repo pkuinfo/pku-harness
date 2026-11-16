@@ -49,11 +49,12 @@ internal object ChangeWait {
             val cur = frame()
             val quietFor = quietForMs()
             val quiet = quietFor >= QUIET_MS
-            val tree = treeChanged()
             val elapsed = now() - start
-            if (quiet && tree) return true
             val stable = if (prev == null || cur == null) prev == null && cur == null else !FrameMath.differs(prev, cur)
             val frameChanged = FrameMath.differs(beforeFrame, cur)
+            // 控件树只在它的结果能结束等待时才看:看一次要把 App 的控件走一遍
+            val tree = (quiet || (stable && elapsed >= BUSY_MS) || now() >= deadline) && treeChanged()
+            if (quiet && tree) return true
             if (quiet && stable && frameChanged) return true
             if (tree && stable && elapsed >= BUSY_MS) return true
             if (quiet && stable && elapsed >= UNCHANGED_MS) return false

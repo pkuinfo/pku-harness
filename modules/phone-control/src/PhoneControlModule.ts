@@ -7,7 +7,7 @@ declare class PhoneControlModule extends NativeModule<{ onControlStopped: (event
   overlayStatus(value: { sessionId: string; phase: 'waiting' | 'thinking' | 'working' | 'attention'; title: string } | null): Promise<void>;
   overlayApproval(value: { id: number; sessionId: string; title: string; detail: string } | null): Promise<void>;
   readiness(): Promise<PhoneReadiness>;
-  setup(kind: 'accessibility' | 'wireless' | 'appInfo' | 'overlays'): Promise<void>;
+  setup(kind: 'accessibility' | 'wireless' | 'appInfo'): Promise<void>;
   pair(code: string, port: number | null): Promise<PhoneReadiness>;
   startPairing(): Promise<PhoneReadiness>;
   stopPairing(): Promise<void>;
@@ -29,7 +29,8 @@ declare class PhoneControlModule extends NativeModule<{ onControlStopped: (event
   end(sessionId: string): Promise<void>;
   takeover(sessionId: string): Promise<void>;
   /** takeover with the reason shown on the floating panel next to its Done button. Missing on APKs before 1.0.11. */
-  handoff?(sessionId: string, note: string | null): Promise<void>;
+  /** true: the app reloaded on the user's screen; Copilot restores its page there, then calls handoff again. */
+  handoff?(sessionId: string, note: string | null): Promise<boolean | null>;
   /** Resolves when the user hands the session back, it ends, or `timeoutMs` passes. Missing on APKs before 1.0.11. */
   awaitHandback?(sessionId: string, timeoutMs: number): Promise<{ handedBack: boolean; ended: boolean; timedOut?: boolean }>;
   handback(sessionId: string): Promise<void>;

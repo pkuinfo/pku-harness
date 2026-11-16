@@ -101,8 +101,6 @@ class PhoneControlModule : Module() {
                 }
                 // App info, where the ⋮ menu has "Allow restricted settings".
                 "appInfo" -> Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", context.packageName, null))
-                // "Display over other apps", for the floating window in screen recordings.
-                "overlays" -> Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.fromParts("package", context.packageName, null))
                 else -> error("Unknown setup step")
             }
             // A fresh Settings task: otherwise Android may just bring back whatever Settings page was left open.
@@ -199,7 +197,7 @@ class PhoneControlModule : Module() {
             result { withContext(Dispatchers.Default) { PhoneRuntime.setBrightness(context, sessionId, percent, adaptive) } }
         }
         AsyncFunction("end") Coroutine { sessionId: String -> PhoneRuntime.end(context, sessionId) }
-        AsyncFunction("takeover") Coroutine { sessionId: String -> PhoneRuntime.takeover(context, sessionId) }
+        AsyncFunction("takeover") Coroutine { sessionId: String -> PhoneRuntime.takeover(context, sessionId); Unit }
         AsyncFunction("handoff") Coroutine { sessionId: String, note: String? -> PhoneRuntime.takeover(context, sessionId, note) }
         AsyncFunction("awaitHandback") Coroutine { sessionId: String, timeoutMs: Double -> PhoneRuntime.awaitHandback(sessionId, timeoutMs.toLong()) }
         AsyncFunction("handback") Coroutine { sessionId: String -> PhoneRuntime.handback(context, sessionId) }
