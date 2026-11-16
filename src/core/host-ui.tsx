@@ -72,8 +72,8 @@ function Column({ gap = 'md', children }: { gap?: keyof typeof GAP; children: Re
   return <View style={{ gap: GAP[gap] }}>{children}</View>;
 }
 
-function GenUI({ spec, onSubmit }: { spec: Record<string, unknown>; onSubmit?: (form: Record<string, unknown>, label?: string) => void }) {
-  return <GenUIView spec={spec as unknown as Spec} onSubmit={onSubmit} />;
+function GenUI({ spec, onSubmit, feed }: { spec: Record<string, unknown>; onSubmit?: (form: Record<string, unknown>, label?: string) => void; feed?: boolean }) {
+  return <GenUIView spec={spec as unknown as Spec} onSubmit={onSubmit} feed={feed} />;
 }
 
 function WidgetNotice({ icon, text }: { icon: string; text: string }) {

@@ -7,17 +7,21 @@ import {
   VisibilityProvider,
 } from '@json-render/react-native';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { sendMessage } from '@/core/agent/run';
 import { refreshAll } from '@/core/dashboard/live-hooks';
 import { invokeTool, services } from '@/core/runtime/invoke';
 
+import { FeedScroll } from './feed';
+import { loadMore } from './load-more';
 import { registry } from './registry';
 
 export type GenUIHandlers = {
   /** Called by the `submit` action with the current form state. */
   onSubmit?: (form: Record<string, unknown>, label?: string) => void;
+  /** A feed screen: the view scrolls itself, with pull to refresh and endless lists (EndReached). */
+  feed?: boolean;
 };
 
 /** State the user owns: kept when the spec's data refreshes (a half-typed form, results of actions). */
@@ -28,7 +32,7 @@ const USER_STATE = new Set(['form', 'result', 'error']);
  * view: when the spec's state changes (a widget or plugin screen whose bindings refreshed), only
  * the data keys are updated, so what the user typed survives a refresh.
  */
-export function GenUIView({ spec, onSubmit }: { spec: Spec } & GenUIHandlers) {
+export function GenUIView({ spec, onSubmit, feed }: { spec: Spec } & GenUIHandlers) {
   // One store for the life of the view (created from the first spec's state).
   const [store] = useState(() => createStateStore((spec as { state?: Record<string, unknown> }).state ?? {}));
   useEffect(() => {
@@ -36,8 +40,15 @@ export function GenUIView({ spec, onSubmit }: { spec: Spec } & GenUIHandlers) {
     for (const [key, value] of Object.entries((spec as { state?: Record<string, unknown> }).state ?? {})) if (!USER_STATE.has(key)) updates[`/${key}`] = value;
     store.update(updates);
   }, [spec, store]);
+  // Lists grown by loadMore (list → status path), cleared on pull to refresh.
+  const grown = useRef(new Map<string, string>());
   const handlers = useMemo(
     () => ({
+      loadMore: async (params: Record<string, unknown>) => {
+        const statusPath = typeof params.statusPath === 'string' ? params.statusPath : null;
+        const list = await loadMore(store, params, (tool, input) => invokeTool(tool, input, { actor: 'user' }));
+        if (list && statusPath) grown.current.set(list, statusPath);
+      },
       submit: async (params: Record<string, unknown>) => {
         const form = (store.get('/form') as Record<string, unknown> | undefined) ?? {};
         onSubmit?.(form, typeof params?.label === 'string' ? params.label : undefined);
@@ -50,6 +61,8 @@ export function GenUIView({ spec, onSubmit }: { spec: Spec } & GenUIHandlers) {
           const result = await invokeTool(String(params.tool), params.input ?? {}, { actor: 'user' });
           if (at('resultPath')) store.set(at('resultPath')!, result);
           if (at('errorPath')) store.set(at('errorPath')!, null);
+          // Done with what the user typed (a sent reply): clear it, only after success.
+          if (Array.isArray(params.clear)) for (const p of params.clear) if (typeof p === 'string' && p.startsWith('/')) store.set(p, null);
         } catch (e) {
           if (!at('errorPath')) throw e;
           store.set(at('errorPath')!, e instanceof Error ? e.message : String(e));
@@ -79,12 +92,24 @@ export function GenUIView({ spec, onSubmit }: { spec: Spec } & GenUIHandlers) {
     }),
     [store, onSubmit],
   );
+  const view = <Renderer spec={spec} registry={registry} />;
   return (
     <StateProvider store={store}>
       <VisibilityProvider>
         <ActionProvider handlers={handlers}>
           <ValidationProvider>
-            <Renderer spec={spec} registry={registry} />
+            {feed ? (
+              <FeedScroll
+                onRefresh={async () => {
+                  // Back to page 1: the grown lists start over from the fresh first page.
+                  for (const [list, status] of grown.current) store.update({ [list]: [], [status]: {} });
+                  await refreshAll();
+                }}>
+                {view}
+              </FeedScroll>
+            ) : (
+              view
+            )}
           </ValidationProvider>
         </ActionProvider>
       </VisibilityProvider>

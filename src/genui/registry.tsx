@@ -19,6 +19,17 @@ import { formatChartValue } from '@/core/host-charts-format';
 import { radius, spacing, useTheme } from '@/theme';
 
 import { catalog } from './catalog';
+import { EndReached } from './feed';
+import { Comment, Gallery, Post } from './social';
+
+/** A Comment's quote in any of its shapes → { author, text }, or null when there is nothing to show. */
+function quoteOf(q: unknown): { author: string; text: string } | null {
+  if (typeof q === 'string') return q.trim() ? { author: '', text: q } : null;
+  if (!q || typeof q !== 'object') return null;
+  const { author, name, text } = q as { author?: unknown; name?: unknown; text?: unknown };
+  const who = typeof author === 'string' ? author : typeof name === 'string' ? name : '';
+  return typeof text === 'string' && text.trim() ? { author: who, text } : null;
+}
 
 const gapOf = (g: 'sm' | 'md' | 'lg' | null | undefined) => (g === 'sm' ? spacing.sm : g === 'lg' ? spacing.xl : spacing.md);
 const sizeOf = { xl: 'numberXL', lg: 'numberL', md: 'numberM' } as const;
@@ -41,13 +52,19 @@ function TextFieldBound({
   placeholder,
   value,
   keyboard,
+  returnKey,
+  multiline,
   binding,
+  onSubmit,
 }: {
   label: string | null;
   placeholder: string | null;
   value: string | null;
   keyboard: 'default' | 'number' | 'email' | null;
+  returnKey?: 'done' | 'search' | 'send' | null;
+  multiline?: boolean | null;
   binding?: string;
+  onSubmit: () => void;
 }) {
   const [v, setV] = useBoundProp<string>(value ?? '', binding);
   return (
@@ -57,6 +74,10 @@ function TextFieldBound({
       value={v ?? ''}
       onChangeText={setV}
       keyboardType={keyboard === 'number' ? 'decimal-pad' : keyboard === 'email' ? 'email-address' : 'default'}
+      returnKeyType={returnKey ?? undefined}
+      multiline={!!multiline}
+      // A search or send key runs the field's on.submit; a multiline field keeps Enter for new lines.
+      onSubmitEditing={returnKey && returnKey !== 'done' && !multiline ? onSubmit : undefined}
     />
   );
 }
@@ -282,7 +303,19 @@ const components: Components<typeof catalog> = {
   },
   Divider: () => <DividerLine />,
   Progress: ({ props }) => <ProgressBar label={props.label} value={props.value} tone={props.tone} />,
-  TextField: ({ props, bindings }) => <TextFieldBound {...props} binding={bindings?.value} />,
+  TextField: ({ props, bindings, emit }) => <TextFieldBound {...props} binding={bindings?.value} onSubmit={() => emit('submit')} />,
+  Post: ({ props, children, emit }) => (
+    <Post props={{ ...props, preview: Array.isArray(props.preview) ? props.preview : null, tags: props.tags ?? null, lines: props.lines ?? null, pinned: props.pinned ?? null, followed: props.followed ?? null }} onPress={() => emit('press')}>
+      {children}
+    </Post>
+  ),
+  Comment: ({ props, children, emit }) => (
+    <Comment props={{ ...props, op: props.op ?? null, quote: quoteOf(props.quote), compact: props.compact ?? null }} onPress={() => emit('press')}>
+      {children}
+    </Comment>
+  ),
+  Gallery: ({ props }) => <Gallery tool={props.tool} items={Array.isArray(props.items) ? props.items : []} compact={!!props.compact} />,
+  EndReached: ({ props, emit, loading }) => <EndReached done={!!props.done} doneLabel={props.doneLabel} loading={!!loading} onReach={() => emit('reach')} />,
   Toggle: ({ props, bindings }) => <ToggleRow label={props.label} value={props.value} binding={bindings?.value} />,
   Choice: ({ props, bindings }) => <ChoiceBound {...props} binding={bindings?.value} />,
   Sparkline: ({ props }) => <Sparkline values={Array.isArray(props.values) ? props.values : []} tone={props.tone ?? 'accent'} />,

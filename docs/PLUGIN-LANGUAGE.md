@@ -406,6 +406,15 @@ the same interpreter with its own set (collections, push, channels; CLOUD-FUNCTI
   memory only (never cached), a failed refresh clears it, and `/refreshIn` holds the seconds to the
   next refresh. View state also has `/params`, `/size`, `/t` and, for plugins with campus
   services, `/account: { signedIn }`.
+- **Feeds**: a screen with `feed: true` scrolls the spec itself, with pull to refresh (bindings
+  reload, grown lists start over). The bound data is page 1; an `EndReached` element at the end of a
+  list runs `loadMore { tool, input, listPath, itemsKey, statusPath, key?, basePath? }`, which
+  appends the next pages (`page` 2, 3, …) and keeps `{ page, loading, done, error }` at
+  `statusPath`. Forum pieces: `Post` (meta, clamped text, tags, reply/like counts, preview
+  replies), `Comment` (each anonymous name in its own colour, the poster in the accent colour, the
+  quoted comment), `Gallery` (pictures through a `userOnly` tool returning `{ uri }`; a request
+  with `as: image` reads a campus picture as a data: URI). The treehole plugin's screens use all of
+  them.
 - **Commands** are prompt templates (`{{input}}`) or open a screen (`screen: <name>`).
 - Host components that need native code (payment QR, OTP digits, hourglass, file picker) are
   catalog components the harness provides; plugins reference them by name. A `QRCode`'s `value`

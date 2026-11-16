@@ -17,6 +17,8 @@ export const palette = {
   ink100: '#E9ECF0',
   ink50: '#F5F6F8',
   white: '#FFFFFF',
+  /** Behind full-screen photos (both themes). */
+  black: '#000000',
 
   // PKU red, tuned per theme for contrast.
   pkuRedBright: '#F0444F',

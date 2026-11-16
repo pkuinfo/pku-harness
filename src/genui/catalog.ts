@@ -81,9 +81,13 @@ export const catalog = defineCatalog(schema, {
         placeholder: z.string().nullable(),
         value: z.string().nullable(),
         keyboard: z.enum(['default', 'number', 'email']).nullable(),
+        // Optional so older specs stay valid.
+        returnKey: z.enum(['done', 'search', 'send']).nullable().optional(),
+        multiline: z.boolean().nullable().optional(),
       }),
       slots: [],
-      description: 'Text input. Bind with value: { "$bindState": "/form/<field>" }.',
+      description: 'Text input. Bind with value: { "$bindState": "/form/<field>" }. returnKey "search"/"send" with on.submit runs an action from the keyboard.',
+      events: ['submit'],
     },
     Toggle: {
       props: z.object({ label: z.string(), value: z.boolean().nullable() }),
@@ -145,6 +149,47 @@ export const catalog = defineCatalog(schema, {
       slots: [],
       description: 'Native date/time picker field. Bind with value: { "$bindState": "/form/<field>" }; the value is local "YYYY-MM-DD HH:mm".',
     },
+    Post: {
+      props: z.object({
+        text: z.string(),
+        meta: z.string().nullable(),
+        replies: z.number().nullable(),
+        likes: z.number().nullable(),
+        tags: z.array(z.string()).nullable().optional(),
+        lines: z.number().nullable().optional(),
+        pinned: z.boolean().nullable().optional(),
+        followed: z.boolean().nullable().optional(),
+        preview: z.array(z.object({ name: z.string().optional(), author: z.string().optional(), text: z.string(), op: z.boolean().optional() }).passthrough()).nullable().optional(),
+      }),
+      slots: ['default'],
+      description: 'A forum post card (preview: first replies shown under it, { author or name, text, op }): meta line (id · time), text (lines clamps it in a feed), tags, children (Gallery, compact Comments), reply and like counts. on.press opens it.',
+      events: ['press'],
+    },
+    Comment: {
+      props: z.object({
+        author: z.string(),
+        text: z.string(),
+        time: z.string().nullable(),
+        op: z.boolean().nullable().optional(),
+        // The comment it answers: { author or name, text } (tool shapes use name), or just its text.
+        quote: z.union([z.string(), z.object({ author: z.string().optional(), name: z.string().optional(), text: z.string() }).passthrough()]).nullable().optional(),
+        compact: z.boolean().nullable().optional(),
+      }),
+      slots: ['default'],
+      description: 'A reply in a thread: avatar and name in a colour of their own (op = the original poster), the quoted comment it answers, text, children (Gallery). compact: one line under a post in a feed. on.press (e.g. reply to it).',
+      events: ['press'],
+    },
+    Gallery: {
+      props: z.object({ tool: z.string(), items: z.array(z.record(z.string(), z.unknown())), compact: z.boolean().nullable().optional() }),
+      slots: [],
+      description: 'Pictures loaded through a plugin tool that returns { uri } (each item is its input; the viewer asks for { ...item, full: true }). Grid like a phone album; tap for full screen.',
+    },
+    EndReached: {
+      props: z.object({ done: z.boolean().nullable(), doneLabel: z.string().nullable() }),
+      slots: [],
+      description: 'The end of an endless list (screens with feed: true): emits reach as the reader nears it; usually on.reach → loadMore. Spinner while loading, doneLabel when done.',
+      events: ['reach'],
+    },
     Button: {
       props: z.object({
         label: z.string(),
@@ -166,8 +211,23 @@ export const catalog = defineCatalog(schema, {
         input: z.record(z.string(), z.unknown()).nullable(),
         resultPath: z.string().nullable().optional(),
         errorPath: z.string().nullable().optional(),
+        clear: z.array(z.string()).nullable().optional(),
       }),
-      description: 'Run a plugin tool directly (tool id like "wallet.cardBalance"). Optional resultPath / errorPath (e.g. "/result") store the outcome in state; bound data refreshes afterwards.',
+      description: 'Run a plugin tool directly (tool id like "wallet.cardBalance"). Optional resultPath / errorPath (e.g. "/result") store the outcome in state; clear lists state paths emptied on success (a sent reply); bound data refreshes afterwards.',
+    },
+    loadMore: {
+      params: z.object({
+        tool: z.string(),
+        input: z.record(z.string(), z.unknown()).nullable(),
+        listPath: z.string(),
+        itemsKey: z.string(),
+        statusPath: z.string(),
+        key: z.string().nullable().optional(),
+        basePath: z.string().nullable().optional(),
+        pageKey: z.string().nullable().optional(),
+        firstPage: z.number().nullable().optional(),
+      }),
+      description: 'Next page of an endless list: runs tool with input + { page } (page 2 first, the bound data being page 1), appends result[itemsKey] to listPath (skipping items whose key is already there or under basePath), and keeps { page, loading, done } at statusPath.',
     },
     smsCode: {
       params: z.object({ statePath: z.string() }),
