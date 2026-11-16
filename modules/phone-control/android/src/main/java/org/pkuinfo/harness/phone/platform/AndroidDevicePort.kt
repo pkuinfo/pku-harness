@@ -30,6 +30,20 @@ private const val LOOK_MAX_PX = 1000.0
 
 /** Adapts internal Android mechanisms to the Harness session engine's small platform contract. */
 class AndroidDevicePort(private val context: Context, private val onClosed: () -> Unit = {}) : DevicePort {
+    /**
+     * What Android sees change for an app moved from Copilot's display to the user's: an app that
+     * doesn't handle one of these is recreated by the move (a WeChat mini program then starts over
+     * on its home page). Logged to diagnose handoffs on phones the emulator doesn't match.
+     */
+    private fun logConfigurationGap(displayId: Int) = runCatching {
+        val displays = context.getSystemService(DisplayManager::class.java)
+        val ours = displays.getDisplay(displayId) ?: return@runCatching
+        val main = displays.getDisplay(Display.DEFAULT_DISPLAY) ?: return@runCatching
+        val from = context.createDisplayContext(ours).resources.configuration
+        val to = context.createDisplayContext(main).resources.configuration
+        android.util.Log.i("CopilotHandoff", "configuration changes on handoff: 0x${Integer.toHexString(from.diff(to))} ($from -> $to)")
+    }
+
     override suspend fun open(allowedPackages: Set<String>): DeviceSession {
         check(Build.VERSION.SDK_INT >= 31) { "Phone control requires Android 12 or newer" }
         checkNotNull(ScreenAccessibility.instance.value) { "Enable Copilot accessibility first" }
@@ -190,6 +204,7 @@ class AndroidDevicePort(private val context: Context, private val onClosed: () -
                 val top = runCatching { helper.topTaskId(display.get().displayId) }.getOrDefault(-1)
                 val topPackage = if (top >= 0) runCatching { helper.packageOfTask(top) }.getOrNull() else null
                 val moving = if (topPackage != null && PhoneScope.policy.current().denial(topPackage) == null) top else task.taskId
+                logConfigurationGap(display.get().displayId)
                 check(helper.moveTask(moving, Display.DEFAULT_DISPLAY)) { "Could not hand the app to the user" }
                 handedTask = moving
                 handedOver = true

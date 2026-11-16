@@ -6,13 +6,16 @@ import android.content.res.ColorStateList
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.graphics.Typeface
 import android.graphics.drawable.RippleDrawable
 import android.graphics.drawable.InsetDrawable
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.Settings
 import android.util.Base64
+import android.util.Log
 import android.util.TypedValue
 import android.view.ContextThemeWrapper
 import android.view.Gravity
@@ -20,6 +23,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import android.view.WindowManager
+import android.view.accessibility.AccessibilityWindowInfo
 import android.widget.Button
 import android.widget.FrameLayout
 import android.widget.ImageButton
@@ -37,6 +41,18 @@ private const val PREVIEW_SHARE_MIN = 0.22f
 private const val PREVIEW_SHARE_MAX = 0.62f
 private const val PREFS = "copilot_overlay"
 private const val PREVIEW_SHARE_KEY = "previewShare"
+/** How long an application overlay gets to appear on screen before the panel is added another way. */
+private const val OVERLAY_CHECK_MS = 1200L
+
+/**
+ * Window managers whose application overlay this phone accepted but never showed (Samsung, with the
+ * app's own window manager): skipped for the rest of the process, so later panels don't blink.
+ */
+private val hiddenOverlayHosts: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
+private val OVERLAY_HOSTS = listOf("app", "service")
+/** The panel's window title; Android lists an accessibility overlay under it once it is on screen. */
+private const val WINDOW_TITLE = "Harness Copilot controls"
+private const val TAG = "CopilotOverlay"
 /** The task whose panel the user minimized; survives the panel being rebuilt. */
 @Volatile private var minimizedTask: String? = null
 
@@ -68,7 +84,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
         WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
         WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL,
         PixelFormat.TRANSLUCENT,
-    ).apply { gravity = Gravity.TOP or Gravity.START; x = gap; y = size(R.dimen.copilot_overlay_touch) * 2; title = "Harness Copilot controls" }
+    ).apply { gravity = Gravity.TOP or Gravity.START; x = gap; y = size(R.dimen.copilot_overlay_touch) * 2; title = WINDOW_TITLE }
     private var attached = false
     // The full window by default; Minimize turns it into the ball, and tapping the ball brings it back.
     // Kept per task across panel instances: the panel is rebuilt whenever the accessibility service
@@ -110,6 +126,14 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
     private var wasHanded = false
     /** A resize drag in progress: the status loop must not rebuild the panel under the finger. */
     private var resizing = false
+    /** Which window manager holds the application overlay ("app" or "service"); null for an accessibility overlay. */
+    private var overlayHost: String? = null
+    private var overlaySince = 0L
+    private var overlaySeen = false
+    /** Checks in a row that didn't find the panel; one alone can be a drag moving it between reads. */
+    private var overlayMisses = 0
+    /** This panel's application overlay was on screen and then hidden (a screen that hides overlays): accessibility from now on. */
+    private var overlayHidden = false
 
     /**
      * "Display over other apps", when the user allowed it: Samsung's screen recorder leaves
@@ -118,7 +142,7 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
      * and banking apps may hide application overlays (HIDE_OVERLAY_WINDOWS), and Done must stay.
      */
     private fun windowType(handed: Boolean) =
-        if (!handed && Settings.canDrawOverlays(service)) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        if (!handed && !overlayHidden && OVERLAY_HOSTS.any { it !in hiddenOverlayHosts } && Settings.canDrawOverlays(service)) WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         else WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY
 
     /** Android can't change a window's type in place: the panel is added again, where it was. */
@@ -128,11 +152,47 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
             runCatching { manager.removeViewImmediate(root) }
             attached = false
         }
+        val host = if (type == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) {
+            OVERLAY_HOSTS.firstOrNull { it !in hiddenOverlayHosts }
+                ?: return attach(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
+        } else null
         params.type = type
-        manager = if (type == WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY) appWindows else serviceWindows
-        attached = runCatching { manager.addView(root, params); true }.getOrDefault(false)
-        if (!attached && type != WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY) return attach(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)
+        manager = if (host == "app") appWindows else serviceWindows
+        overlayHost = host; overlaySince = SystemClock.uptimeMillis(); overlaySeen = false; overlayMisses = 0
+        attached = runCatching { manager.addView(root, params); true }
+            .onFailure { Log.w(TAG, "adding the panel (${host ?: "accessibility"}) failed", it) }.getOrDefault(false)
+        Log.i(TAG, "panel added as ${host ?: "accessibility"} overlay: $attached")
+        if (!attached && host != null) { hiddenOverlayHosts += host; return attach(type) }
         return attached
+    }
+
+    /**
+     * A phone can take an application overlay without an error and still never draw it (Samsung did,
+     * with the app's window manager), and a screen that hides overlays hides it later. The panel is on
+     * screen when Android lists it among the windows; if not, it is added the next way, ending with
+     * the accessibility overlay, which nothing hides.
+     */
+    private fun checkOverlayShown(handed: Boolean) {
+        val host = overlayHost ?: return
+        if (SystemClock.uptimeMillis() - overlaySince < OVERLAY_CHECK_MS) return
+        if (!root.isLaidOut || root.width == 0) return
+        val at = IntArray(2).also(root::getLocationOnScreen)
+        val panel = Rect(at[0], at[1], at[0] + root.width, at[1] + root.height)
+        // An application overlay is listed without its title: matched by where it is.
+        val shown = runCatching {
+            val bounds = Rect()
+            service.windows.any {
+                it.type != AccessibilityWindowInfo.TYPE_APPLICATION &&
+                    (it.title?.toString() == WINDOW_TITLE || bounds.also(it::getBoundsInScreen) == panel)
+            }
+        }.getOrDefault(true)
+        if (shown) { overlaySeen = true; overlayMisses = 0; return }
+        if (++overlayMisses < 2) return
+        Log.i(TAG, "$host overlay not on screen (${if (overlaySeen) "hidden by a screen" else "never shown"}): adding it another way")
+        if (overlaySeen) overlayHidden = true else hiddenOverlayHosts += host
+        attached = false
+        runCatching { manager.removeViewImmediate(root) }
+        if (!attach(windowType(handed))) close()
     }
 
     fun show(): Boolean {
@@ -156,6 +216,8 @@ class CopilotOverlay(private val service: ScreenAccessibility, private val sessi
                     if (handed && !wasHanded) expanded = true
                     wasHanded = handed
                     if (!attach(windowType(handed))) { close(); break }
+                    checkOverlayShown(handed)
+                    if (closed) break
                     val front = harnessInFront() ?: inFront
                     if (front != inFront) { inFront = front; if (!front) openInFront = false }
                     val activity = operationStatus()
