@@ -331,6 +331,7 @@ export const app = {
       course: '教学网',
       library: '图书馆',
       librarySpace: '图书馆空间预约',
+      mail: '学生邮箱',
       cwpay: '收费平台',
       bdkj: '北大空间',
       cwfw: '财务门户',

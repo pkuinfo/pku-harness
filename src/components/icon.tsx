@@ -98,6 +98,7 @@ export const icons = {
   catalog: { ios: 'books.vertical', android: 'library_books' },
   timetable: { ios: 'tablecells', android: 'calendar_view_week' },
   library: { ios: 'building.columns', android: 'local_library' },
+  mail: { ios: 'envelope', android: 'mail' },
   building: { ios: 'building.2', android: 'apartment' },
   medal: { ios: 'rosette', android: 'workspace_premium' },
   food: { ios: 'fork.knife', android: 'restaurant' },

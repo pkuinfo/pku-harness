@@ -329,6 +329,7 @@ export const app: Messages['app'] = {
       course: 'Course (Blackboard)',
       library: 'Library',
       librarySpace: 'Library space booking',
+      mail: 'Student mail',
       cwpay: 'Payment platform',
       bdkj: 'PKU Space',
       cwfw: 'Finance portal',

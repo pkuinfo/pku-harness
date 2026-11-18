@@ -255,3 +255,17 @@ Each task ends with: typecheck + lint pass, and (for UI) a screenshot check on t
   resumes at Permissions), the done-step suggestions, the attach-sheet Command row (the menu
   still opens on `/`), and two of the three starter dashboard cards. Copilot setup stays in
   the welcome flow, skippable.
+
+## Student mail (2026-11-18)
+
+- [x] `mail` campus service (`src/core/campus/adapters/mail.ts`): NetEase Enterprise Mail behind
+  mail.stu.pku.edu.cn, signed in with the campus credentials (RSA prelogin + domainEntLogin, SMS
+  code once per device via the verification prompt, `pass_2fa` trusted device); fills `{sid}` /
+  `{account}` into plugin requests. Protocol captured live: pkucli `docs/stu-mail-api.md`.
+- [x] `mail` plugin (document): folders, list (inbox / unread / sent / drafts / spam / trash,
+  paging back through history), read, search, contacts, send, reply / reply all; screens home,
+  folder, message (reply box), search, compose. Recorded tests; send and reply verified live
+  against the web API (to the user's own address).
+- [ ] Attachments: open/save needs a host file-save ability (names and sizes are shown today);
+  attach files when sending.
+- [ ] Live check of the adapter on a device (needs the user's sign-in and SMS code).

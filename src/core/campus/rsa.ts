@@ -7,6 +7,20 @@ import forge from 'node-forge';
  */
 export function encryptPkcs1(pem: string, text: string, randomBytes: (n: number) => Uint8Array): string {
   const key = forge.pki.publicKeyFromPem(pem.includes('BEGIN') ? pem : `-----BEGIN PUBLIC KEY-----\n${pem}\n-----END PUBLIC KEY-----`);
+  return forge.util.encode64(pkcs1(key, text, randomBytes));
+}
+
+/**
+ * The same padding for a key given as hex modulus + exponent, hex output (jsbn's
+ * `RSAKey.encrypt`, as NetEase's mail login uses it; see adapters/mail.ts).
+ */
+export function encryptPkcs1Hex(modulusHex: string, exponentHex: string, text: string, randomBytes: (n: number) => Uint8Array): string {
+  const key = forge.pki.setRsaPublicKey(new forge.jsbn.BigInteger(modulusHex, 16), new forge.jsbn.BigInteger(exponentHex, 16));
+  const k = Math.ceil(key.n.bitLength() / 8);
+  return forge.util.bytesToHex(pkcs1(key, text, randomBytes)).padStart(k * 2, '0');
+}
+
+function pkcs1(key: forge.pki.rsa.PublicKey, text: string, randomBytes: (n: number) => Uint8Array): string {
   const k = Math.ceil(key.n.bitLength() / 8);
   const message = forge.util.encodeUtf8(text);
   if (message.length > k - 11) throw new Error('密码过长');
@@ -17,5 +31,5 @@ export function encryptPkcs1(pem: string, text: string, randomBytes: (n: number)
     for (const b of randomBytes(psLength - ps.length)) if (b !== 0 && ps.length < psLength) ps += String.fromCharCode(b);
   }
   const em = `\x00\x02${ps}\x00${message}`;
-  return forge.util.encode64(key.encrypt(em, 'RAW'));
+  return key.encrypt(em, 'RAW');
 }

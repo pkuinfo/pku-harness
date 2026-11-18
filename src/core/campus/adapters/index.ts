@@ -7,3 +7,4 @@ import './cwfw';
 import './cwpay';
 import './elective';
 import './library';
+import './mail';
